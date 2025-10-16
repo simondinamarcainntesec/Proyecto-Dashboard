@@ -36,6 +36,7 @@ CSRF_TRUSTED_ORIGINS = ["http://localhost", "http://127.0.0.1"]
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard:index"
 LOGOUT_REDIRECT_URL = "login"
+ALARMSONE_ACCESS_TOKEN = '1000.7e825b058846b3c4a526b131d516cb8b.cc3ebe0d9437edbca6d70a8efa7af8de' 
 
 
 # Application definition
@@ -48,6 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'dashboard',
+    'api_client',
 ]
 
 MIDDLEWARE = [
