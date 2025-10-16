@@ -22,5 +22,15 @@
     {% else %}
       <p>No se pudieron cargar las alarmas o no hay alarmas disponibles.</p>
     {% endif %}
+
+    {% if messages %}
+    <ul class="messages">
+        {% for message in messages %}
+        <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>
+            {{ message }}
+        </li>
+        {% endfor %}
+    </ul>
+{% endif %}
   </body>
 </html>

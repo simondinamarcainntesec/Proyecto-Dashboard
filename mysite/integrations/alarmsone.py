@@ -6,7 +6,6 @@ import httpx
 BASE_URL = os.getenv("ALARMSONE_BASE_URL", "https://alarmsone.manageengine.com/rest/json")
 
 def _token() -> str:
-    # Reemplaza esto por la llamada real a tu flujo n8n cuando la tengas.
     t = os.getenv("ALARMSONE_TOKEN")
     if not t:
         raise RuntimeError("Falta ALARMSONE_TOKEN")
