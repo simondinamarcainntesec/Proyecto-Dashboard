@@ -68,7 +68,7 @@ def alarms_table(request):
            o  ?from=2025-10-01&to=2025-10-15
     """
     now = datetime.now(timezone.utc)
-    dt_from = _parse_iso(request.GET.get("from",""), now - timedelta(days=int(request.GET.get("days","9"))))
+    dt_from = _parse_iso(request.GET.get("from",""), now - timedelta(days=int(request.GET.get("days","7"))))
     dt_to   = _parse_iso(request.GET.get("to",""),   now)
     status  = request.GET.get("status","all")
     page_sz = int(request.GET.get("page_size","10000"))
