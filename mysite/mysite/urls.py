@@ -13,4 +13,6 @@ urlpatterns = [
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
     path("", login_required(home_view), name="home"),
     path("inyeccion_api/", include(("inyeccion_api.urls", "inyeccion_api"), namespace="inyeccion_api")),
+    path("dashboard/", include("dashboard.urls")),
+
 ]

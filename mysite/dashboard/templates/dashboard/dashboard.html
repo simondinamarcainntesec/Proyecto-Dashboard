@@ -1,0 +1,79 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Dashboard de Indicadores</h1>
+    </header>
+
+    <main class="dashboard-container">
+        <!-- Fila de KPIs -->
+        <div class="row">
+            <div class="card kpi-card">
+                <h2>Indicadores</h2>
+                <ul>
+                    <li><strong>Total Alarmas:</strong> {{ kpi_total }}</li>
+                    <li><strong>Alta Severidad:</strong> {{ kpi_high }}</li>
+                    <li><strong>Dispositivos Afectados:</strong> {{ kpi_dispositivos }}</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Fila de gráficos y tabla -->
+        <div class="row">
+            <div class="card chart-card">
+                <h3>Tendencias</h3>
+                <canvas id="trendChart"></canvas>
+            </div>
+
+            <div class="card chart-card">
+                <h3>Severidad</h3>
+                <canvas id="severityDonut"></canvas>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="card table-card">
+                <h3>Dispositivos Afectados</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Dispositivo</th>
+                            <th>Cantidad</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for device, count in device_counts.items %}
+                        <tr>
+                            <td>{{ device }}</td>
+                            <td>{{ count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card chart-card">
+                <h3>Acciones</h3>
+                <canvas id="actionBar"></canvas>
+            </div>
+        </div>
+    </main>
+
+    {{ trend_labels|json_script:"trend-labels" }}
+    {{ trend_data|json_script:"trend-data" }}
+    {{ severity_trends|json_script:"severity-trends" }}
+    {{ severity_counts|json_script:"severity-counts" }}
+    {{ device_counts|json_script:"device-counts" }}
+    {{ action_counts|json_script:"action-counts" }}
+
+    <script src="{% static 'js/charts.js' %}"></script>
+</body>
+</html>
