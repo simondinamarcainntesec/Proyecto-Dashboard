@@ -12,5 +12,5 @@ urlpatterns = [
     path("login/",  auth_views.LoginView.as_view(template_name="auth/login.html"), name="login"),
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
     path("", login_required(home_view), name="home"),
-    path("dashboard/", include(("dashboard.urls", "dashboard"), namespace="dashboard")),
+    path("inyeccion_api/", include(("inyeccion_api.urls", "inyeccion_api"), namespace="inyeccion_api")),
 ]
