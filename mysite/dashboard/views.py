@@ -15,7 +15,7 @@ from integrations.alarmsone import list_alarms, list_alarms_all
 # -----------------------------
 _WHITELIST_ORDERED = [
     "Action", "actions", "aotags", "severity",
-    "msg_severity", "msg_device_name",
+    "msg_severity", "msg_device_name", "eventtime",
 ]
 
 # CSV injection guard (Excel)
@@ -152,7 +152,7 @@ def _value_for_column(alarm: dict, column: str):
     - Columnas planas: Action/actions/aotags/severity
     - Derivadas: msg_severity, msg_device_name (extraídas desde log_details/message)
     """
-    if column in ("Action", "actions", "aotags", "severity"):
+    if column in ("Action", "actions", "aotags", "severity", "eventtime"):
         return _get_value_case_insensitive(alarm, column)
 
     if column in ("msg_severity", "msg_device_name"):
