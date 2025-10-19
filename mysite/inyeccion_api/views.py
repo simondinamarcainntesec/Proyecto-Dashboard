@@ -336,7 +336,7 @@ def alarms_export_csv(request):
     NOTE: exporta desde la API para que coincida con la tabla recién renderizada.
     """
     now = datetime.now(timezone.utc)
-    dt_from = _parse_iso(request.GET.get("from",""), now - timedelta(days=int(request.GET.get("days","7"))))
+    dt_from = _parse_iso(request.GET.get("from",""), now - timedelta(days=int(request.GET.get("days","5"))))
     dt_to   = _parse_iso(request.GET.get("to",""),   now)
     status  = request.GET.get("status","all")
     page_sz = int(request.GET.get("page_size","200"))

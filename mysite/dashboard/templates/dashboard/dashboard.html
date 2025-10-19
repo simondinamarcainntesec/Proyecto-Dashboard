@@ -2,78 +2,158 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
-    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Portal Clientes – Panel</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
-    <header>
-        <h1>Dashboard de Indicadores</h1>
+
+<body class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">E</div>
+      <div class="brand-tenant">
+        <div class="brand-sub">Tenant:</div>
+        <div class="brand-name">ACME</div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a class="nav-item is-active" href="#"><span class="nav-ico">🏠</span>Panel</a>
+      <a class="nav-item" href="#"><span class="nav-ico">📈</span>Métricas</a>
+      <a class="nav-item" href="#"><span class="nav-ico">🔗</span>Conectores</a>
+      <a class="nav-item" href="#"><span class="nav-ico">🚨</span>Alertas</a>
+      <a class="nav-item" href="#"><span class="nav-ico">🧾</span>Auditoría</a>
+      <a class="nav-item" href="#"><span class="nav-ico">⚙️</span>Ajustes</a>
+    </nav>
+  </aside>
+
+  <!-- Main -->
+  <div class="content">
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="top-left">
+        <h1 class="top-title">Tenant: <span class="top-tenant">ACME Mining</span></h1>
+      </div>
+      <div class="top-right">
+        <button class="btn ghost" title="Actualizar">⟳</button>
+        <button class="btn ghost" title="Exportar">⬇︎</button>
+        <div class="user">
+          <div class="user-avatar">U</div>
+          <div class="user-name">User</div>
+        </div>
+      </div>
     </header>
 
-    <main class="dashboard-container">
-        <!-- Fila de KPIs -->
-        <div class="row">
-            <div class="card kpi-card">
-                <h2>Indicadores</h2>
-                <ul>
-                    <li><strong>Total Alarmas:</strong> {{ kpi_total }}</li>
-                    <li><strong>Alta Severidad:</strong> {{ kpi_high }}</li>
-                    <li><strong>Dispositivos Afectados:</strong> {{ kpi_dispositivos }}</li>
-                </ul>
-            </div>
+    <!-- Filtros -->
+    <section class="toolbar">
+      <form id="date-filter" method="get" class="toolbar-row">
+        <div class="group">
+          <span class="chip">Últimos 7 días</span>
+          <span class="chip">Últimos 30 días</span>
+          <span class="chip">Este mes</span>
         </div>
 
-        <!-- Fila de gráficos y tabla -->
-        <div class="row">
-            <div class="card chart-card">
-                <h3>Tendencias</h3>
-                <canvas id="trendChart"></canvas>
-            </div>
-
-            <div class="card chart-card">
-                <h3>Severidad</h3>
-                <canvas id="severityDonut"></canvas>
-            </div>
+        <div class="group">
+          <label class="date-range">
+            <span>Desde</span>
+            <input type="date" name="from" value="{{ from_date_str }}" />
+          </label>
+          <label class="date-range">
+            <span>Hasta</span>
+            <input type="date" name="to" value="{{ to_date_str }}" />
+          </label>
+          <button class="btn primary" type="submit">Aplicar</button>
+          <a class="btn ghost" href="?">Limpiar</a>
         </div>
+      </form>
+    </section>
 
-        <div class="row">
-            <div class="card table-card">
-                <h3>Dispositivos Afectados</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Dispositivo</th>
-                            <th>Cantidad</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for device, count in device_counts.items %}
-                        <tr>
-                            <td>{{ device }}</td>
-                            <td>{{ count }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+    <!-- KPIs -->
+    <section class="grid grid-kpis">
+      <div class="card kpi"><div class="kpi-label">Disponibilidad (simulado)</div><div class="kpi-value">99,8%</div></div>
+      <div class="card kpi"><div class="kpi-label">Alta Severidad</div><div class="kpi-value" id="kpi-high">{{ kpi_high }}</div></div>
+      <div class="card kpi"><div class="kpi-label">Total Alarmas</div><div class="kpi-value" id="kpi-total">{{ kpi_total }}</div></div>
+      <div class="card kpi"><div class="kpi-label">Dispositivos Afectados</div><div class="kpi-value" id="kpi-devices">{{ kpi_dispositivos }}</div></div>
+    </section>
 
-            <div class="card chart-card">
-                <h3>Acciones</h3>
-                <canvas id="actionBar"></canvas>
-            </div>
+    <!-- Grilla principal -->
+    <section class="grid grid-main">
+      <div class="card chart">
+        <div class="card-head"><h3>Métrica</h3></div>
+        <div class="card-body"><canvas id="trendChart"></canvas></div>
+      </div>
+
+      <div class="card chart">
+        <div class="card-head"><h3>Severidad</h3></div>
+        <div class="card-body"><canvas id="severityDonut"></canvas></div>
+      </div>
+
+      <div class="card table">
+        <div class="card-head between">
+          <h3>Dispositivos recientes</h3>
+          <div class="table-legend">
+            <span class="legend-dot dot-critical"></span><span class="legend-text">Critical</span>
+            <span class="legend-dot dot-high"></span><span class="legend-text">High</span>
+            <span class="legend-dot dot-medium"></span><span class="legend-text">Medium</span>
+            <span class="legend-dot dot-low"></span><span class="legend-text">Low</span>
+            <span class="legend-dot dot-info"></span><span class="legend-text">Info</span>
+            <span class="legend-dot dot-warning"></span><span class="legend-text">Warning</span>
+          </div>
         </div>
-    </main>
+        <div class="table-wrap">
+          <table class="datatable" id="device-table">
+            <thead>
+              <tr>
+                <th data-sort="text">Dispositivo</th>
+                <th data-sort="number" class="is-right">Cantidad</th>
+              </tr>
+            </thead>
+            <tbody id="device-table-body">
+              {% for device, count in device_counts.items %}
+              <tr>
+                <td><span class="cell-device">{{ device }}</span></td>
+                <td class="is-right"><span class="pill pill-count">{{ count }}</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="table-footnote">* Clic en los encabezados para ordenar</div>
+      </div>
 
-    {{ trend_labels|json_script:"trend-labels" }}
-    {{ trend_data|json_script:"trend-data" }}
-    {{ severity_trends|json_script:"severity-trends" }}
-    {{ severity_counts|json_script:"severity-counts" }}
-    {{ device_counts|json_script:"device-counts" }}
-    {{ action_counts|json_script:"action-counts" }}
+      <div class="card chart">
+        <div class="card-head"><h3>Acciones</h3></div>
+        <div class="card-body"><canvas id="actionBar"></canvas></div>
+      </div>
+    </section>
 
-    <script src="{% static 'js/charts.js' %}"></script>
+    <footer class="footnote">Última actualización: hace 7 min</footer>
+  </div>
+
+  <!-- JSON embebidos para charts.js -->
+  {{ trend_labels|json_script:"trend-labels" }}
+  {{ trend_data|json_script:"trend-data" }}
+  {{ severity_trends|json_script:"severity-trends" }}
+  {{ severity_counts|json_script:"severity-counts" }}
+
+  {{ device_counts|json_script:"device-counts" }}
+  {{ action_counts|json_script:"action-counts" }}
+
+  {{ device_counts_by_severity|json_script:"device-counts-by-severity" }}
+  {{ action_counts_by_severity|json_script:"action-counts-by-severity" }}
+
+  {{ trend_by_device|json_script:"trend-by-device" }}
+  {{ top_devices|json_script:"top-devices" }}
+
+  <!-- NUEVOS JSON -->
+  {{ trend_by_action|json_script:"trend-by-action" }}
+  {{ device_counts_by_action|json_script:"device-counts-by-action" }}
+
+  <script src="{% static 'js/charts.js' %}"></script>
 </body>
 </html>
