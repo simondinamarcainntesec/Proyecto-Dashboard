@@ -15,11 +15,7 @@
   <!-- Sidebar -->
   <aside class="sidebar">
     <div class="brand">
-      <div class="brand-logo">E</div>
-      <div class="brand-tenant">
-        <div class="brand-sub">Tenant:</div>
-        <div class="brand-name">ACME</div>
-      </div>
+      <img src="{% static 'img/inntesec CSS negro 1.avif' %}" alt="Logo Inntesec" />
     </div>
 
     <nav class="nav">
@@ -37,7 +33,7 @@
     <!-- Topbar -->
     <header class="topbar">
       <div class="top-left">
-        <h1 class="top-title">Tenant: <span class="top-tenant">ACME Mining</span></h1>
+        <h1 class="top-title">Tenant: <span class="top-tenant">Fashions Park</span></h1>
       </div>
       <div class="top-right">
         <button class="btn ghost" title="Actualizar">⟳</button>
@@ -81,19 +77,38 @@
       <div class="card kpi"><div class="kpi-label">Dispositivos Afectados</div><div class="kpi-value" id="kpi-devices">{{ kpi_dispositivos }}</div></div>
     </section>
 
-    <!-- Grilla principal -->
+    <!-- Grilla principal con ÁREAS -->
     <section class="grid grid-main">
-      <div class="card chart">
+      <!-- IZQUIERDA (grande) -->
+      <div class="card chart card--trend">
         <div class="card-head"><h3>Métrica</h3></div>
         <div class="card-body"><canvas id="trendChart"></canvas></div>
       </div>
 
-      <div class="card chart">
+      <div class="card chart card--hourly">
+        <div class="card-head between"><h3>Alarmas por hora</h3></div>
+        <div class="card-body"><canvas id="hourlyChart"></canvas></div>
+      </div>
+
+      <!-- DERECHA -->
+      <div class="card chart card--donut">
         <div class="card-head"><h3>Severidad</h3></div>
         <div class="card-body"><canvas id="severityDonut"></canvas></div>
       </div>
 
-      <div class="card table">
+      <div class="card chart card--actions">
+        <div class="card-head"><h3>Acciones</h3></div>
+        <div class="card-body"><canvas id="actionBar"></canvas></div>
+      </div>
+
+      <!-- NUEVO: barra de msg_severity -->
+      <div class="card chart card--msgsev">
+        <div class="card-head"><h3>Severity Alarm</h3></div>
+        <div class="card-body"><canvas id="msgSeverityBar"></canvas></div>
+      </div>
+
+      <!-- TABLA (abajo a todo lo ancho) -->
+      <div class="card table card--table">
         <div class="card-head between">
           <h3>Dispositivos recientes</h3>
           <div class="table-legend">
@@ -125,11 +140,6 @@
         </div>
         <div class="table-footnote">* Clic en los encabezados para ordenar</div>
       </div>
-
-      <div class="card chart">
-        <div class="card-head"><h3>Acciones</h3></div>
-        <div class="card-body"><canvas id="actionBar"></canvas></div>
-      </div>
     </section>
 
     <footer class="footnote">Última actualización: hace 7 min</footer>
@@ -145,14 +155,36 @@
   {{ action_counts|json_script:"action-counts" }}
 
   {{ device_counts_by_severity|json_script:"device-counts-by-severity" }}
-  {{ action_counts_by_severity|json_script:"action-counts-by-severity" }}
+
+  {{ device_counts_by_severity_full|json_script:"device-counts-by-severity-full" }} <!-- NEW -->
 
   {{ trend_by_device|json_script:"trend-by-device" }}
   {{ top_devices|json_script:"top-devices" }}
 
-  <!-- NUEVOS JSON -->
   {{ trend_by_action|json_script:"trend-by-action" }}
   {{ device_counts_by_action|json_script:"device-counts-by-action" }}
+  {{ action_counts_by_device|json_script:"action-counts-by-device" }}
+
+  {{ hour_labels|json_script:"hour-labels" }}
+  {{ hour_data|json_script:"hour-data" }}
+  {{ severity_counts_by_hour|json_script:"severity-counts-by-hour" }}
+  {{ device_counts_by_hour|json_script:"device-counts-by-hour" }}
+  {{ device_counts_by_hour_full|json_script:"device-counts-by-hour-full" }} <!-- NEW -->
+  {{ action_counts_by_hour|json_script:"action-counts-by-hour" }}
+  {{ trend_labels_hour|json_script:"trend-labels-hour" }}
+  {{ trend_by_hour|json_script:"trend-by-hour" }}
+
+  <!-- === NUEVO: JSON para msg_severity === -->
+  {{ msg_severity_counts|json_script:"msg-severity-counts" }}
+  {{ device_counts_by_msg_severity|json_script:"device-counts-by-msg-severity" }}
+  {{ action_counts_by_msg_severity|json_script:"action-counts-by-msg-severity" }}
+  {{ severity_counts_by_msg_severity|json_script:"severity-counts-by-msg-severity" }}
+  {{ msg_severity_counts_by_hour|json_script:"msg-severity-counts-by-hour" }}
+  {{ trend_by_msg_severity|json_script:"trend-by-msg-severity" }}
+
+  {{ device_counts_by_severity_full|json_script:"device-counts-by-severity-full" }}
+  {{ device_counts_by_hour_full|json_script:"device-counts-by-hour-full" }}
+
 
   <script src="{% static 'js/charts.js' %}"></script>
 </body>

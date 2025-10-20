@@ -1,0 +1,30 @@
+[2025-10-20 19:33:39,493: INFO/MainProcess] beat: Starting...
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-20 19:33:39
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         integrations:0x7af2947b0890
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-20 19:33:39,669: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-20 19:33:39,673: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-20 19:33:40,685: INFO/MainProcess] mingle: all alone
+[2025-10-20 19:33:40,696: INFO/MainProcess] celery@ia-customer-portal ready.
+[2025-10-20 20:00:00,003: INFO/MainProcess] Scheduler: Sending due task obtener-token-cada-hora (integrations.tasks.tarea_obtener_token)
+[2025-10-20 20:00:00,014: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[a54d434b-b336-4e63-b009-ace9cbcf5e21] received
+[2025-10-20 20:00:00,930: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_obtener_token[a54d434b-b336-4e63-b009-ace9cbcf5e21] succeeded in 0.9146805950003909s: None
+[2025-10-20 21:00:00,000: INFO/MainProcess] Scheduler: Sending due task obtener-token-cada-hora (integrations.tasks.tarea_obtener_token)
+[2025-10-20 21:00:00,003: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[d0f5ca22-3f60-418c-a5d0-793d0cb421bc] received
+[2025-10-20 21:00:01,080: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_obtener_token[d0f5ca22-3f60-418c-a5d0-793d0cb421bc] succeeded in 1.0759329740012618s: None

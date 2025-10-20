@@ -10,12 +10,12 @@ obtener_token_final_v2.py — Header `passkey: <clave>` y extracción robusta de
 import json, ssl, sys, urllib.request
 from typing import Any, Optional
 
-# ==== CONFIGURA ESTO ====
-URL = "https://iaproductivo.inntesec.cl/webhook/3c850e31-e699-4fa6-9fed-513d4ccd281b"   # <-- pega la URL real
-SECRET = "@L^E4$h!f^r1VmwD#c1B#C8XzM#B4pON"                # <-- pega tu clave (sin JSON)
-HEADER_NAME = "passkey"                   # según el método 6 que funcionó
+
+URL = "https://iaproductivo.inntesec.cl/webhook/3c850e31-e699-4fa6-9fed-513d4ccd281b"  
+SECRET = "@L^E4$h!f^r1VmwD#c1B#C8XzM#B4pON"               
+HEADER_NAME = "passkey"                  
 VERIFY_SSL = True
-# ========================
+
 
 CANDIDATE_KEYS = {"Acces_token", "access_token", "token", "Access_Token", "ACCESS_TOKEN"}
 

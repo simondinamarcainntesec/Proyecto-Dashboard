@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 import dj_database_url
+from celery.schedules import crontab
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -51,6 +52,7 @@ INSTALLED_APPS = [
     'inyeccion_api',
     'api_client',
     'dashboard',
+    'integrations',
 ]
 
 MIDDLEWARE = [
@@ -136,3 +138,15 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+
+CELERY_BEAT_SCHEDULE = {
+    "obtener-token-cada-hora": {
+        "task": "integrations.tasks.tarea_obtener_token",
+        "schedule": crontab(minute="0"),  # cada hora
+    },
+}
+CELERY_TIMEZONE = "America/Santiago"
+CELERY_BROKER_URL = "redis://localhost:6379/0"
+CELERY_RESULT_BACKEND = "redis://localhost:6379/1"
