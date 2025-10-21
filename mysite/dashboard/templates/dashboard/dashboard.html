@@ -155,8 +155,7 @@
   {{ action_counts|json_script:"action-counts" }}
 
   {{ device_counts_by_severity|json_script:"device-counts-by-severity" }}
-
-  {{ device_counts_by_severity_full|json_script:"device-counts-by-severity-full" }} <!-- NEW -->
+  {{ device_counts_by_severity_full|json_script:"device-counts-by-severity-full" }}
 
   {{ trend_by_device|json_script:"trend-by-device" }}
   {{ top_devices|json_script:"top-devices" }}
@@ -165,26 +164,25 @@
   {{ device_counts_by_action|json_script:"device-counts-by-action" }}
   {{ action_counts_by_device|json_script:"action-counts-by-device" }}
 
+  <!-- ⬇️ FALTABA ESTA LÍNEA -->
+  {{ action_counts_by_severity|json_script:"action-counts-by-severity" }}
+
   {{ hour_labels|json_script:"hour-labels" }}
   {{ hour_data|json_script:"hour-data" }}
   {{ severity_counts_by_hour|json_script:"severity-counts-by-hour" }}
   {{ device_counts_by_hour|json_script:"device-counts-by-hour" }}
-  {{ device_counts_by_hour_full|json_script:"device-counts-by-hour-full" }} <!-- NEW -->
+  {{ device_counts_by_hour_full|json_script:"device-counts-by-hour-full" }}
   {{ action_counts_by_hour|json_script:"action-counts-by-hour" }}
   {{ trend_labels_hour|json_script:"trend-labels-hour" }}
   {{ trend_by_hour|json_script:"trend-by-hour" }}
 
-  <!-- === NUEVO: JSON para msg_severity === -->
+  <!-- === JSON para msg_severity === -->
   {{ msg_severity_counts|json_script:"msg-severity-counts" }}
   {{ device_counts_by_msg_severity|json_script:"device-counts-by-msg-severity" }}
   {{ action_counts_by_msg_severity|json_script:"action-counts-by-msg-severity" }}
   {{ severity_counts_by_msg_severity|json_script:"severity-counts-by-msg-severity" }}
   {{ msg_severity_counts_by_hour|json_script:"msg-severity-counts-by-hour" }}
   {{ trend_by_msg_severity|json_script:"trend-by-msg-severity" }}
-
-  {{ device_counts_by_severity_full|json_script:"device-counts-by-severity-full" }}
-  {{ device_counts_by_hour_full|json_script:"device-counts-by-hour-full" }}
-
 
   <script src="{% static 'js/charts.js' %}"></script>
 </body>

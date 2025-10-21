@@ -1,0 +1,954 @@
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 13:24:59
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         integrations:0x70148b8c0da0
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 13:25:00,154: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 13:25:00,160: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 13:25:01,169: INFO/MainProcess] mingle: all alone
+[2025-10-21 13:25:01,180: INFO/MainProcess] celery@ia-customer-portal ready.
+[2025-10-21 13:25:01,187: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[667973fe-4b1b-4dbc-ba4c-6c89e249bde7] received
+[2025-10-21 13:25:01,188: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[fb7f0eb6-320a-4940-a01a-44b065ea350a] received
+[2025-10-21 13:25:01,188: INFO/ForkPoolWorker-2] Inicio de ingesta de API
+[2025-10-21 13:25:01,189: ERROR/ForkPoolWorker-2] No se encontró token.txt
+[2025-10-21 13:25:01,189: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[a116ca84-ee63-4a0c-b852-9eb182203cd2] received
+[2025-10-21 13:25:01,190: INFO/ForkPoolWorker-1] Inicio de ingesta de API
+[2025-10-21 13:25:01,191: ERROR/ForkPoolWorker-1] No se encontró token.txt
+[2025-10-21 13:25:01,193: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[fff4d8f8-20cd-49d3-a57c-b40414f416a6] received
+[2025-10-21 13:25:01,196: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_ingesta_api[667973fe-4b1b-4dbc-ba4c-6c89e249bde7] succeeded in 0.008302556001581252s: None
+[2025-10-21 13:25:01,197: INFO/ForkPoolWorker-2] Inicio de ingesta de API
+[2025-10-21 13:25:01,197: ERROR/ForkPoolWorker-2] No se encontró token.txt
+[2025-10-21 13:25:01,198: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_ingesta_api[fb7f0eb6-320a-4940-a01a-44b065ea350a] succeeded in 0.007409997007925995s: None
+[2025-10-21 13:25:01,199: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_ingesta_api[a116ca84-ee63-4a0c-b852-9eb182203cd2] succeeded in 0.001572805005707778s: None
+[2025-10-21 13:25:01,199: INFO/ForkPoolWorker-1] Inicio de ingesta de API
+[2025-10-21 13:25:01,200: ERROR/ForkPoolWorker-1] No se encontró token.txt
+[2025-10-21 13:25:01,201: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_ingesta_api[fff4d8f8-20cd-49d3-a57c-b40414f416a6] succeeded in 0.0012773860071320087s: None
+[2025-10-21 13:25:05,548: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[99db94ee-da6e-4782-ba73-26199d2d8db1] received
+[2025-10-21 13:25:05,550: INFO/ForkPoolWorker-2] Inicio de ingesta de API
+[2025-10-21 13:25:05,550: ERROR/ForkPoolWorker-2] No se encontró token.txt
+[2025-10-21 13:25:05,551: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_ingesta_api[99db94ee-da6e-4782-ba73-26199d2d8db1] succeeded in 0.0020213349926052615s: None
+
+worker: Warm shutdown (MainProcess)
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 13:32:34
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         integrations:0x789ef71b0ec0
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 13:32:34,271: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 13:32:34,277: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 13:32:35,287: INFO/MainProcess] mingle: all alone
+[2025-10-21 13:32:35,307: INFO/MainProcess] celery@ia-customer-portal ready.
+
+worker: Warm shutdown (MainProcess)
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 13:35:11
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         integrations:0x7311600bcbc0
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 13:35:12,103: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 13:35:12,110: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 13:35:13,126: INFO/MainProcess] mingle: all alone
+[2025-10-21 13:35:13,139: INFO/MainProcess] celery@ia-customer-portal ready.
+[2025-10-21 13:35:19,851: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[3e176447-bf14-4518-9372-b934e4cc8bb1] received
+[2025-10-21 13:35:19,854: INFO/ForkPoolWorker-2] Inicio de ingesta de API
+[2025-10-21 13:35:19,854: ERROR/ForkPoolWorker-2] No se encontró token.txt
+[2025-10-21 13:35:19,861: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_ingesta_api[3e176447-bf14-4518-9372-b934e4cc8bb1] succeeded in 0.007772021999699064s: None
+
+worker: Warm shutdown (MainProcess)
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 13:36:42
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         integrations:0x7dfb074b4b90
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 13:36:42,638: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 13:36:42,643: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 13:36:43,653: INFO/MainProcess] mingle: all alone
+[2025-10-21 13:36:43,665: INFO/MainProcess] celery@ia-customer-portal ready.
+[2025-10-21 13:37:43,052: ERROR/MainProcess] Received unregistered task of type 'integrations.tasks.obtener-token-cada-hora'.
+The message has been ignored and discarded.
+
+Did you remember to import the module containing this task?
+Or maybe you're using relative imports?
+
+Please see
+https://docs.celeryq.dev/en/latest/internals/protocol.html
+for more information.
+
+The full contents of the message body was:
+b'[[], {}, {"callbacks": null, "errbacks": null, "chain": null, "chord": null}]' (77b)
+
+The full contents of the message headers:
+{'lang': 'py', 'task': 'integrations.tasks.obtener-token-cada-hora', 'id': '36bfdc4d-dc60-4abe-954e-f271bcd9f2b5', 'shadow': None, 'eta': None, 'expires': None, 'group': None, 'group_index': None, 'retries': 0, 'timelimit': [None, None], 'root_id': '36bfdc4d-dc60-4abe-954e-f271bcd9f2b5', 'parent_id': None, 'argsrepr': '()', 'kwargsrepr': '{}', 'origin': 'gen32909@ia-customer-portal', 'ignore_result': False, 'replaced_task_nesting': 0, 'stamped_headers': None, 'stamps': {}}
+
+The delivery info for this task is:
+{'exchange': '', 'routing_key': 'celery'}
+Traceback (most recent call last):
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/celery/worker/consumer/consumer.py", line 662, in on_task_received
+    strategy = strategies[type_]
+               ~~~~~~~~~~^^^^^^^
+KeyError: 'integrations.tasks.obtener-token-cada-hora'
+
+worker: Warm shutdown (MainProcess)
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 13:39:56
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         integrations:0x7e9f37eb0e90
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 13:39:57,126: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 13:39:57,132: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 13:39:58,141: INFO/MainProcess] mingle: all alone
+[2025-10-21 13:39:58,152: INFO/MainProcess] celery@ia-customer-portal ready.
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 13:40:02
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         integrations:0x7775774b4f80
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 13:40:03,106: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 13:40:03,110: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 13:40:04,123: INFO/MainProcess] mingle: all alone
+[2025-10-21 13:40:04,136: INFO/MainProcess] celery@ia-customer-portal ready.
+[2025-10-21 13:40:10,351: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[50fec82a-f106-444d-b6ac-4b5b2e52fbcd] received
+[2025-10-21 13:40:10,354: INFO/ForkPoolWorker-2] Inicio de obtención de token
+[2025-10-21 13:40:10,373: ERROR/ForkPoolWorker-2] Error al ejecutar obtener_token.py: Command '['python3', '/home/inntesec-ia/Proyecto-Dashboard/mysite/integrations/../../../obtener_token.py']' returned non-zero exit status 2.
+[2025-10-21 13:40:10,377: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_obtener_token[50fec82a-f106-444d-b6ac-4b5b2e52fbcd] succeeded in 0.023198955997941084s: None
+
+worker: Warm shutdown (MainProcess)
+
+worker: Warm shutdown (MainProcess)
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 13:41:34
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         integrations:0x73f849097740
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 13:41:35,049: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 13:41:35,054: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 13:41:36,064: INFO/MainProcess] mingle: all alone
+[2025-10-21 13:41:36,079: INFO/MainProcess] celery@ia-customer-portal ready.
+[2025-10-21 13:41:45,014: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[ecf22147-affb-4814-82f4-aa10a3a80545] received
+[2025-10-21 13:41:45,018: INFO/ForkPoolWorker-2] Inicio de obtención de token
+[2025-10-21 13:41:45,927: INFO/ForkPoolWorker-2] Token actualizado correctamente
+[2025-10-21 13:41:45,934: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_obtener_token[ecf22147-affb-4814-82f4-aa10a3a80545] succeeded in 0.9161981099896366s: None
+[2025-10-21 13:42:14,583: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[92a69534-8d8f-4dcb-afba-3443325dfada] received
+[2025-10-21 13:42:14,585: INFO/ForkPoolWorker-2] Inicio de ingesta de API
+[2025-10-21 13:42:14,841: ERROR/ForkPoolWorker-2] Error durante la ingesta de API: Expecting value: line 1 column 1 (char 0)
+Traceback (most recent call last):
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/requests/models.py", line 976, in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/inntesec-ia/Proyecto-Dashboard/mysite/integrations/tasks.py", line 57, in tarea_ingesta_api
+    data = response.json()  # Asume que devuelve lista de dicts
+           ^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/requests/models.py", line 980, in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+[2025-10-21 13:42:14,847: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_ingesta_api[92a69534-8d8f-4dcb-afba-3443325dfada] succeeded in 0.2616386860026978s: None
+[2025-10-21 13:42:32,584: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[655c323c-253e-4d87-abb5-18b765cb33c5] received
+[2025-10-21 13:42:32,586: INFO/ForkPoolWorker-2] Inicio de ingesta de API
+[2025-10-21 13:42:32,760: ERROR/ForkPoolWorker-2] Error durante la ingesta de API: Expecting value: line 1 column 1 (char 0)
+Traceback (most recent call last):
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/requests/models.py", line 976, in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/inntesec-ia/Proyecto-Dashboard/mysite/integrations/tasks.py", line 57, in tarea_ingesta_api
+    data = response.json()  # Asume que devuelve lista de dicts
+           ^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/requests/models.py", line 980, in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+[2025-10-21 13:42:32,763: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_ingesta_api[655c323c-253e-4d87-abb5-18b765cb33c5] succeeded in 0.17741498399118427s: None
+
+worker: Warm shutdown (MainProcess)
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 13:45:34
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         integrations:0x7c4096cbcb00
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 13:45:34,884: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 13:45:34,888: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 13:45:35,899: INFO/MainProcess] mingle: all alone
+[2025-10-21 13:45:35,915: INFO/MainProcess] celery@ia-customer-portal ready.
+[2025-10-21 13:45:40,537: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[bfec00d8-2bc8-4f27-b00d-253f6de82ddb] received
+[2025-10-21 13:45:40,539: INFO/ForkPoolWorker-2] Inicio de ingesta de API
+[2025-10-21 13:45:40,934: ERROR/ForkPoolWorker-2] Error durante la ingesta de API: 401 Client Error: Unauthorized for url: https://help.alarmsone.com/rest-api-documentation.html
+Traceback (most recent call last):
+  File "/home/inntesec-ia/Proyecto-Dashboard/mysite/integrations/tasks.py", line 56, in tarea_ingesta_api
+    response.raise_for_status()
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/requests/models.py", line 1026, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 401 Client Error: Unauthorized for url: https://help.alarmsone.com/rest-api-documentation.html
+[2025-10-21 13:45:40,941: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_ingesta_api[bfec00d8-2bc8-4f27-b00d-253f6de82ddb] succeeded in 0.4025594910053769s: None
+
+worker: Warm shutdown (MainProcess)
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 13:48:36
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         integrations:0x749b8d8b4b90
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 13:48:36,312: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 13:48:36,316: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 13:48:37,326: INFO/MainProcess] mingle: all alone
+[2025-10-21 13:48:37,339: INFO/MainProcess] celery@ia-customer-portal ready.
+[2025-10-21 13:48:40,162: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[bac76652-025d-457e-86c1-600c9a3c49bb] received
+[2025-10-21 13:48:40,166: INFO/ForkPoolWorker-2] Inicio de ingesta de API
+[2025-10-21 13:48:40,215: ERROR/ForkPoolWorker-2] Error durante la ingesta de API: HTTPSConnectionPool(host='api.alarmsone.com', port=443): Max retries exceeded with url: /v1/alerts (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x749b8a2ce930>: Failed to resolve 'api.alarmsone.com' ([Errno -2] Name or service not known)"))
+Traceback (most recent call last):
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/socket.py", line 963, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -2] Name or service not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 488, in _make_request
+    raise new_e
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 464, in _make_request
+    self._validate_conn(conn)
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 1093, in _validate_conn
+    conn.connect()
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/urllib3/connection.py", line 753, in connect
+    self.sock = sock = self._new_conn()
+                       ^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x749b8a2ce930>: Failed to resolve 'api.alarmsone.com' ([Errno -2] Name or service not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/requests/adapters.py", line 644, in send
+    resp = conn.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/urllib3/util/retry.py", line 519, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.alarmsone.com', port=443): Max retries exceeded with url: /v1/alerts (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x749b8a2ce930>: Failed to resolve 'api.alarmsone.com' ([Errno -2] Name or service not known)"))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/inntesec-ia/Proyecto-Dashboard/mysite/integrations/tasks.py", line 55, in tarea_ingesta_api
+    response = requests.get(API_URL, headers=headers)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/requests/api.py", line 73, in get
+    return request("get", url, params=params, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/requests/api.py", line 59, in request
+    return session.request(method=method, url=url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/requests/sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/requests/sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/requests/adapters.py", line 677, in send
+    raise ConnectionError(e, request=request)
+requests.exceptions.ConnectionError: HTTPSConnectionPool(host='api.alarmsone.com', port=443): Max retries exceeded with url: /v1/alerts (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x749b8a2ce930>: Failed to resolve 'api.alarmsone.com' ([Errno -2] Name or service not known)"))
+[2025-10-21 13:48:40,262: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_ingesta_api[bac76652-025d-457e-86c1-600c9a3c49bb] succeeded in 0.09584037399326917s: None
+
+worker: Warm shutdown (MainProcess)
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 13:51:18
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         integrations:0x755e2b245400
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 13:51:19,093: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 13:51:19,097: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 13:51:20,107: INFO/MainProcess] mingle: all alone
+[2025-10-21 13:51:20,120: INFO/MainProcess] celery@ia-customer-portal ready.
+[2025-10-21 13:51:24,325: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[2bc1d726-992b-4fc5-b533-f47cb4c6cfb6] received
+[2025-10-21 13:51:24,327: INFO/ForkPoolWorker-2] Inicio de ingesta de API
+[2025-10-21 13:51:24,419: ERROR/ForkPoolWorker-2] Error de conexión o request: HTTPSConnectionPool(host='api.alarmsone.com', port=443): Max retries exceeded with url: /v1/alerts?start_time=2025-10-20T10%3A51%3A24.359800-03%3A00&limit=1000 (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x755e27cd7320>: Failed to resolve 'api.alarmsone.com' ([Errno -2] Name or service not known)"))
+[2025-10-21 13:51:24,423: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_ingesta_api[2bc1d726-992b-4fc5-b533-f47cb4c6cfb6] succeeded in 0.09600176798994653s: None
+
+worker: Warm shutdown (MainProcess)
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 13:57:13
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         integrations:0x7eae2e0b1040
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 13:57:13,739: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 13:57:13,745: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 13:57:14,755: INFO/MainProcess] mingle: all alone
+[2025-10-21 13:57:14,766: INFO/MainProcess] celery@ia-customer-portal ready.
+[2025-10-21 13:57:21,593: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[7d2fb032-4e2a-4c1a-9b2d-9a705899cab7] received
+[2025-10-21 13:57:21,596: INFO/ForkPoolWorker-2] Inicio de ingesta de API
+[2025-10-21 13:57:21,943: ERROR/ForkPoolWorker-2] Error HTTP al llamar API: 404 Client Error:  for url: https://alarmsone.manageengine.com/rest/json?start_time=2025-10-20T10%3A57%3A21.630621-03%3A00&limit=1000 - {"response": {"uri":"/rest/json","error": {"code":2891,"message":"Given URL is wrong."}}}
+
+[2025-10-21 13:57:21,949: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_ingesta_api[7d2fb032-4e2a-4c1a-9b2d-9a705899cab7] succeeded in 0.3534015960030956s: None
+[2025-10-21 14:00:00,031: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[aa3f5a15-e3dc-418a-99cd-1aee8c10f583] received
+[2025-10-21 14:00:00,032: INFO/ForkPoolWorker-2] Inicio de obtención de token
+[2025-10-21 14:00:00,986: INFO/ForkPoolWorker-2] Token actualizado correctamente
+[2025-10-21 14:00:00,988: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_obtener_token[aa3f5a15-e3dc-418a-99cd-1aee8c10f583] succeeded in 0.9560883730009664s: None
+
+worker: Warm shutdown (MainProcess)
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 14:00:53
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         integrations:0x73466ee5f740
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 14:00:53,339: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 14:00:53,346: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 14:00:54,356: INFO/MainProcess] mingle: all alone
+[2025-10-21 14:00:54,367: INFO/MainProcess] celery@ia-customer-portal ready.
+[2025-10-21 14:01:09,638: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[f24277de-d7bd-41ec-85d9-87e169284936] received
+[2025-10-21 14:01:09,640: INFO/ForkPoolWorker-2] Inicio de obtención de token
+[2025-10-21 14:01:10,556: INFO/ForkPoolWorker-2] Token actualizado correctamente
+[2025-10-21 14:01:10,563: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_obtener_token[f24277de-d7bd-41ec-85d9-87e169284936] succeeded in 0.9229047469998477s: None
+[2025-10-21 14:01:19,890: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[b6db5dba-cef6-4e96-8104-ce1fa22fe530] received
+[2025-10-21 14:01:19,892: INFO/ForkPoolWorker-2] Inicio de ingesta de API
+[2025-10-21 14:01:20,933: INFO/ForkPoolWorker-2] Se recibieron 0 alarmas de la API
+[2025-10-21 14:01:20,933: INFO/ForkPoolWorker-2] Ingesta finalizada. Nuevas filas insertadas: 0
+[2025-10-21 14:01:20,937: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_ingesta_api[b6db5dba-cef6-4e96-8104-ce1fa22fe530] succeeded in 1.0454267599998275s: None
+
+worker: Warm shutdown (MainProcess)
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 14:03:36
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         integrations:0x7540a2cc03b0
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 14:03:36,573: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 14:03:36,577: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 14:03:37,588: INFO/MainProcess] mingle: all alone
+[2025-10-21 14:03:37,607: INFO/MainProcess] celery@ia-customer-portal ready.
+[2025-10-21 14:03:42,561: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[205a34a4-defe-44c3-8403-af1067f383d7] received
+[2025-10-21 14:03:42,563: INFO/ForkPoolWorker-2] Inicio de obtención de token
+[2025-10-21 14:03:43,452: INFO/ForkPoolWorker-2] Token actualizado correctamente
+[2025-10-21 14:03:43,456: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_obtener_token[205a34a4-defe-44c3-8403-af1067f383d7] succeeded in 0.8930364949919749s: None
+[2025-10-21 14:03:53,068: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[2730db5e-c83a-46e2-856c-aae0daf11039] received
+[2025-10-21 14:03:53,070: INFO/ForkPoolWorker-2] Inicio de ingesta de API
+[2025-10-21 14:03:54,166: INFO/ForkPoolWorker-2] Se recibieron 0 alarmas de la API
+[2025-10-21 14:03:54,166: INFO/ForkPoolWorker-2] Ingesta finalizada. Nuevas filas insertadas: 0
+[2025-10-21 14:03:54,169: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_ingesta_api[2730db5e-c83a-46e2-856c-aae0daf11039] succeeded in 1.0996458920126315s: None
+[2025-10-21 14:04:23,797: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[66d566dd-401d-4791-91c5-3e7802d8ee4a] received
+[2025-10-21 14:04:23,799: INFO/ForkPoolWorker-2] Inicio de ingesta de API
+[2025-10-21 14:04:24,878: INFO/ForkPoolWorker-2] Se recibieron 0 alarmas de la API
+[2025-10-21 14:04:24,878: INFO/ForkPoolWorker-2] Ingesta finalizada. Nuevas filas insertadas: 0
+[2025-10-21 14:04:24,882: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_ingesta_api[66d566dd-401d-4791-91c5-3e7802d8ee4a] succeeded in 1.082200049990206s: None
+
+worker: Warm shutdown (MainProcess)
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 14:04:38
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         integrations:0x7211578bc8c0
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 14:04:38,696: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 14:04:38,700: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 14:04:39,710: INFO/MainProcess] mingle: all alone
+[2025-10-21 14:04:39,721: INFO/MainProcess] celery@ia-customer-portal ready.
+[2025-10-21 14:04:45,964: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[45962b0e-2289-4391-838b-b67681475beb] received
+[2025-10-21 14:04:45,967: INFO/ForkPoolWorker-2] Inicio de ingesta de API
+[2025-10-21 14:04:45,967: ERROR/ForkPoolWorker-2] Error durante la ingesta de API: cannot access local variable 'response' where it is not associated with a value
+Traceback (most recent call last):
+  File "/home/inntesec-ia/Proyecto-Dashboard/mysite/integrations/tasks.py", line 45, in tarea_ingesta_api
+    logging.info(f"Llamando API con URL: {response.url}")
+                                          ^^^^^^^^
+UnboundLocalError: cannot access local variable 'response' where it is not associated with a value
+[2025-10-21 14:04:45,975: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_ingesta_api[45962b0e-2289-4391-838b-b67681475beb] succeeded in 0.008914906007703394s: None
+
+worker: Warm shutdown (MainProcess)
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 14:07:37
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         integrations:0x754f35eb83b0
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 14:07:37,807: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 14:07:37,813: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 14:07:38,824: INFO/MainProcess] mingle: all alone
+[2025-10-21 14:07:38,836: INFO/MainProcess] celery@ia-customer-portal ready.
+[2025-10-21 14:07:51,592: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[9dbc0b7b-7195-42a9-8ba8-3ea78ad206f6] received
+[2025-10-21 14:07:51,595: INFO/ForkPoolWorker-2] Inicio de obtención de token
+[2025-10-21 14:07:52,494: INFO/ForkPoolWorker-2] Token actualizado correctamente
+[2025-10-21 14:07:52,498: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_obtener_token[9dbc0b7b-7195-42a9-8ba8-3ea78ad206f6] succeeded in 0.9036868779949145s: None
+[2025-10-21 14:08:02,238: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[3ae07fd1-f372-4835-abc2-96cde930b011] received
+[2025-10-21 14:08:02,240: INFO/ForkPoolWorker-2] Inicio de ingesta de API
+[2025-10-21 14:08:03,346: INFO/ForkPoolWorker-2] Llamada API: https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760796482241&toDate=1761055682241&filter=all&size=1000 | Status: 200
+[2025-10-21 14:08:03,376: INFO/ForkPoolWorker-2] Se recibieron 0 alarmas de la API
+[2025-10-21 14:08:03,380: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_ingesta_api[3ae07fd1-f372-4835-abc2-96cde930b011] succeeded in 1.139581993003958s: None
+
+worker: Warm shutdown (MainProcess)
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 14:10:11
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         integrations:0x7e83298b1220
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 14:10:12,081: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 14:10:12,085: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 14:10:13,095: INFO/MainProcess] mingle: all alone
+[2025-10-21 14:10:13,106: INFO/MainProcess] celery@ia-customer-portal ready.
+[2025-10-21 14:10:22,753: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[4d387c75-9be5-4b18-bd60-a4b40eeb4d8e] received
+[2025-10-21 14:10:22,756: INFO/ForkPoolWorker-2] Inicio de obtención de token
+[2025-10-21 14:10:23,600: INFO/ForkPoolWorker-2] Token actualizado correctamente
+[2025-10-21 14:10:23,608: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_obtener_token[4d387c75-9be5-4b18-bd60-a4b40eeb4d8e] succeeded in 0.8521094030002132s: None
+[2025-10-21 14:10:32,073: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[2a8ccde8-a274-4b46-81e4-28bd77bd109e] received
+[2025-10-21 14:10:32,075: INFO/ForkPoolWorker-2] Inicio de ingesta de API
+[2025-10-21 14:10:33,150: INFO/ForkPoolWorker-2] Llamada API: https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451032076&toDate=1761055832076&filter=all&size=1000 | Status: 200
+[2025-10-21 14:10:33,180: INFO/ForkPoolWorker-2] Se recibieron 0 alarmas de la API
+[2025-10-21 14:10:33,184: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_ingesta_api[2a8ccde8-a274-4b46-81e4-28bd77bd109e] succeeded in 1.10950662799587s: None
+
+worker: Warm shutdown (MainProcess)
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 14:11:01
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         integrations:0x79065ceb0740
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 14:11:02,039: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 14:11:02,043: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 14:11:03,063: INFO/MainProcess] mingle: all alone
+[2025-10-21 14:11:03,087: INFO/MainProcess] celery@ia-customer-portal ready.
+[2025-10-21 14:11:06,239: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[d983cb18-e8bf-45f7-947a-7a495fcf7ed9] received
+[2025-10-21 14:11:06,241: INFO/ForkPoolWorker-2] Inicio de ingesta de API
+[2025-10-21 14:11:07,190: INFO/ForkPoolWorker-2] Llamada API: https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760623866242&toDate=1761055866242&filter=all&size=1000 | Status: 200
+[2025-10-21 14:11:07,221: INFO/ForkPoolWorker-2] Se recibieron 0 alarmas de la API
+[2025-10-21 14:11:07,228: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_ingesta_api[d983cb18-e8bf-45f7-947a-7a495fcf7ed9] succeeded in 0.9868967450020136s: None
+
+worker: Warm shutdown (MainProcess)
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 14:14:03
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         integrations:0x7b24d36b49e0
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 14:14:03,957: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 14:14:03,964: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 14:14:04,973: INFO/MainProcess] mingle: all alone
+[2025-10-21 14:14:04,989: INFO/MainProcess] celery@ia-customer-portal ready.
+[2025-10-21 14:14:10,646: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[6bc05246-2bc9-48d1-9091-c3bcf4ef45fc] received
+[2025-10-21 14:14:10,649: INFO/ForkPoolWorker-2] Inicio de obtención de token
+[2025-10-21 14:14:11,636: INFO/ForkPoolWorker-2] Token actualizado correctamente
+[2025-10-21 14:14:11,643: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_obtener_token[6bc05246-2bc9-48d1-9091-c3bcf4ef45fc] succeeded in 0.9946082219976233s: None
+[2025-10-21 14:14:17,618: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[cab0c0d1-5e33-4dad-93c9-779839f8b4df] received
+[2025-10-21 14:14:17,620: INFO/ForkPoolWorker-2] Inicio de ingesta de API
+[2025-10-21 14:14:18,633: INFO/ForkPoolWorker-2] Llamada API: https://alarmsone.manageengine.com/rest/json/listAlarms?filter=all&size=1000 | Status: 200
+[2025-10-21 14:14:18,664: INFO/ForkPoolWorker-2] Cantidad de alarmas recibidas: 0
+[2025-10-21 14:14:18,664: INFO/ForkPoolWorker-2] No se recibieron alarmas de la API
+[2025-10-21 14:14:18,668: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_ingesta_api[cab0c0d1-5e33-4dad-93c9-779839f8b4df] succeeded in 1.048761669997475s: None
+
+worker: Warm shutdown (MainProcess)
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 14:17:08
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         integrations:0x7f22915b09b0
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 14:17:09,025: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 14:17:09,031: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 14:17:10,041: INFO/MainProcess] mingle: all alone
+[2025-10-21 14:17:10,053: INFO/MainProcess] celery@ia-customer-portal ready.
+[2025-10-21 14:17:21,153: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[f725ecbc-d49a-4092-a4d2-aabf25377e7b] received
+[2025-10-21 14:17:21,156: INFO/ForkPoolWorker-2] Inicio de obtención de token
+[2025-10-21 14:17:22,330: INFO/ForkPoolWorker-2] Token actualizado correctamente
+[2025-10-21 14:17:22,336: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_obtener_token[f725ecbc-d49a-4092-a4d2-aabf25377e7b] succeeded in 1.1796584479889134s: None
+[2025-10-21 14:17:27,451: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[f9d4a685-d755-41ba-9e66-2ff1b2557446] received
+[2025-10-21 14:17:27,454: INFO/ForkPoolWorker-2] Inicio de ingesta de API
+[2025-10-21 14:17:28,454: INFO/ForkPoolWorker-2] Llamada API: https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797047454&toDate=1761056247454&filter=all&size=1000 | Status: 200
+[2025-10-21 14:17:28,484: INFO/ForkPoolWorker-2] Se recibieron 0 alarmas de la API
+[2025-10-21 14:17:28,488: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_ingesta_api[f9d4a685-d755-41ba-9e66-2ff1b2557446] succeeded in 1.0347127759887371s: None
+
+worker: Warm shutdown (MainProcess)
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 14:19:21
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         integrations:0x7c54c11bc590
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 14:19:21,537: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 14:19:21,541: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 14:19:22,551: INFO/MainProcess] mingle: all alone
+[2025-10-21 14:19:22,563: INFO/MainProcess] celery@ia-customer-portal ready.
+[2025-10-21 14:19:30,344: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[e921f9cd-a520-4fb8-bb61-8cbeae945bb9] received
+[2025-10-21 14:19:30,347: INFO/ForkPoolWorker-2] Inicio de obtención de token
+[2025-10-21 14:19:31,245: INFO/ForkPoolWorker-2] Token actualizado correctamente
+[2025-10-21 14:19:31,250: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_obtener_token[e921f9cd-a520-4fb8-bb61-8cbeae945bb9] succeeded in 0.9037381429952802s: None
+[2025-10-21 14:19:38,191: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[41a293a5-e895-4987-88cb-6f8c504bbe00] received
+[2025-10-21 14:19:38,194: INFO/ForkPoolWorker-2] Inicio de ingesta de API
+[2025-10-21 14:19:38,194: ERROR/ForkPoolWorker-2] Error inesperado durante la ingesta de API: Falta ALARMSONE_TOKEN
+Traceback (most recent call last):
+  File "/home/inntesec-ia/Proyecto-Dashboard/mysite/integrations/tasks.py", line 53, in tarea_ingesta_api
+    result = list_alarms_all(from_dt=from_dt, to_dt=to_dt, page_size=200, max_pages=50)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/mysite/integrations/alarmsone.py", line 60, in list_alarms_all
+    raw, _ = list_alarms(
+             ^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/mysite/integrations/alarmsone.py", line 26, in list_alarms
+    "Authorization": f"Bearer {_token()}",
+                               ^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/mysite/integrations/alarmsone.py", line 11, in _token
+    raise RuntimeError("Falta ALARMSONE_TOKEN")
+RuntimeError: Falta ALARMSONE_TOKEN
+[2025-10-21 14:19:38,199: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_ingesta_api[41a293a5-e895-4987-88cb-6f8c504bbe00] succeeded in 0.00562847699620761s: None
+
+worker: Warm shutdown (MainProcess)
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 14:21:26
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         integrations:0x7182754c0140
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 14:21:26,881: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 14:21:26,885: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 14:21:27,896: INFO/MainProcess] mingle: all alone
+[2025-10-21 14:21:27,909: INFO/MainProcess] celery@ia-customer-portal ready.
+[2025-10-21 14:21:34,730: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[b08a5769-d103-432f-b16c-892522cd698a] received
+[2025-10-21 14:21:34,733: INFO/ForkPoolWorker-2] Inicio de obtención de token
+[2025-10-21 14:21:35,690: INFO/ForkPoolWorker-2] Token actualizado correctamente
+[2025-10-21 14:21:35,697: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_obtener_token[b08a5769-d103-432f-b16c-892522cd698a] succeeded in 0.9635134029958863s: None
+[2025-10-21 14:21:42,422: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[ed38192a-a718-45e5-986b-52070006858e] received
+[2025-10-21 14:21:42,424: INFO/ForkPoolWorker-2] Inicio de ingesta de API
+[2025-10-21 14:21:42,924: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797302425&toDate=1761056502425&filter=all&size=200&from=0 "HTTP/1.1 200 "
+[2025-10-21 14:21:43,452: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797302425&toDate=1761056502425&filter=all&size=200&from=200 "HTTP/1.1 200 "
+[2025-10-21 14:21:43,863: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797302425&toDate=1761056502425&filter=all&size=200&from=400 "HTTP/1.1 200 "
+[2025-10-21 14:21:44,350: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797302425&toDate=1761056502425&filter=all&size=200&from=600 "HTTP/1.1 200 "
+[2025-10-21 14:21:44,754: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797302425&toDate=1761056502425&filter=all&size=200&from=800 "HTTP/1.1 200 "
+[2025-10-21 14:21:45,249: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797302425&toDate=1761056502425&filter=all&size=200&from=1000 "HTTP/1.1 200 "
+[2025-10-21 14:21:45,655: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797302425&toDate=1761056502425&filter=all&size=200&from=1200 "HTTP/1.1 200 "
+[2025-10-21 14:21:46,105: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797302425&toDate=1761056502425&filter=all&size=200&from=1400 "HTTP/1.1 200 "
+[2025-10-21 14:21:46,619: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797302425&toDate=1761056502425&filter=all&size=200&from=1600 "HTTP/1.1 200 "
+[2025-10-21 14:21:47,086: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797302425&toDate=1761056502425&filter=all&size=200&from=1800 "HTTP/1.1 200 "
+[2025-10-21 14:21:47,507: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797302425&toDate=1761056502425&filter=all&size=200&from=2000 "HTTP/1.1 200 "
+[2025-10-21 14:21:48,009: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797302425&toDate=1761056502425&filter=all&size=200&from=2200 "HTTP/1.1 200 "
+[2025-10-21 14:21:48,490: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797302425&toDate=1761056502425&filter=all&size=200&from=2400 "HTTP/1.1 200 "
+[2025-10-21 14:21:48,941: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797302425&toDate=1761056502425&filter=all&size=200&from=2600 "HTTP/1.1 200 "
+[2025-10-21 14:21:49,014: INFO/ForkPoolWorker-2] Se recibieron 2677 alarmas de la API
+[2025-10-21 14:22:01,249: INFO/ForkPoolWorker-2] Ingesta finalizada. Nuevas filas insertadas: 2677
+[2025-10-21 14:22:01,255: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_ingesta_api[ed38192a-a718-45e5-986b-52070006858e] succeeded in 18.831037552008638s: None
+[2025-10-21 14:22:18,852: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[32c9d88d-0d51-4742-98ea-6afbf2e7fb3e] received
+[2025-10-21 14:22:18,854: INFO/ForkPoolWorker-2] Inicio de ingesta de API
+[2025-10-21 14:22:19,176: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797338854&toDate=1761056538854&filter=all&size=200&from=0 "HTTP/1.1 200 "
+[2025-10-21 14:22:19,654: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797338854&toDate=1761056538854&filter=all&size=200&from=200 "HTTP/1.1 200 "
+[2025-10-21 14:22:20,092: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797338854&toDate=1761056538854&filter=all&size=200&from=400 "HTTP/1.1 200 "
+[2025-10-21 14:22:20,597: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797338854&toDate=1761056538854&filter=all&size=200&from=600 "HTTP/1.1 200 "
+[2025-10-21 14:22:21,024: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797338854&toDate=1761056538854&filter=all&size=200&from=800 "HTTP/1.1 200 "
+[2025-10-21 14:22:21,524: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797338854&toDate=1761056538854&filter=all&size=200&from=1000 "HTTP/1.1 200 "
+[2025-10-21 14:22:21,933: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797338854&toDate=1761056538854&filter=all&size=200&from=1200 "HTTP/1.1 200 "
+[2025-10-21 14:22:22,343: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797338854&toDate=1761056538854&filter=all&size=200&from=1400 "HTTP/1.1 200 "
+[2025-10-21 14:22:22,808: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797338854&toDate=1761056538854&filter=all&size=200&from=1600 "HTTP/1.1 200 "
+[2025-10-21 14:22:23,211: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797338854&toDate=1761056538854&filter=all&size=200&from=1800 "HTTP/1.1 200 "
+[2025-10-21 14:22:23,689: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797338854&toDate=1761056538854&filter=all&size=200&from=2000 "HTTP/1.1 200 "
+[2025-10-21 14:22:24,165: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797338854&toDate=1761056538854&filter=all&size=200&from=2200 "HTTP/1.1 200 "
+[2025-10-21 14:22:24,681: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797338854&toDate=1761056538854&filter=all&size=200&from=2400 "HTTP/1.1 200 "
+[2025-10-21 14:22:25,150: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760797338854&toDate=1761056538854&filter=all&size=200&from=2600 "HTTP/1.1 200 "
+[2025-10-21 14:22:25,225: INFO/ForkPoolWorker-2] Se recibieron 2677 alarmas de la API
+[2025-10-21 14:22:27,393: INFO/ForkPoolWorker-2] Ingesta finalizada. Nuevas filas insertadas: 0
+[2025-10-21 14:22:27,399: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_ingesta_api[32c9d88d-0d51-4742-98ea-6afbf2e7fb3e] succeeded in 8.546121459003189s: None
+
+worker: Warm shutdown (MainProcess)
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 14:23:40
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         integrations:0x78a47ccc0770
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 14:23:40,949: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 14:23:40,954: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 14:23:41,965: INFO/MainProcess] mingle: all alone
+[2025-10-21 14:23:41,976: INFO/MainProcess] celery@ia-customer-portal ready.
+[2025-10-21 14:23:48,949: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[a95f937d-8240-4a95-93be-0d9d13d51a55] received
+[2025-10-21 14:23:48,954: INFO/ForkPoolWorker-2] Inicio de obtención de token
+[2025-10-21 14:23:49,934: INFO/ForkPoolWorker-2] Token actualizado correctamente
+[2025-10-21 14:23:49,941: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_obtener_token[a95f937d-8240-4a95-93be-0d9d13d51a55] succeeded in 0.9877674220042536s: None
+[2025-10-21 14:23:52,519: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[53f0469e-862f-458e-87a8-b2fb6abdc36f] received
+[2025-10-21 14:23:52,521: INFO/ForkPoolWorker-2] Inicio de ingesta de API
+[2025-10-21 14:23:52,959: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=0 "HTTP/1.1 200 "
+[2025-10-21 14:23:53,429: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=200 "HTTP/1.1 200 "
+[2025-10-21 14:23:53,825: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=400 "HTTP/1.1 200 "
+[2025-10-21 14:23:54,312: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=600 "HTTP/1.1 200 "
+[2025-10-21 14:23:54,734: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=800 "HTTP/1.1 200 "
+[2025-10-21 14:23:55,250: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=1000 "HTTP/1.1 200 "
+[2025-10-21 14:23:55,669: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=1200 "HTTP/1.1 200 "
+[2025-10-21 14:23:56,081: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=1400 "HTTP/1.1 200 "
+[2025-10-21 14:23:56,550: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=1600 "HTTP/1.1 200 "
+[2025-10-21 14:23:56,952: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=1800 "HTTP/1.1 200 "
+[2025-10-21 14:23:57,356: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=2000 "HTTP/1.1 200 "
+[2025-10-21 14:23:57,760: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=2200 "HTTP/1.1 200 "
+[2025-10-21 14:23:58,244: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=2400 "HTTP/1.1 200 "
+[2025-10-21 14:23:58,755: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=2600 "HTTP/1.1 200 "
+[2025-10-21 14:23:59,249: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=2800 "HTTP/1.1 200 "
+[2025-10-21 14:23:59,655: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=3000 "HTTP/1.1 200 "
+[2025-10-21 14:24:00,100: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=3200 "HTTP/1.1 200 "
+[2025-10-21 14:24:00,564: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=3400 "HTTP/1.1 200 "
+[2025-10-21 14:24:00,983: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=3600 "HTTP/1.1 200 "
+[2025-10-21 14:24:01,391: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=3800 "HTTP/1.1 200 "
+[2025-10-21 14:24:01,870: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=4000 "HTTP/1.1 200 "
+[2025-10-21 14:24:02,362: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=4200 "HTTP/1.1 200 "
+[2025-10-21 14:24:02,765: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=4400 "HTTP/1.1 200 "
+[2025-10-21 14:24:03,242: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=4600 "HTTP/1.1 200 "
+[2025-10-21 14:24:03,650: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=4800 "HTTP/1.1 200 "
+[2025-10-21 14:24:04,135: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=5000 "HTTP/1.1 200 "
+[2025-10-21 14:24:04,641: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=5200 "HTTP/1.1 200 "
+[2025-10-21 14:24:05,070: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=5400 "HTTP/1.1 200 "
+[2025-10-21 14:24:05,558: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=5600 "HTTP/1.1 200 "
+[2025-10-21 14:24:06,060: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=5800 "HTTP/1.1 200 "
+[2025-10-21 14:24:06,539: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=6000 "HTTP/1.1 200 "
+[2025-10-21 14:24:07,006: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=6200 "HTTP/1.1 200 "
+[2025-10-21 14:24:07,403: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=6400 "HTTP/1.1 200 "
+[2025-10-21 14:24:07,887: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=6600 "HTTP/1.1 200 "
+[2025-10-21 14:24:08,314: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=6800 "HTTP/1.1 200 "
+[2025-10-21 14:24:08,752: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=7000 "HTTP/1.1 200 "
+[2025-10-21 14:24:08,754: INFO/ForkPoolWorker-2] Se recibieron 7015 alarmas de la API
+[2025-10-21 14:24:31,096: INFO/ForkPoolWorker-2] Ingesta finalizada. Nuevas filas insertadas: 4338
+[2025-10-21 14:24:31,111: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_ingesta_api[53f0469e-862f-458e-87a8-b2fb6abdc36f] succeeded in 38.59043161899899s: None

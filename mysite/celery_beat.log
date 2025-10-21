@@ -1,0 +1,11 @@
+[2025-10-21 13:24:54,506: INFO/MainProcess] beat: Starting...
+celery beat v5.5.3 (immunity) is starting.
+__    -    ... __   -        _
+LocalTime -> 2025-10-21 13:24:54
+Configuration ->
+    . broker -> redis://localhost:6379/0
+    . loader -> celery.loaders.app.AppLoader
+    . scheduler -> celery.beat.PersistentScheduler
+    . db -> celerybeat-schedule
+    . logfile -> [stderr]@%INFO
+    . maxinterval -> 5.00 minutes (300s)

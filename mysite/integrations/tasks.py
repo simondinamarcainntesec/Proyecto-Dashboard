@@ -1,44 +1,98 @@
-from celery import shared_task
-import subprocess
 import os
-from datetime import datetime
-import pytz
+import subprocess
+import logging
+from celery import shared_task
+from datetime import datetime, timedelta
+from pytz import timezone
+import requests
+from inyeccion_api.models import Alarm
+from inyeccion_api.views import _map_api_alarm_to_model  # Ajusta según dónde esté
+from integrations.alarmsone import list_alarms_all
 
+# === Configuración de logging ===
+log_file = os.path.join(os.path.dirname(__file__), '../../celery_run_log.txt')
+logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s - %(message)s')
+
+TOKEN_FILE = os.path.join(os.path.dirname(__file__), '../../token.txt')
+API_URL = "https://alarmsone.manageengine.com/rest/json/listAlarms"  # Endpoint correcto
+
+# === Tarea para obtener el token ===
 @shared_task
 def tarea_obtener_token():
-    count_file = "celery_run_count.txt"
-    log_file = "celery_run_log.txt"
-
-    # Obtener número de ejecución
-    if os.path.exists(count_file):
-        with open(count_file, "r") as f:
-            count = int(f.read().strip()) + 1
-    else:
-        count = 1
-    with open(count_file, "w") as f:
-        f.write(str(count))
-
-    # Obtener hora local de Chile
-    tz = pytz.timezone("America/Santiago")
-    now = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
-
     try:
-        # Ruta absoluta del script obtener_token.py
-        script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../obtener_token.py"))
+        logging.info("Inicio de obtención de token")
         result = subprocess.run(
-            ["python3", script_path],
+            ["python3", os.path.join(os.path.dirname(__file__), "../../obtener_token.py")],
             capture_output=True,
-            text=True
+            text=True,
+            check=True
         )
+        token = result.stdout.strip()
 
-        with open(log_file, "a") as log:
-            log.write(f"=== Ejecución #{count} ({now}) ===\n")
-            if result.returncode == 0:
-                log.write(f"✅ Ejecución correcta\n{result.stdout}\n\n")
-            else:
-                log.write(f"❌ Error al ejecutar script\n{result.stderr}\n\n")
+        with open(TOKEN_FILE, "w") as f:
+            f.write(token)
+        logging.info("Token actualizado correctamente")
+
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Error al ejecutar obtener_token.py: {e}")
+    except Exception as e:
+        logging.exception(f"Error inesperado al obtener token: {e}")
+
+# === Tarea de ingesta usando _map_api_alarm_to_model ===
+TOKEN_FILE = os.path.join(os.path.dirname(__file__), '../../token.txt')
+
+def _list_alarms_with_token(from_dt, to_dt, token, page_size=200, max_pages=50):
+    """
+    Wrapper de list_alarms_all que inyecta el token directamente.
+    """
+    import integrations.alarmsone as alarmsone
+    original_token_func = alarmsone._token
+    try:
+        # Sobrescribir temporalmente la función _token para devolver nuestro token
+        alarmsone._token = lambda: token
+        return alarmsone.list_alarms_all(from_dt=from_dt, to_dt=to_dt, page_size=page_size, max_pages=max_pages)
+    finally:
+        # Restaurar la función original
+        alarmsone._token = original_token_func
+
+@shared_task
+def tarea_ingesta_api():
+    try:
+        logging.info("Inicio de ingesta de API")
+
+        # Leer token actualizado
+        if not os.path.exists(TOKEN_FILE):
+            logging.error("No se encontró token.txt")
+            return
+        with open(TOKEN_FILE, "r") as f:
+            API_TOKEN = f.read().strip()
+
+        tz = timezone("America/Santiago")
+        now = datetime.now(tz)
+        from_dt = now - timedelta(days=7)
+        to_dt = now
+
+        # Traer todas las alarmas usando wrapper con token
+        result = _list_alarms_with_token(from_dt=from_dt, to_dt=to_dt, token=API_TOKEN)
+        alarms_data = result.get("alarms", [])
+        logging.info(f"Se recibieron {len(alarms_data)} alarmas de la API")
+
+        if not alarms_data:
+            return
+
+        count_inserted = 0
+        for item in alarms_data:
+            alarm_obj = _map_api_alarm_to_model(item)
+            if not alarm_obj:
+                continue
+
+            if Alarm.objects.filter(alertid=alarm_obj.alertid).exists():
+                continue
+
+            alarm_obj.save()
+            count_inserted += 1
+
+        logging.info(f"Ingesta finalizada. Nuevas filas insertadas: {count_inserted}")
 
     except Exception as e:
-        with open(log_file, "a") as log:
-            log.write(f"=== Ejecución #{count} ({now}) ===\n")
-            log.write(f"❌ Excepción: {str(e)}\n\n")
+            logging.exception(f"Error inesperado durante la ingesta de API: {e}")

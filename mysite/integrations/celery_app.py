@@ -1,5 +1,6 @@
 from celery import Celery
 from celery.schedules import crontab
+from datetime import timedelta
 import os
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "mysite.settings")
@@ -8,14 +9,18 @@ app = Celery("integrations")
 app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
 
-# === Configuración de zona horaria ===
+# Zona horaria
 app.conf.timezone = "America/Santiago"
-app.conf.enable_utc = False  # importante para respetar la zona local
+app.conf.enable_utc = False
 
-# === Programación: ejecutar cada hora en el minuto 0 ===
+# === Programación de tareas ===
 app.conf.beat_schedule = {
     "obtener-token-cada-hora": {
         "task": "integrations.tasks.tarea_obtener_token",
-        "schedule": crontab(minute="0"),  # cada hora
+        "schedule": crontab(minute="*"),  # cada hora en punto
+    },
+    "ingesta-api-cada-hora": {
+        "task": "integrations.tasks.tarea_ingesta_api",
+        "schedule": timedelta(hours=1),
     },
 }
