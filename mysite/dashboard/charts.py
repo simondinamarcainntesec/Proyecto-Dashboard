@@ -120,7 +120,7 @@ def build_trend_by_action(dt_from=None, dt_to=None):
 
     rows = (
         qs.annotate(date=TruncDay("event_time"))
-          .values("date", "action")
+          .values("date", "actions")   # <<<<< CAMBIO
           .annotate(total=Count("id"))
           .order_by("date")
     )
@@ -128,7 +128,7 @@ def build_trend_by_action(dt_from=None, dt_to=None):
     trend_by_action = defaultdict(lambda: [0]*len(labels))
     for r in rows:
         date_str = r["date"].strftime("%Y-%m-%d")
-        act = r["action"] or "N/A"
+        act = r["actions"] or "N/A"    # <<<<< CAMBIO
         i = idx.get(date_str)
         if i is not None:
             trend_by_action[act][i] = r["total"]
@@ -181,13 +181,13 @@ def build_action_bar_data(dt_from=None, dt_to=None, top_n=10):
     """
     qs = _base_qs(dt_from, dt_to)
 
-    rows = qs.values("action").annotate(total=Count("id")).order_by("-total")[:top_n]
-    action_counts = {(r["action"] or "N/A"): r["total"] for r in rows}
+    rows = qs.values("actions").annotate(total=Count("id")).order_by("-total")[:top_n]  # <<<<< CAMBIO
+    action_counts = {(r["actions"] or "N/A"): r["total"] for r in rows}                # <<<<< CAMBIO
 
     by_sev = defaultdict(Counter)
-    for r in qs.values("severity", "action").annotate(total=Count("id")):
+    for r in qs.values("severity", "actions").annotate(total=Count("id")):             # <<<<< CAMBIO
         sev = r["severity"] if r["severity"] is not None else "N/A"
-        act = r["action"] or "N/A"
+        act = r["actions"] or "N/A"                                                    # <<<<< CAMBIO
         by_sev[sev][act] = r["total"]
 
     action_counts_by_severity = {
@@ -197,9 +197,9 @@ def build_action_bar_data(dt_from=None, dt_to=None, top_n=10):
 
     # NUEVO: acciones por dispositivo (para filtrar el bar de acciones al click en la tabla)
     by_dev = defaultdict(Counter)
-    for r in _base_qs(dt_from, dt_to).values("device_name", "action").annotate(total=Count("id")):
+    for r in _base_qs(dt_from, dt_to).values("device_name", "actions").annotate(total=Count("id")):  # <<<<< CAMBIO
         dev = r["device_name"] or "N/A"
-        act = r["action"] or "N/A"
+        act = r["actions"] or "N/A"                                                                  # <<<<< CAMBIO
         by_dev[dev][act] = r["total"]
     action_counts_by_device = {dev: dict(cnt) for dev, cnt in by_dev.items()}
 
@@ -214,12 +214,12 @@ def build_device_by_action(dt_from=None, dt_to=None, top_n=10):
 
     by_action = defaultdict(Counter)
     rows = (
-        qs.values("action", "device_name")
+        qs.values("actions", "device_name")   # <<<<< CAMBIO
           .annotate(total=Count("id"))
           .order_by("-total")
     )
     for r in rows:
-        act = r["action"] or "N/A"
+        act = r["actions"] or "N/A"          # <<<<< CAMBIO
         dev = r["device_name"] or "N/A"
         by_action[act][dev] = r["total"]
 
@@ -306,10 +306,10 @@ def build_hour_filter_payload(dt_from, dt_to, top_n=10):
     # FULL sin recorte para filtros por dispositivo
     device_counts_by_hour_full = {h: dict(m) for h, m in device_counts_by_hour_full.items()}
 
-    # 4) Por acción y hora
+    # 4) Por acción y hora  (usa 'actions')
     act_rows = (
         qs.annotate(h=TruncHour("event_time", tzinfo=CL_TZ))
-          .values("h", "action")
+          .values("h", "actions")     # <<<<< CAMBIO
           .annotate(total=Count("id"))
     )
     action_counts_by_hour = defaultdict(lambda: defaultdict(int))
@@ -317,7 +317,7 @@ def build_hour_filter_payload(dt_from, dt_to, top_n=10):
         h = r.get("h")
         if h:
             hour = h.strftime("%H")
-            act = r["action"] or "N/A"
+            act = r["actions"] or "N/A"  # <<<<< CAMBIO
             action_counts_by_hour[hour][act] += r["total"]
     action_counts_by_hour = {h: dict(m) for h, m in action_counts_by_hour.items()}
 
@@ -381,11 +381,11 @@ def build_msg_severity_bar_data(dt_from=None, dt_to=None, top_n=10):
         by_msg_dev[msg][dev] = r["total"]
     device_counts_by_msg_severity = {msg: dict(cnt) for msg, cnt in by_msg_dev.items()}
 
-    # Por acción
+    # Por acción  (usa 'actions')
     by_msg_act = defaultdict(Counter)
-    for r in qs.values("msg_severity", "action").annotate(total=Count("id")):
+    for r in qs.values("msg_severity", "actions").annotate(total=Count("id")):  # <<<<< CAMBIO
         msg = r["msg_severity"] or "N/A"
-        act = r["action"] or "N/A"
+        act = r["actions"] or "N/A"                                            # <<<<< CAMBIO
         by_msg_act[msg][act] = r["total"]
     action_counts_by_msg_severity = {msg: dict(cnt) for msg, cnt in by_msg_act.items()}
 

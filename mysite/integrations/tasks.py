@@ -96,3 +96,55 @@ def tarea_ingesta_api():
 
     except Exception as e:
             logging.exception(f"Error inesperado durante la ingesta de API: {e}")
+            
+@shared_task
+def ingesta_mensual_ciclica():
+    """
+    Ingresa datos históricos del mes dividiendo en tramos de 5 días.
+    """
+    try:
+        logging.info("Inicio de ingesta histórica mensual")
+
+        # Leer token actualizado
+        if not os.path.exists(TOKEN_FILE):
+            logging.error("No se encontró token.txt")
+            return
+        with open(TOKEN_FILE, "r") as f:
+            API_TOKEN = f.read().strip()
+
+        tz = timezone("America/Santiago")
+        today = datetime.now(tz)
+        # Empezamos 30 días atrás
+        start_date = today - timedelta(days=30)
+        end_date = start_date + timedelta(days=5)
+
+        total_inserted = 0
+
+        while start_date < today:
+            logging.info(f"Traer alarmas desde {start_date} hasta {end_date}")
+
+            result = _list_alarms_with_token(from_dt=start_date, to_dt=end_date, token=API_TOKEN)
+            alarms_data = result.get("alarms", [])
+            logging.info(f"Se recibieron {len(alarms_data)} alarmas de la API")
+
+            count_inserted = 0
+            for item in alarms_data:
+                alarm_obj = _map_api_alarm_to_model(item)
+                if not alarm_obj:
+                    continue
+                if Alarm.objects.filter(alertid=alarm_obj.alertid).exists():
+                    continue
+                alarm_obj.save()
+                count_inserted += 1
+
+            logging.info(f"Nuevas filas insertadas en este tramo: {count_inserted}")
+            total_inserted += count_inserted
+
+            # Avanzar el rango de 5 días
+            start_date = end_date
+            end_date = min(end_date + timedelta(days=5), today)
+
+        logging.info(f"Ingesta histórica finalizada. Total filas insertadas: {total_inserted}")
+
+    except Exception as e:
+        logging.exception(f"Error inesperado durante la ingesta histórica: {e}")

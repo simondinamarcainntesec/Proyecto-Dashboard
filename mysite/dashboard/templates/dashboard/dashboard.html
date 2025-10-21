@@ -8,7 +8,6 @@
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body class="layout">
@@ -74,14 +73,14 @@
       <div class="card kpi"><div class="kpi-label">Disponibilidad (simulado)</div><div class="kpi-value">99,8%</div></div>
       <div class="card kpi"><div class="kpi-label">Alta Severidad</div><div class="kpi-value" id="kpi-high">{{ kpi_high }}</div></div>
       <div class="card kpi"><div class="kpi-label">Total Alarmas</div><div class="kpi-value" id="kpi-total">{{ kpi_total }}</div></div>
-      <div class="card kpi"><div class="kpi-label">Dispositivos Afectados</div><div class="kpi-value" id="kpi-devices">{{ kpi_dispositivos }}</div></div>
+      <div class="card kpi"><div class="kpi-label">Dispositivos Detectados</div><div class="kpi-value" id="kpi-devices">{{ kpi_dispositivos }}</div></div>
     </section>
 
     <!-- Grilla principal con ÁREAS -->
     <section class="grid grid-main">
       <!-- IZQUIERDA (grande) -->
       <div class="card chart card--trend">
-        <div class="card-head"><h3>Métrica</h3></div>
+        <div class="card-head"><h3>Alarmas por día</h3></div>
         <div class="card-body"><canvas id="trendChart"></canvas></div>
       </div>
 
@@ -103,7 +102,7 @@
 
       <!-- NUEVO: barra de msg_severity -->
       <div class="card chart card--msgsev">
-        <div class="card-head"><h3>Severity Alarm</h3></div>
+        <div class="card-head"><h3>Severidad Alarma</h3></div>
         <div class="card-body"><canvas id="msgSeverityBar"></canvas></div>
       </div>
 
@@ -163,8 +162,6 @@
   {{ trend_by_action|json_script:"trend-by-action" }}
   {{ device_counts_by_action|json_script:"device-counts-by-action" }}
   {{ action_counts_by_device|json_script:"action-counts-by-device" }}
-
-  <!-- ⬇️ FALTABA ESTA LÍNEA -->
   {{ action_counts_by_severity|json_script:"action-counts-by-severity" }}
 
   {{ hour_labels|json_script:"hour-labels" }}
@@ -184,6 +181,10 @@
   {{ msg_severity_counts_by_hour|json_script:"msg-severity-counts-by-hour" }}
   {{ trend_by_msg_severity|json_script:"trend-by-msg-severity" }}
 
-  <script src="{% static 'js/charts.js' %}"></script>
+  <!-- Chart.js global primero -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Bundle modular del dashboard -->
+  <script type="module" src="{% static 'js/alarms_one/dashboard.js' %}"></script>
 </body>
 </html>
