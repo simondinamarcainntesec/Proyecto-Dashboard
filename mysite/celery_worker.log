@@ -950,5 +950,5 @@ worker: Warm shutdown (MainProcess)
 [2025-10-21 14:24:08,314: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=6800 "HTTP/1.1 200 "
 [2025-10-21 14:24:08,752: INFO/ForkPoolWorker-2] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1760451832521&toDate=1761056632521&filter=all&size=200&from=7000 "HTTP/1.1 200 "
 [2025-10-21 14:24:08,754: INFO/ForkPoolWorker-2] Se recibieron 7015 alarmas de la API
-[2025-10-21 14:24:31,096: INFO/ForkPoolWorker-2] Ingesta finalizada. Nuevas filas insertadas: 4338
+[2025-10-21 14:24:31,096: INFO/ForkPoolWorker-2] Ingesta finalizada. Nuevas filas insertadas:             
 [2025-10-21 14:24:31,111: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_ingesta_api[53f0469e-862f-458e-87a8-b2fb6abdc36f] succeeded in 38.59043161899899s: None
