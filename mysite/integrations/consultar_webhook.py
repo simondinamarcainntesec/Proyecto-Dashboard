@@ -7,7 +7,7 @@ WEBHOOK_URL = "https://iaproductivo.inntesec.cl/webhook/4721cd5e-0c36-4773-8292-
 PASSKEY = "@aDv%6rSBPXXhD*iW7dl6PCjOZ4a0Fkc"  # reemplaza con la passkey real
 
 # Parámetro a enviar
-PARAMS = {"value": "Clientes"}
+PARAMS = {"value": "Empresa"}
 
 def consultar_webhook():
     try:

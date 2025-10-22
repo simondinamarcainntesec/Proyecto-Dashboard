@@ -2,7 +2,6 @@
 import {
   normalizeCountsLabels,
   findKeyCI,
-  norm,
   normalizeMapValues,
   readJSON,
   prettyActionLabel,
@@ -10,16 +9,97 @@ import {
 import data from "./data.js";
 import { colorFor, colorForMsgSeverity } from "./theme.js";
 
-export function getActiveCounts(state) {
-  const byMsg = state.msgSeverityFilter && severityCountsForMsgSeverity(state.msgSeverityFilter);
-  const byDev = state.deviceFilter && severityCountsForDevice(state.deviceFilter);
-  const byAct = state.actionFilter && severityCountsForAction(state.actionFilter);
-  const byHour = state.hourFilter && severityCountsForHour(state.hourFilter);
+/* =========================================================
+ *  HELPERS
+ * =======================================================*/
+function top10(m) { return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,10); }
 
-  let base = byMsg || byDev || byAct || byHour || data.severityCounts;
+function applySeveritySlice(counts, severityFilter) {
+  if (!severityFilter) return counts;
+  const realKey = findKeyCI(counts, severityFilter) || severityFilter;
+  const v = Number(counts[realKey] || 0);
+  return { [realKey]: v };
+}
+
+// pivots → severidad (para donut/KPI)
+function sevForDevice(device) {
+  const dev = data.canonicalDeviceKey(device);
+  const out = {};
+  Object.keys(data.deviceBySevFullRaw || {}).forEach((sev) => {
+    const m = (data.deviceBySevFullRaw[sev] || {});
+    out[String(sev).trim()] = Number(m[dev] || 0);
+  });
+  return out;
+}
+function sevForAction(actionKey) {
+  const m = data.actToSev[actionKey] || {};
+  const out = {}; Object.keys(m).forEach((sev) => out[sev] = Number(m[sev] || 0));
+  return out;
+}
+function sevForHour(hour) {
+  const m = data.sevByHourRaw?.[hour] || {};
+  const out = {}; Object.keys(m).forEach((sev)=> out[String(sev).trim()] = Number(m[sev]||0));
+  return out;
+}
+function sevForMsgSeverity(msg) {
+  const m = data.severityByMsgSeverityRaw?.[msg] || {};
+  const out = {}; Object.keys(m).forEach((sev)=> out[String(sev).trim()] = Number(m[sev]||0));
+  return out;
+}
+function sevForLevel(level) {
+  const real = findKeyCI(data.severityByLevelRaw, level) ?? level;
+  const per = data.severityByLevelRaw?.[real] || {};
+  const out = {}; Object.keys(per).forEach((sev)=> out[String(sev).trim()] = Number(per[sev]||0));
+  return out;
+}
+function sevForSubtype(subtype) {
+  const real = findKeyCI(data.severityBySubtypeRaw, subtype) ?? subtype;
+  const per = data.severityBySubtypeRaw?.[real] || {};
+  const out = {}; Object.keys(per).forEach((sev)=> out[String(sev).trim()] = Number(per[sev]||0));
+  return out;
+}
+function sevForLogDesc(desc) {
+  const real = findKeyCI(data.severityByLogDescRaw, desc) ?? desc;
+  const per = data.severityByLogDescRaw?.[real] || {};
+  const out = {}; Object.keys(per).forEach((sev)=> out[String(sev).trim()] = Number(per[sev]||0));
+  return out;
+}
+
+// filtro activo (prioridad única)
+function activePivot(state) {
+  return (
+    state.deviceFilter && ["device", state.deviceFilter] ||
+    state.actionFilter && ["action", state.actionFilter] ||
+    state.hourFilter && ["hour", state.hourFilter] ||
+    state.msgSeverityFilter && ["msg", state.msgSeverityFilter] ||
+    state.levelFilter && ["level", state.levelFilter] ||
+    state.subtypeFilter && ["subtype", state.subtypeFilter] ||
+    state.logDescriptionFilter && ["logdesc", state.logDescriptionFilter] ||
+    state.severityFilter && ["severity", state.severityFilter] ||
+    ["none",""]
+  );
+}
+
+/* =========================================================
+ *  DONUT / KPIs
+ * =======================================================*/
+export function getActiveCounts(state) {
+  const [kind, key] = activePivot(state);
+
+  let base;
+  switch (kind) {
+    case "device":  base = sevForDevice(key); break;
+    case "action":  base = sevForAction(key); break;
+    case "hour":    base = sevForHour(key); break;
+    case "msg":     base = sevForMsgSeverity(key); break;
+    case "level":   base = sevForLevel(key); break;
+    case "subtype": base = sevForSubtype(key); break;
+    case "logdesc": base = sevForLogDesc(key); break;
+    default:        base = data.severityCounts; break; // si el pivot ya es severity, luego se recorta
+  }
+
   base = normalizeCountsLabels(base);
   base = applySeveritySlice(base, state.severityFilter);
-
   if (!base || Object.keys(base).length === 0) return { "N/A": 0 };
   return base;
 }
@@ -28,6 +108,7 @@ export function calcKpis(state) {
   const counts = getActiveCounts(state);
   let total = Object.values(counts).reduce((a, b) => a + (Number(b) || 0), 0);
 
+  // Ajuste device → usa total del device
   if (state.deviceFilter && !state.severityFilter) {
     const dk = data.canonicalDeviceKey(state.deviceFilter);
     if (data.deviceCountsAll && Object.prototype.hasOwnProperty.call(data.deviceCountsAll, dk)) {
@@ -39,141 +120,127 @@ export function calcKpis(state) {
   return { total, high, devices };
 }
 
+/* =========================================================
+ *  TREND (Alarmas por día)
+ *  (Si agregas trend-by-level / trend-by-subtype / trend-by-logdesc en backend,
+ *   se activan automáticamente las ramas de abajo.)
+ * =======================================================*/
 export function trendDataForCurrentFilter(state) {
   const { canonicalDeviceKey } = data;
 
-  if (state.deviceFilter && data.trendByDevice[canonicalDeviceKey(state.deviceFilter)]) {
+  if (state.deviceFilter && data.trendByDevice?.[canonicalDeviceKey(state.deviceFilter)]) {
     const dk = canonicalDeviceKey(state.deviceFilter);
-    return {
-      labels: data.trendLabels,
-      datasets: [
-        {
-          label: dk,
-          data: data.trendByDevice[dk],
-          borderColor: "#60A5FA",
-          backgroundColor: "rgba(96,165,250,0.18)",
-          borderWidth: 3,
-          pointRadius: 3,
-          pointHoverRadius: 5,
-          fill: true,
-          tension: 0.35,
-        },
-      ],
-    };
+    return baseTrend(data.trendLabels, [{ label: dk, data: data.trendByDevice[dk], color: "#60A5FA" }]);
   }
-  if (state.actionFilter && data.trendByAction[state.actionFilter]) {
-    return {
-      labels: data.trendLabels,
-      datasets: [
-        {
-          label: `Acción: ${prettyActionLabel(state.actionFilter)}`,
-          data: data.trendByAction[state.actionFilter],
-          borderColor: "#8B5CF6",
-          backgroundColor: "rgba(139,92,246,0.20)",
-          borderWidth: 3,
-          pointRadius: 3,
-          pointHoverRadius: 5,
-          fill: true,
-          tension: 0.35,
-        },
-      ],
-    };
+  if (state.actionFilter && data.trendByAction?.[state.actionFilter]) {
+    return baseTrend(data.trendLabels, [{ label: `Acción: ${prettyActionLabel(state.actionFilter)}`, data: data.trendByAction[state.actionFilter], color: "#8B5CF6" }]);
   }
-  if (state.msgSeverityFilter && data.trendByMsgSeverityRaw[state.msgSeverityFilter]) {
-    return {
-      labels: data.trendLabels,
-      datasets: [
-        {
-          label: `Msg severity: ${state.msgSeverityFilter}`,
-          data: data.trendByMsgSeverityRaw[state.msgSeverityFilter],
-          borderColor: "#F43F5E",
-          backgroundColor: "rgba(244,63,94,0.20)",
-          borderWidth: 3,
-          pointRadius: 3,
-          pointHoverRadius: 5,
-          fill: true,
-          tension: 0.35,
-        },
-      ],
-    };
+  if (state.msgSeverityFilter && data.trendByMsgSeverityRaw?.[state.msgSeverityFilter]) {
+    return baseTrend(data.trendLabels, [{ label: `Msg severity: ${state.msgSeverityFilter}`, data: data.trendByMsgSeverityRaw[state.msgSeverityFilter], color: "#F43F5E" }]);
   }
-  if (state.hourFilter && data.trendByHourRaw[state.hourFilter]) {
-    return {
-      labels: data.trendLabelsHour,
-      datasets: [
-        {
-          label: `Hora ${state.hourFilter}:00`,
-          data: data.trendByHourRaw[state.hourFilter],
-          borderColor: "#22C55E",
-          backgroundColor: "rgba(34,197,94,0.20)",
-          borderWidth: 3,
-          pointRadius: 3,
-          pointHoverRadius: 5,
-          fill: true,
-          tension: 0.35,
-        },
-      ],
-    };
+  if (state.levelFilter && data.trendByLevel?.[state.levelFilter]) {
+    return baseTrend(data.trendLabels, [{ label: `Level: ${state.levelFilter}`, data: data.trendByLevel[state.levelFilter], color: "#0EA5E9" }]);
   }
+  if (state.subtypeFilter && data.trendBySubtype?.[state.subtypeFilter]) {
+    return baseTrend(data.trendLabels, [{ label: `Subtype: ${state.subtypeFilter}`, data: data.trendBySubtype[state.subtypeFilter], color: "#22C55E" }]);
+  }
+  if (state.logDescriptionFilter && data.trendByLogDesc?.[state.logDescriptionFilter]) {
+    return baseTrend(data.trendLabels, [{ label: `Log: ${state.logDescriptionFilter}`, data: data.trendByLogDesc[state.logDescriptionFilter], color: "#FB7185" }]);
+  }
+
+  // Default: por severidad (posibilidad de ocultar una)
   const datasets = Object.keys(data.severityTrendsMap).map((sev) => {
     const sevKey = String(sev).trim();
-    const hidden =
-      state.severityFilter &&
+    const hidden = state.severityFilter &&
       sevKey.toLowerCase() !== String(state.severityFilter).trim().toLowerCase();
     const base = colorFor(sevKey);
     return {
       label: sevKey,
-      data:
-        (data.severityTrendsMap[sev] && data.severityTrendsMap[sev].data) ||
-        new Array(data.trendLabels.length).fill(0),
-      borderColor: base,
-      backgroundColor: base + "33",
-      pointBackgroundColor: base,
-      pointBorderColor: base,
-      borderWidth: 3,
-      pointRadius: hidden ? 0 : 3,
-      pointHoverRadius: hidden ? 0 : 5,
-      fill: true,
-      tension: 0.35,
-      hidden,
+      data: data.severityTrendsMap[sev]?.data || new Array(data.trendLabels.length).fill(0),
+      borderColor: base, backgroundColor: base + "33",
+      borderWidth: 3, pointRadius: hidden ? 0 : 3, pointHoverRadius: hidden ? 0 : 5,
+      fill: true, tension: 0.35, hidden,
     };
   });
   return { labels: data.trendLabels, datasets };
 }
+function baseTrend(labels, items) {
+  const datasets = items.map(({ label, data, color }) => ({
+    label, data,
+    borderColor: color, backgroundColor: color + "33",
+    borderWidth: 3, pointRadius: 3, pointHoverRadius: 5, fill: true, tension: 0.35,
+  }));
+  return { labels, datasets };
+}
 
-// acción → dataset barra
+/* =========================================================
+ *  HOURLY (Alarmas por hora) – opcionales por pivote si backend lo provee
+ * =======================================================*/
+export function hourDataForCurrentFilter(state) {
+  // Puedes mantener tu versión actual si ya la tienes; esta es una referencia.
+  const labels = data.trendLabelsHour || [];
+  // Fallback global
+  const map = readJSON("hour-data") || {};
+  return { labels, data: labels.map(h => Number(map[h] || 0)), label: "Total" };
+}
+
+/* =========================================================
+ *  ACCIONES (barra)
+ * =======================================================*/
 export function actionDataForCurrentFilter(state) {
   const { canonicalDeviceKey } = data;
 
-  if (state.deviceFilter && data.actionByDev[canonicalDeviceKey(state.deviceFilter)]) {
+  if (state.deviceFilter && data.actionByDev?.[canonicalDeviceKey(state.deviceFilter)]) {
     const m = data.actionByDev[canonicalDeviceKey(state.deviceFilter)];
     const keys = Object.keys(m);
-    return { labels: keys.map(prettyActionLabel), data: keys.map((k) => Number(m[k] || 0)), keys };
+    return { labels: keys.map(prettyActionLabel), data: keys.map(k => Number(m[k] || 0)), keys };
   }
   if (state.severityFilter) {
     const realSev = findKeyCI(data.sevToAct, state.severityFilter);
     if (realSev && data.sevToAct[realSev]) {
       const m = data.sevToAct[realSev];
       const keys = Object.keys(m);
-      return { labels: keys.map(prettyActionLabel), data: keys.map((k) => Number(m[k] || 0)), keys };
+      return { labels: keys.map(prettyActionLabel), data: keys.map(k => Number(m[k] || 0)), keys };
     }
   }
-  if (state.msgSeverityFilter && data.actionByMsgSeverityRaw[state.msgSeverityFilter]) {
+  if (state.msgSeverityFilter && data.actionByMsgSeverityRaw?.[state.msgSeverityFilter]) {
     const m = data.actionByMsgSeverityRaw[state.msgSeverityFilter];
     const keys = Object.keys(m);
-    return { labels: keys.map(prettyActionLabel), data: keys.map((k) => Number(m[k] || 0)), keys };
+    return { labels: keys.map(prettyActionLabel), data: keys.map(k => Number(m[k] || 0)), keys };
   }
-  if (state.hourFilter && data.actByHourNorm[state.hourFilter]) {
+  if (state.hourFilter && data.actByHourNorm?.[state.hourFilter]) {
     const m = data.actByHourNorm[state.hourFilter];
     const keys = Object.keys(m);
-    return { labels: keys.map(prettyActionLabel), data: keys.map((k) => Number(m[k] || 0)), keys };
+    return { labels: keys.map(prettyActionLabel), data: keys.map(k => Number(m[k] || 0)), keys };
   }
+  // NUEVOS: Level/Subtype/LogDesc
+  if (state.levelFilter && data.actionByLevelRaw) {
+    const levKey = findKeyCI(data.actionByLevelRaw, state.levelFilter) ?? state.levelFilter;
+    const per = data.actionByLevelRaw[levKey] || {};
+    const keys = Object.keys(per);
+    return { labels: keys.map(prettyActionLabel), data: keys.map(k => Number(per[k] || 0)), keys };
+  }
+  if (state.subtypeFilter && data.actionBySubtypeRaw) {
+    const subKey = findKeyCI(data.actionBySubtypeRaw, state.subtypeFilter) ?? state.subtypeFilter;
+    const per = data.actionBySubtypeRaw[subKey] || {};
+    const keys = Object.keys(per);
+    return { labels: keys.map(prettyActionLabel), data: keys.map(k => Number(per[k] || 0)), keys };
+  }
+  if (state.logDescriptionFilter && data.actionByLogDescRaw) {
+    const logKey = findKeyCI(data.actionByLogDescRaw, state.logDescriptionFilter) ?? state.logDescriptionFilter;
+    const per = data.actionByLogDescRaw[logKey] || {};
+    const keys = Object.keys(per);
+    return { labels: keys.map(prettyActionLabel), data: keys.map(k => Number(per[k] || 0)), keys };
+  }
+
   const m = normalizeMapValues(data.actionCountsRaw);
   const keys = Object.keys(m);
-  return { labels: keys.map(prettyActionLabel), data: keys.map((k) => Number(m[k] || 0)), keys };
+  return { labels: keys.map(prettyActionLabel), data: keys.map(k => Number(m[k] || 0)), keys };
 }
 
-// msg_severity → dataset barra
+/* =========================================================
+ *  MSG SEVERITY (barra)
+ * =======================================================*/
 export function msgSeverityDataForCurrentFilter(state) {
   const { canonicalDeviceKey } = data;
 
@@ -184,7 +251,7 @@ export function msgSeverityDataForCurrentFilter(state) {
       map[msg] = Number((perDev || {})[devKey] || 0);
     });
     const keys = Object.keys(map);
-    return { labels: keys, data: keys.map((k) => map[k]), keys, colors: keys.map(colorForMsgSeverity) };
+    return { labels: keys, data: keys.map(k => map[k]), keys, colors: keys.map(colorForMsgSeverity) };
   }
   if (state.severityFilter && data.severityByMsgSeverityRaw) {
     const map = {};
@@ -193,7 +260,7 @@ export function msgSeverityDataForCurrentFilter(state) {
       map[msg] = Number((perSev || {})[k] || 0);
     });
     const keys = Object.keys(map);
-    return { labels: keys, data: keys.map((k) => map[k]), keys, colors: keys.map(colorForMsgSeverity) };
+    return { labels: keys, data: keys.map(k => map[k]), keys, colors: keys.map(colorForMsgSeverity) };
   }
   if (state.actionFilter && data.actionByMsgSeverityRaw) {
     const map = {};
@@ -203,82 +270,182 @@ export function msgSeverityDataForCurrentFilter(state) {
       map[msg] = Number(per[real] || 0);
     });
     const keys = Object.keys(map);
-    return { labels: keys, data: keys.map((k) => map[k]), keys, colors: keys.map(colorForMsgSeverity) };
+    return { labels: keys, data: keys.map(k => map[k]), keys, colors: keys.map(colorForMsgSeverity) };
   }
-  if (state.hourFilter && data.msgSeverityByHourRaw && data.msgSeverityByHourRaw[state.hourFilter]) {
+  if (state.hourFilter && data.msgSeverityByHourRaw?.[state.hourFilter]) {
     const m = data.msgSeverityByHourRaw[state.hourFilter] || {};
     const keys = Object.keys(m);
-    return { labels: keys, data: keys.map((k) => Number(m[k] || 0)), keys, colors: keys.map(colorForMsgSeverity) };
+    return { labels: keys, data: keys.map(k => Number(m[k] || 0)), keys, colors: keys.map(colorForMsgSeverity) };
   }
+  // NUEVOS: Level/Subtype/LogDesc → severidades por ese pivot
+  if (state.levelFilter && data.severityByLevelRaw) {
+    const levKey = findKeyCI(data.severityByLevelRaw, state.levelFilter) ?? state.levelFilter;
+    const perSev = data.severityByLevelRaw[levKey] || {};
+    const labels = Object.keys(perSev);
+    return { labels, data: labels.map(k => Number(perSev[k] || 0)), keys: labels, colors: labels.map(colorForMsgSeverity) };
+  }
+  if (state.subtypeFilter && data.severityBySubtypeRaw) {
+    const subKey = findKeyCI(data.severityBySubtypeRaw, state.subtypeFilter) ?? state.subtypeFilter;
+    const perSev = data.severityBySubtypeRaw[subKey] || {};
+    const labels = Object.keys(perSev);
+    return { labels, data: labels.map(k => Number(perSev[k] || 0)), keys: labels, colors: labels.map(colorForMsgSeverity) };
+  }
+  if (state.logDescriptionFilter && data.severityByLogDescRaw) {
+    const logKey = findKeyCI(data.severityByLogDescRaw, state.logDescriptionFilter) ?? state.logDescriptionFilter;
+    const perSev = data.severityByLogDescRaw[logKey] || {};
+    const labels = Object.keys(perSev);
+    return { labels, data: labels.map(k => Number(perSev[k] || 0)), keys: labels, colors: labels.map(colorForMsgSeverity) };
+  }
+
   const m = normalizeMapValues(data.msgSeverityCountsRaw);
   const keys = Object.keys(m);
-  return { labels: keys, data: keys.map((k) => Number(m[k] || 0)), keys, colors: keys.map(colorForMsgSeverity) };
+  return { labels: keys, data: keys.map(k => Number(m[k] || 0)), keys, colors: keys.map(colorForMsgSeverity) };
 }
 
-// tabla de dispositivos
+/* =========================================================
+ *  LEVEL / SUBTYPE (barras)
+ * =======================================================*/
+export function levelDataForCurrentFilter(state) {
+  if (state.deviceFilter && data.deviceByLevelRaw) {
+    const devKey = data.canonicalDeviceKey(state.deviceFilter);
+    const map = {};
+    Object.entries(data.deviceByLevelRaw).forEach(([level, perDev]) => {
+      map[level] = Number((perDev || {})[devKey] || 0);
+    });
+    const labels = Object.keys(map);
+    return { labels, data: labels.map(k=>map[k]), keys: labels };
+  }
+  if (state.actionFilter && data.actionByLevelRaw) {
+    const per = data.actionByLevelRaw;
+    const map = {};
+    Object.entries(per || {}).forEach(([level, perAct]) => {
+      const real = findKeyCI(perAct, state.actionFilter) ?? state.actionFilter;
+      map[level] = Number((perAct || {})[real] || 0);
+    });
+    const labels = Object.keys(map);
+    return { labels, data: labels.map(k=>map[k]), keys: labels };
+  }
+  if (state.severityFilter && data.severityByLevelRaw) {
+    const per = data.severityByLevelRaw;
+    const map = {};
+    Object.entries(per || {}).forEach(([level, perSev]) => {
+      const realSev = findKeyCI(perSev, state.severityFilter) || state.severityFilter;
+      map[level] = Number((perSev || {})[realSev] || 0);
+    });
+    const labels = Object.keys(map);
+    return { labels, data: labels.map(k=>map[k]), keys: labels };
+  }
+  const m = normalizeMapValues(data.levelCountsRaw);
+  const labels = Object.keys(m);
+  return { labels, data: labels.map(k => Number(m[k] || 0)), keys: labels };
+}
+
+export function subtypeDataForCurrentFilter(state) {
+  if (state.deviceFilter && data.deviceBySubtypeRaw) {
+    const devKey = data.canonicalDeviceKey(state.deviceFilter);
+    const map = {};
+    Object.entries(data.deviceBySubtypeRaw).forEach(([sub, perDev]) => {
+      map[sub] = Number((perDev || {})[devKey] || 0);
+    });
+    const labels = Object.keys(map);
+    return { labels, data: labels.map(k=>map[k]), keys: labels };
+  }
+  if (state.actionFilter && data.actionBySubtypeRaw) {
+    const per = data.actionBySubtypeRaw;
+    const map = {};
+    Object.entries(per || {}).forEach(([sub, perAct]) => {
+      const real = findKeyCI(perAct, state.actionFilter) ?? state.actionFilter;
+      map[sub] = Number((perAct || {})[real] || 0);
+    });
+    const labels = Object.keys(map);
+    return { labels, data: labels.map(k=>map[k]), keys: labels };
+  }
+  if (state.severityFilter && data.severityBySubtypeRaw) {
+    const per = data.severityBySubtypeRaw;
+    const map = {};
+    Object.entries(per || {}).forEach(([sub, perSev]) => {
+      const realSev = findKeyCI(perSev, state.severityFilter) || state.severityFilter;
+      map[sub] = Number((perSev || {})[realSev] || 0);
+    });
+    const labels = Object.keys(map);
+    return { labels, data: labels.map(k=>map[k]), keys: labels };
+  }
+  const m = normalizeMapValues(data.subtypeCountsRaw);
+  const labels = Object.keys(m);
+  return { labels, data: labels.map(k => Number(m[k] || 0)), keys: labels };
+}
+
+/* =========================================================
+ *  LOG DESCRIPTION (barras)
+ * =======================================================*/
+export function logDescriptionDataForCurrentFilter(state) {
+  // Por device
+  if (state.deviceFilter && data.deviceByLogDescRaw) {
+    const devKey = data.canonicalDeviceKey(state.deviceFilter);
+    const map = {};
+    Object.entries(data.deviceByLogDescRaw).forEach(([desc, perDev]) => {
+      map[desc] = Number((perDev || {})[devKey] || 0);
+    });
+    const keys = Object.keys(map);
+    return { labels: keys, data: keys.map(k => map[k]), keys };
+  }
+  // Por action
+  if (state.actionFilter && data.actionByLogDescRaw) {
+    const map = {};
+    Object.entries(data.actionByLogDescRaw).forEach(([desc, perAct]) => {
+      const per = perAct || {};
+      const real = findKeyCI(per, state.actionFilter) ?? state.actionFilter;
+      map[desc] = Number(per[real] || 0);
+    });
+    const keys = Object.keys(map);
+    return { labels: keys, data: keys.map(k => map[k]), keys };
+  }
+  // Por severity
+  if (state.severityFilter && data.severityByLogDescRaw) {
+    const map = {};
+    Object.entries(data.severityByLogDescRaw).forEach(([desc, perSev]) => {
+      const realSev = findKeyCI(perSev, state.severityFilter) || state.severityFilter;
+      map[desc] = Number((perSev || {})[realSev] || 0);
+    });
+    const keys = Object.keys(map);
+    return { labels: keys, data: keys.map(k => map[k]), keys };
+  }
+
+  // Base (top N global backend)
+  const m = normalizeMapValues(data.logDescCountsRaw);
+  const keys = Object.keys(m);
+  return { labels: keys, data: keys.map(k => Number(m[k] || 0)), keys };
+}
+
+/* =========================================================
+ *  TABLA DISPOSITIVOS
+ * =======================================================*/
 export function deviceRowsForCurrentFilter(state) {
-  if (state.hourFilter && data.devByHourRaw[state.hourFilter]) {
-    const m = data.devByHourRaw[state.hourFilter];
-    return top10(m);
+  if (state.hourFilter && data.devByHourRaw?.[state.hourFilter]) {
+    return top10(data.devByHourRaw[state.hourFilter]);
   }
-  if (state.msgSeverityFilter && data.deviceByMsgSeverityRaw[state.msgSeverityFilter]) {
-    const m = data.deviceByMsgSeverityRaw[state.msgSeverityFilter] || {};
-    return top10(m);
+  if (state.msgSeverityFilter && data.deviceByMsgSeverityRaw?.[state.msgSeverityFilter]) {
+    return top10(data.deviceByMsgSeverityRaw[state.msgSeverityFilter] || {});
   }
-  if (state.actionFilter && data.deviceByAction[state.actionFilter]) {
-    const m = data.deviceByAction[state.actionFilter] || {};
-    return top10(m);
+  if (state.actionFilter && data.deviceByAction?.[state.actionFilter]) {
+    return top10(data.deviceByAction[state.actionFilter] || {});
   }
+  if (state.levelFilter && data.deviceByLevelRaw) {
+    const levKey = findKeyCI(data.deviceByLevelRaw, state.levelFilter) ?? state.levelFilter;
+    return top10(data.deviceByLevelRaw[levKey] || {});
+  }
+  if (state.subtypeFilter && data.deviceBySubtypeRaw) {
+    const subKey = findKeyCI(data.deviceBySubtypeRaw, state.subtypeFilter) ?? state.subtypeFilter;
+    return top10(data.deviceBySubtypeRaw[subKey] || {});
+  }
+  if (state.logDescriptionFilter && data.deviceByLogDescRaw) {
+    const logKey = findKeyCI(data.deviceByLogDescRaw, state.logDescriptionFilter) ?? state.logDescriptionFilter;
+    return top10(data.deviceByLogDescRaw[logKey] || {});
+  }
+
   const bySev = readJSON("device-counts-by-severity") || {};
   if (state.severityFilter && bySev[state.severityFilter]) {
     return top10(bySev[state.severityFilter]);
   }
   return top10(data.deviceCountsAll);
-}
-
-// ===== privados =====
-function top10(m) {
-  return Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, 10);
-}
-
-function applySeveritySlice(counts, severityFilter) {
-  if (!severityFilter) return counts;
-  const realKey = findKeyCI(counts, severityFilter) || severityFilter;
-  const v = Number(counts[realKey] || 0);
-  return { [realKey]: v };
-}
-
-function severityCountsForDevice(device) {
-  const dev = data.canonicalDeviceKey(device);
-  const out = {};
-  const bySevFull = data.deviceBySevFullRaw || {};
-  Object.keys(bySevFull).forEach((sev) => {
-    const m = bySevFull[sev] || {};
-    out[String(sev).trim()] = Number(m[dev] || 0);
-  });
-  return out;
-}
-
-function severityCountsForAction(actionKey) {
-  const m = data.actToSev[actionKey] || {};
-  const out = {};
-  Object.keys(m).forEach((sev) => (out[sev] = Number(m[sev] || 0)));
-  return out;
-}
-
-function severityCountsForHour(hour) {
-  const m = data.sevByHourRaw && data.sevByHourRaw[hour] ? data.sevByHourRaw[hour] : {};
-  const out = {};
-  Object.keys(m).forEach((sev) => (out[String(sev).trim()] = Number(m[sev] || 0)));
-  return out;
-}
-
-function severityCountsForMsgSeverity(msg) {
-  const m =
-    data.severityByMsgSeverityRaw && data.severityByMsgSeverityRaw[msg]
-      ? data.severityByMsgSeverityRaw[msg]
-      : {};
-  const out = {};
-  Object.keys(m).forEach((sev) => (out[String(sev).trim()] = Number(m[sev] || 0)));
-  return out;
 }

@@ -1,0 +1,258 @@
+nohup: ignoring input
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 19:43:20
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         mysite:0x7dda21d948f0
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.ingesta_mensual_ciclica
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 19:43:20,276: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 19:43:20,280: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 19:43:21,290: INFO/MainProcess] mingle: all alone
+[2025-10-21 19:43:21,305: INFO/MainProcess] celery@ia-customer-portal ready.
+
+worker: Warm shutdown (MainProcess)
+nohup: ignoring input
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 19:54:40
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         mysite:0x7fed856b0770
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.ingesta_mensual_ciclica
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 19:54:40,544: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 19:54:40,549: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 19:54:41,559: INFO/MainProcess] mingle: all alone
+[2025-10-21 19:54:41,578: INFO/MainProcess] celery@ia-customer-portal ready.
+
+worker: Warm shutdown (MainProcess)
+nohup: ignoring input
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 19:56:37
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         mysite:0x7a1578ffacc0
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.ingesta_mensual_ciclica
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 19:56:38,108: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 19:56:38,112: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 19:56:39,124: INFO/MainProcess] mingle: all alone
+[2025-10-21 19:56:39,138: INFO/MainProcess] celery@ia-customer-portal ready.
+
+worker: Warm shutdown (MainProcess)
+nohup: ignoring input
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 19:58:24
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         mysite:0x7c41baebcb30
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.ingesta_mensual_ciclica
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 19:58:25,072: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 19:58:25,077: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 19:58:26,087: INFO/MainProcess] mingle: all alone
+[2025-10-21 19:58:26,098: INFO/MainProcess] celery@ia-customer-portal ready.
+[2025-10-21 20:00:00,013: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[ec471115-60d1-496a-99f5-e4440ce28188] received
+[2025-10-21 20:00:00,015: INFO/ForkPoolWorker-2] Inicio de obtención de token
+[2025-10-21 20:00:00,824: INFO/ForkPoolWorker-2] Token actualizado correctamente
+[2025-10-21 20:00:00,828: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_obtener_token[ec471115-60d1-496a-99f5-e4440ce28188] succeeded in 0.8137529699888546s: None
+
+worker: Warm shutdown (MainProcess)
+nohup: ignoring input
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-21 20:09:27
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         mysite:0x715c8aeb4aa0
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.ingesta_mensual_ciclica
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-21 20:09:28,169: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-21 20:09:28,175: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-21 20:09:29,192: INFO/MainProcess] mingle: all alone
+[2025-10-21 20:09:29,203: INFO/MainProcess] celery@ia-customer-portal ready.
+
+worker: Warm shutdown (MainProcess)
+nohup: ignoring input
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-22 13:22:04
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         mysite:0x77428c2b2090
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.ingesta_mensual_ciclica
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-22 13:22:04,237: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-22 13:22:04,241: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-22 13:22:05,253: INFO/MainProcess] mingle: all alone
+[2025-10-22 13:22:05,265: INFO/MainProcess] celery@ia-customer-portal ready.
+
+worker: Warm shutdown (MainProcess)
+nohup: ignoring input
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-22 13:22:55
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         mysite:0x75f507eb8500
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.ingesta_mensual_ciclica
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-22 13:22:55,788: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-22 13:22:55,792: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-22 13:22:56,802: INFO/MainProcess] mingle: all alone
+[2025-10-22 13:22:56,815: INFO/MainProcess] celery@ia-customer-portal ready.
+
+worker: Warm shutdown (MainProcess)
+nohup: ignoring input
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-22 13:24:56
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         mysite:0x7c27ad0b4860
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.ingesta_mensual_ciclica
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-22 13:24:56,987: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-22 13:24:56,993: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-22 13:24:58,003: INFO/MainProcess] mingle: all alone
+[2025-10-22 13:24:58,016: INFO/MainProcess] celery@ia-customer-portal ready.
+[2025-10-22 14:00:00,166: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[58da8000-5de4-4dd1-9ad3-e3947243b5db] received
+[2025-10-22 14:00:00,167: INFO/ForkPoolWorker-2] Inicio de obtención de token
+[2025-10-22 14:00:01,057: INFO/ForkPoolWorker-2] Token actualizado correctamente
+[2025-10-22 14:00:01,063: INFO/ForkPoolWorker-2] Task integrations.tasks.tarea_obtener_token[58da8000-5de4-4dd1-9ad3-e3947243b5db] succeeded in 0.8956819700251799s: None
+
+worker: Warm shutdown (MainProcess)
+nohup: ignoring input
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1013-azure-x86_64-with-glibc2.39 2025-10-22 14:16:15
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         mysite:0x7bd98e0c0260
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . integrations.tasks.ingesta_mensual_ciclica
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+
+[2025-10-22 14:16:15,281: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-10-22 14:16:15,285: INFO/MainProcess] mingle: searching for neighbors
+[2025-10-22 14:16:16,296: INFO/MainProcess] mingle: all alone
+[2025-10-22 14:16:16,309: INFO/MainProcess] celery@ia-customer-portal ready.

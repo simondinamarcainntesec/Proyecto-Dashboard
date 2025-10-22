@@ -76,20 +76,20 @@
       <div class="card kpi"><div class="kpi-label">Dispositivos Detectados</div><div class="kpi-value" id="kpi-devices">{{ kpi_dispositivos }}</div></div>
     </section>
 
-    <!-- Grilla principal con ÁREAS -->
+    <!-- GRILLA PRINCIPAL -->
     <section class="grid grid-main">
-      <!-- IZQUIERDA (grande) -->
+      <!-- FILA 1: Alarmas por día | Alarmas por hora -->
       <div class="card chart card--trend">
         <div class="card-head"><h3>Alarmas por día</h3></div>
         <div class="card-body"><canvas id="trendChart"></canvas></div>
       </div>
 
       <div class="card chart card--hourly">
-        <div class="card-head between"><h3>Alarmas por hora</h3></div>
+        <div class="card-head"><h3>Alarmas por hora</h3></div>
         <div class="card-body"><canvas id="hourlyChart"></canvas></div>
       </div>
 
-      <!-- DERECHA -->
+      <!-- FILA 2: Severidad (donut) | Acciones -->
       <div class="card chart card--donut">
         <div class="card-head"><h3>Severidad</h3></div>
         <div class="card-body"><canvas id="severityDonut"></canvas></div>
@@ -100,24 +100,23 @@
         <div class="card-body"><canvas id="actionBar"></canvas></div>
       </div>
 
-      <!-- NUEVO: barra de msg_severity -->
-      <div class="card chart card--msgsev">
-        <div class="card-head"><h3>Severidad Alarma</h3></div>
-        <div class="card-body"><canvas id="msgSeverityBar"></canvas></div>
+      <!-- FILA 3: Level | Subtype -->
+      <div class="card chart card--level">
+        <div class="card-head"><h3>Level</h3></div>
+        <div class="card-body"><canvas id="levelBar"></canvas></div>
       </div>
 
-      <!-- TABLA (abajo a todo lo ancho) -->
+      <div class="card chart card--subtype">
+        <div class="card-head"><h3>Subtype</h3></div>
+        <div class="card-body"><canvas id="subtypeBar"></canvas></div>
+      </div>
+
+      <!-- FILA 4: Log Description (a lo ancho - 2 columnas) -->
+
+      <!-- FILA 5: Tabla (1/2) | Severidad Alarma (1/2) -->
       <div class="card table card--table">
         <div class="card-head between">
           <h3>Dispositivos recientes</h3>
-          <div class="table-legend">
-            <span class="legend-dot dot-critical"></span><span class="legend-text">Critical</span>
-            <span class="legend-dot dot-high"></span><span class="legend-text">High</span>
-            <span class="legend-dot dot-medium"></span><span class="legend-text">Medium</span>
-            <span class="legend-dot dot-low"></span><span class="legend-text">Low</span>
-            <span class="legend-dot dot-info"></span><span class="legend-text">Info</span>
-            <span class="legend-dot dot-warning"></span><span class="legend-text">Warning</span>
-          </div>
         </div>
         <div class="table-wrap">
           <table class="datatable" id="device-table">
@@ -138,6 +137,11 @@
           </table>
         </div>
         <div class="table-footnote">* Clic en los encabezados para ordenar</div>
+      </div>
+
+      <div class="card chart card--msgsev">
+        <div class="card-head"><h3>Severidad Alarma</h3></div>
+        <div class="card-body"><canvas id="msgSeverityBar"></canvas></div>
       </div>
     </section>
 
@@ -173,7 +177,7 @@
   {{ trend_labels_hour|json_script:"trend-labels-hour" }}
   {{ trend_by_hour|json_script:"trend-by-hour" }}
 
-  <!-- === JSON para msg_severity === -->
+  <!-- msg_severity -->
   {{ msg_severity_counts|json_script:"msg-severity-counts" }}
   {{ device_counts_by_msg_severity|json_script:"device-counts-by-msg-severity" }}
   {{ action_counts_by_msg_severity|json_script:"action-counts-by-msg-severity" }}
@@ -181,7 +185,24 @@
   {{ msg_severity_counts_by_hour|json_script:"msg-severity-counts-by-hour" }}
   {{ trend_by_msg_severity|json_script:"trend-by-msg-severity" }}
 
-  <!-- Chart.js global primero -->
+  <!-- Level/Subtype -->
+  {{ level_counts|json_script:"level-counts" }}
+  {{ device_counts_by_level|json_script:"device-counts-by-level" }}
+  {{ action_counts_by_level|json_script:"action-counts-by-level" }}
+  {{ severity_counts_by_level|json_script:"severity-counts-by-level" }}
+
+  {{ subtype_counts|json_script:"subtype-counts" }}
+  {{ device_counts_by_subtype|json_script:"device-counts-by-subtype" }}
+  {{ action_counts_by_subtype|json_script:"action-counts-by-subtype" }}
+  {{ severity_counts_by_subtype|json_script:"severity-counts-by-subtype" }}
+
+  <!-- log_description -->
+  {{ logdesc_counts|json_script:"logdesc-counts" }}
+  {{ device_counts_by_logdesc|json_script:"device-counts-by-logdesc" }}
+  {{ action_counts_by_logdesc|json_script:"action-counts-by-logdesc" }}
+  {{ severity_counts_by_logdesc|json_script:"severity-counts-by-logdesc" }}
+
+  <!-- Chart.js global -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Bundle modular del dashboard -->

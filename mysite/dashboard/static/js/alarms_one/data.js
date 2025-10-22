@@ -26,6 +26,22 @@ const msgSeverityByHourRaw = readJSON("msg-severity-counts-by-hour") || {};
 const trendByMsgSeverityRaw = readJSON("trend-by-msg-severity") || {};
 const deviceBySevFullRaw = readJSON("device-counts-by-severity-full") || {};
 
+// === NUEVO: LEVEL y SUBTYPE ===
+const levelCountsRaw = readJSON("level-counts") || {};
+const deviceByLevelRaw = readJSON("device-counts-by-level") || {};
+const actionByLevelRaw = readJSON("action-counts-by-level") || {};
+const severityByLevelRaw = readJSON("severity-counts-by-level") || {};
+
+const subtypeCountsRaw = readJSON("subtype-counts") || {};
+const deviceBySubtypeRaw = readJSON("device-counts-by-subtype") || {};
+const actionBySubtypeRaw = readJSON("action-counts-by-subtype") || {};
+const severityBySubtypeRaw = readJSON("severity-counts-by-subtype") || {};
+
+const logDescCountsRaw = readJSON("logdesc-counts") || {};
+const deviceByLogDescRaw = readJSON("device-counts-by-logdesc") || {};
+const actionByLogDescRaw = readJSON("action-counts-by-logdesc") || {};
+const severityByLogDescRaw = readJSON("severity-counts-by-logdesc") || {};
+
 const trendByAction = {};
 Object.entries(trendByActionRaw).forEach(([k, arr]) => {
   trendByAction[norm(k)] = Array.isArray(arr) ? arr : [];
@@ -105,4 +121,11 @@ export default {
   msgSeverityCountsRaw, deviceByMsgSeverityRaw, actionByMsgSeverityRaw,
   severityByMsgSeverityRaw, msgSeverityByHourRaw, trendByMsgSeverityRaw,
   deviceBySevFullRaw, sevToAct, actToSev, canonicalDeviceKey,
+
+  // === NUEVO: LEVEL y SUBTYPE ===
+  levelCountsRaw, deviceByLevelRaw, actionByLevelRaw, severityByLevelRaw,
+  subtypeCountsRaw, deviceBySubtypeRaw, actionBySubtypeRaw, severityBySubtypeRaw,
+
+  // NUEVO export:
+  logDescCountsRaw, deviceByLogDescRaw, actionByLogDescRaw, severityByLogDescRaw,
 };

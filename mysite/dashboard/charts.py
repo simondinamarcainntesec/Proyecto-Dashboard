@@ -453,3 +453,123 @@ def build_trend_by_msg_severity(dt_from=None, dt_to=None):
             trend_by_msg_severity[msg][i] = r["total"]
 
     return {"trend_by_msg_severity": dict(trend_by_msg_severity), "trend_labels": labels}
+def build_level_bar_data(dt_from=None, dt_to=None, top_n=10):
+    qs = _base_qs(dt_from, dt_to)
+
+    rows = qs.values("level").annotate(total=Count("id")).order_by("-total")[:top_n]
+    level_counts = {(r["level"] or "N/A"): r["total"] for r in rows}
+
+    by_dev = defaultdict(Counter)
+    for r in qs.values("level", "device_name").annotate(total=Count("id")):
+        lvl = r["level"] or "N/A"
+        dev = r["device_name"] or "N/A"
+        by_dev[lvl][dev] = r["total"]
+    device_counts_by_level = {lvl: dict(cnt) for lvl, cnt in by_dev.items()}
+
+    by_act = defaultdict(Counter)
+    for r in qs.values("level", "actions").annotate(total=Count("id")):
+        lvl = r["level"] or "N/A"
+        act = r["actions"] or "N/A"
+        by_act[lvl][act] = r["total"]
+    action_counts_by_level = {lvl: dict(cnt) for lvl, cnt in by_act.items()}
+
+    by_sev = defaultdict(Counter)
+    for r in qs.values("level", "severity").annotate(total=Count("id")):
+        lvl = r["level"] or "N/A"
+        sev = r["severity"] if r["severity"] is not None else "N/A"
+        by_sev[lvl][sev] = r["total"]
+    severity_counts_by_level = {lvl: dict(cnt) for lvl, cnt in by_sev.items()}
+
+    return (
+        level_counts,
+        device_counts_by_level,
+        action_counts_by_level,
+        severity_counts_by_level,
+    )
+
+
+# =============================
+# === NUEVO: barras SUBTYPE ===
+# =============================
+def build_subtype_bar_data(dt_from=None, dt_to=None, top_n=10):
+    qs = _base_qs(dt_from, dt_to)
+
+    rows = qs.values("subtype").annotate(total=Count("id")).order_by("-total")[:top_n]
+    subtype_counts = {(r["subtype"] or "N/A"): r["total"] for r in rows}
+
+    by_dev = defaultdict(Counter)
+    for r in qs.values("subtype", "device_name").annotate(total=Count("id")):
+        st = r["subtype"] or "N/A"
+        dev = r["device_name"] or "N/A"
+        by_dev[st][dev] = r["total"]
+    device_counts_by_subtype = {st: dict(cnt) for st, cnt in by_dev.items()}
+
+    by_act = defaultdict(Counter)
+    for r in qs.values("subtype", "actions").annotate(total=Count("id")):
+        st = r["subtype"] or "N/A"
+        act = r["actions"] or "N/A"
+        by_act[st][act] = r["total"]
+    action_counts_by_subtype = {st: dict(cnt) for st, cnt in by_act.items()}
+
+    by_sev = defaultdict(Counter)
+    for r in qs.values("subtype", "severity").annotate(total=Count("id")):
+        st = r["subtype"] or "N/A"
+        sev = r["severity"] if r["severity"] is not None else "N/A"
+        by_sev[st][sev] = r["total"]
+    severity_counts_by_subtype = {st: dict(cnt) for st, cnt in by_sev.items()}
+
+    return (
+        subtype_counts,
+        device_counts_by_subtype,
+        action_counts_by_subtype,
+        severity_counts_by_subtype,
+    )
+
+def build_log_description_bar_data(dt_from=None, dt_to=None, top_n=10):
+    """
+    Barras por `log_description`:
+      - logdesc_counts: { log_description: total } (TOP N)
+      - device_counts_by_logdesc: { log_description: {device: n} }
+      - action_counts_by_logdesc: { log_description: {action: n} }
+      - severity_counts_by_logdesc: { log_description: {severity: n} }
+    """
+    qs = _base_qs(dt_from, dt_to)
+
+    # Global (top N por frecuencia)
+    rows = (
+        qs.values("log_description")
+          .annotate(total=Count("id"))
+          .order_by("-total")[:top_n]
+    )
+    logdesc_counts = {(r["log_description"] or "N/A"): r["total"] for r in rows}
+
+    # Por dispositivo
+    by_dev = defaultdict(Counter)
+    for r in qs.values("log_description", "device_name").annotate(total=Count("id")):
+        desc = r["log_description"] or "N/A"
+        dev = r["device_name"] or "N/A"
+        by_dev[desc][dev] = r["total"]
+    device_counts_by_logdesc = {d: dict(cnt) for d, cnt in by_dev.items()}
+
+    # Por acción
+    by_act = defaultdict(Counter)
+    for r in qs.values("log_description", "actions").annotate(total=Count("id")):
+        desc = r["log_description"] or "N/A"
+        act = r["actions"] or "N/A"
+        by_act[desc][act] = r["total"]
+    action_counts_by_logdesc = {d: dict(cnt) for d, cnt in by_act.items()}
+
+    # Por severidad
+    by_sev = defaultdict(Counter)
+    for r in qs.values("log_description", "severity").annotate(total=Count("id")):
+        desc = r["log_description"] or "N/A"
+        sev = r["severity"] if r["severity"] is not None else "N/A"
+        by_sev[desc][sev] = r["total"]
+    severity_counts_by_logdesc = {d: dict(cnt) for d, cnt in by_sev.items()}
+
+    return (
+        logdesc_counts,
+        device_counts_by_logdesc,
+        action_counts_by_logdesc,
+        severity_counts_by_logdesc,
+    )

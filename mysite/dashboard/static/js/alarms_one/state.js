@@ -5,6 +5,10 @@ const state = {
   actionFilter: "",      // normalizado
   hourFilter: "",        // "00".."23"
   msgSeverityFilter: "", // tal cual BD
+  // === NUEVOS ===
+  levelFilter: "",
+  subtypeFilter: "",
+  logDescriptionFilter: "",
 };
 
 const listeners = new Set();
@@ -12,25 +16,47 @@ export function getState() { return { ...state }; }
 export function setState(patch) { Object.assign(state, patch); listeners.forEach(l => l(getState())); }
 export function onStateChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 
+// Helper: deja activo SOLO el filtro indicado y limpia el resto
+function only(patch) {
+  const empty = {
+    severityFilter:"", deviceFilter:"", actionFilter:"", hourFilter:"",
+    msgSeverityFilter:"", levelFilter:"", subtypeFilter:"", logDescriptionFilter:""
+  };
+  setState({ ...empty, ...patch });
+}
+
 export const actions = {
   toggleSeverity(sev) {
     const s = (state.severityFilter || "").toLowerCase() === String(sev).toLowerCase() ? "" : sev;
-    setState({ severityFilter: s, deviceFilter:"", actionFilter:"", hourFilter:"", msgSeverityFilter:"" });
+    only({ severityFilter: s });
   },
   setDevice(dev) {
     const s = state.deviceFilter === dev ? "" : dev;
-    setState({ deviceFilter: s, severityFilter:"", actionFilter:"", hourFilter:"", msgSeverityFilter:"" });
+    only({ deviceFilter: s });
   },
   toggleAction(key) {
     const s = state.actionFilter === key ? "" : key;
-    setState({ actionFilter: s, severityFilter:"", deviceFilter:"", hourFilter:"", msgSeverityFilter:"" });
+    only({ actionFilter: s });
   },
   toggleHour(h) {
     const s = state.hourFilter === h ? "" : h;
-    setState({ hourFilter: s, severityFilter:"", deviceFilter:"", actionFilter:"", msgSeverityFilter:"" });
+    only({ hourFilter: s });
   },
   toggleMsgSeverity(k) {
     const s = state.msgSeverityFilter === k ? "" : k;
-    setState({ msgSeverityFilter: s, severityFilter:"", deviceFilter:"", actionFilter:"", hourFilter:"" });
+    only({ msgSeverityFilter: s });
+  },
+  // === NUEVOS ===
+  toggleLevel(k) {
+    const s = state.levelFilter === k ? "" : k;
+    only({ levelFilter: s });
+  },
+  toggleSubtype(k) {
+    const s = state.subtypeFilter === k ? "" : k;
+    only({ subtypeFilter: s });
+  },
+  toggleLogDescription(k) {
+    const s = state.logDescriptionFilter === k ? "" : k;
+    only({ logDescriptionFilter: s });
   },
 };

@@ -1,21 +1,30 @@
 // dashboard.js
 import { setupChartJSDefaults } from "./theme.js";
-import { $ } from "./utils.js"; // ← sin coma colgante
+import { $ } from "./utils.js";
 import { getState, onStateChange } from "./state.js";
-import "./data.js"; // ← side-effect: carga datos embebidos JSON
+import "./data.js";
 import {
   getActiveCounts,
   calcKpis,
   trendDataForCurrentFilter,
   actionDataForCurrentFilter,
-  msgSeverityDataForCurrentFilter
+  msgSeverityDataForCurrentFilter,
+  // === NUEVO ===
+  levelDataForCurrentFilter,
+  subtypeDataForCurrentFilter,
 } from "./selectors.js";
+
 import { renderDonut } from "./charts/donut.js";
 import { renderTrend } from "./charts/trend.js";
 import { renderActionBar } from "./charts/actions.js";
 import { renderMsgSeverityBar } from "./charts/msgSeverity.js";
 import { renderHourly } from "./charts/hourly.js";
 import { renderDeviceTable } from "./charts/devicesTable.js";
+// === NUEVO ===
+import { renderLevelBar } from "./charts/level.js";
+import { renderSubtypeBar } from "./charts/subtype.js";
+import { logDescriptionDataForCurrentFilter } from "./selectors.js";
+import { renderLogDescriptionBar } from "./charts/logDescription.js";
 
 // ======================================================
 // 1) Inicialización global
@@ -47,6 +56,11 @@ function updateAll() {
   renderActionBar(actionDataForCurrentFilter(st));
   renderMsgSeverityBar(msgSeverityDataForCurrentFilter(st), st.msgSeverityFilter);
   renderHourly(st);
+
+  // === NUEVO: barras Level y Subtype ===
+  renderLevelBar(levelDataForCurrentFilter(st), st.levelFilter);
+  renderSubtypeBar(subtypeDataForCurrentFilter(st), st.subtypeFilter);
+  renderLogDescriptionBar(logDescriptionDataForCurrentFilter(st), st.logDescriptionFilter);
 
   console.log("[dashboard] Gráficos actualizados correctamente ✅");
 }
