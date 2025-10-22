@@ -141,12 +141,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 
-CELERY_BEAT_SCHEDULE = {
-    "obtener-token-cada-hora": {
-        "task": "integrations.tasks.tarea_obtener_token",
-        "schedule": crontab(minute="0"),  # cada hora
-    },
-}
+# Configuración de Celery
 CELERY_TIMEZONE = "America/Santiago"
+# Broker/result backend se pueden configurar aquí si prefieres centralizarlo en settings,
+# pero ahora la configuración principal de beat_schedule vive en `mysite/celery.py`.
 CELERY_BROKER_URL = "redis://localhost:6379/0"
 CELERY_RESULT_BACKEND = "redis://localhost:6379/1"

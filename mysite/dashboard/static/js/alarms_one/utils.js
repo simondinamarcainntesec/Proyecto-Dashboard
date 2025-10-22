@@ -1,4 +1,4 @@
-// utils.js
+// utils.js (ESM: sin globals, todo por export)
 export const $ = (sel) => document.querySelector(sel);
 
 export function readJSON(id) {

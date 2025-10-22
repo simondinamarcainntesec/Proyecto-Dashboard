@@ -10,8 +10,9 @@ import {
   actionDataForCurrentFilter,
   msgSeverityDataForCurrentFilter,
   // === NUEVO ===
-  levelDataForCurrentFilter,
+  levelDataForCurrentFilter,      // (se mantiene importado si lo usas en otros lados)
   subtypeDataForCurrentFilter,
+  logDescriptionDataForCurrentFilter,
 } from "./selectors.js";
 
 import { renderDonut } from "./charts/donut.js";
@@ -21,9 +22,9 @@ import { renderMsgSeverityBar } from "./charts/msgSeverity.js";
 import { renderHourly } from "./charts/hourly.js";
 import { renderDeviceTable } from "./charts/devicesTable.js";
 // === NUEVO ===
-import { renderLevelBar } from "./charts/level.js";
+// REEMPLAZA el render clásico por el montaje reactivo de Level:
+import { mountLevelBar } from "./charts/level.js";
 import { renderSubtypeBar } from "./charts/subtype.js";
-import { logDescriptionDataForCurrentFilter } from "./selectors.js";
 import { renderLogDescriptionBar } from "./charts/logDescription.js";
 
 // ======================================================
@@ -32,7 +33,6 @@ import { renderLogDescriptionBar } from "./charts/logDescription.js";
 console.log("[dashboard] Iniciando dashboard AlarmsOne...");
 
 setupChartJSDefaults(window.Chart);
-
 console.log("[dashboard] Chart.js detectado:", !!window.Chart);
 
 // ======================================================
@@ -57,8 +57,12 @@ function updateAll() {
   renderMsgSeverityBar(msgSeverityDataForCurrentFilter(st), st.msgSeverityFilter);
   renderHourly(st);
 
-  // === NUEVO: barras Level y Subtype ===
-  renderLevelBar(levelDataForCurrentFilter(st), st.levelFilter);
+  // === IMPORTANTE ===
+  // Level ahora se actualiza solo (subscribe) mediante mountLevelBar(),
+  // por eso NO lo renderizamos aquí para evitar recrearlo cada vez.
+  // renderLevelBar(levelDataForCurrentFilter(st), st.levelFilter);  ← eliminado
+
+  // Subtype y LogDescription siguen con el flujo tradicional por ahora
   renderSubtypeBar(subtypeDataForCurrentFilter(st), st.subtypeFilter);
   renderLogDescriptionBar(logDescriptionDataForCurrentFilter(st), st.logDescriptionFilter);
 
@@ -74,12 +78,8 @@ function wireDateFilter() {
   const from = form.querySelector('input[name="from"]');
   const to = form.querySelector('input[name="to"]');
   if (from && to) {
-    from.addEventListener("change", () => {
-      to.min = from.value || "";
-    });
-    to.addEventListener("change", () => {
-      from.max = to.value || "";
-    });
+    from.addEventListener("change", () => { to.min = from.value || ""; });
+    to.addEventListener("change", () => { from.max = to.value || ""; });
     to.min = from.value || "";
     from.max = to.value || "";
   }
@@ -112,18 +112,27 @@ function wireTableSort() {
 // ======================================================
 // 4) Boot (inicio al cargar el documento)
 // ======================================================
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", () => {
-    console.log("[dashboard] DOM cargado → inicializando...");
-    wireDateFilter();
-    wireTableSort();
-    updateAll();
-  });
-} else {
-  console.log("[dashboard] DOM ya listo → inicializando...");
+let unmountLevel = null;
+
+function boot() {
+  console.log("[dashboard] DOM listo → inicializando...");
   wireDateFilter();
   wireTableSort();
+
+  // Monta Level UNA sola vez. Internamente:
+  // - se subscribe a onStateChange
+  // - maneja onClick → actions.toggleLevel(key)
+  // - re-renderiza sin recrear el canvas/chart
+  unmountLevel = mountLevelBar("levelBar");
+
+  // Render inicial del resto
   updateAll();
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", boot);
+} else {
+  boot();
 }
 
 // ======================================================
@@ -133,3 +142,6 @@ onStateChange(() => {
   console.log("[dashboard] Cambio detectado en filtros → refrescando...");
   updateAll();
 });
+
+// (Opcional) Si en algún momento desmontas la vista:
+// window.addEventListener("beforeunload", () => { unmountLevel && unmountLevel(); });

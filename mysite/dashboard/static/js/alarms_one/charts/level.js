@@ -1,61 +1,87 @@
 // charts/level.js
-import { actions } from "../state.js";
-import { colorFor } from "../theme.js";
+import { getState, onStateChange, actions } from "../state.js";
+import { levelDataForCurrentFilter } from "../selectors.js";
+import { AXIS, GRID } from "../theme.js";
 
-let levelChart;
+let chart;
+let currentKeys = []; // clave real por índice visual
 
-function trunc(s, n = 30) {
-  const t = String(s ?? "");
-  return t.length > n ? t.slice(0, n - 1) + "…" : t;
-}
+export function mountLevelBar(canvasId = "levelBar") {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) {
+    console.warn(`[Level] No se encontró canvas #${canvasId}`);
+    return () => {};
+  }
+  const ctx = canvas.getContext("2d");
 
-function eqCI(a, b) {
-  return String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
-}
-
-export function renderLevelBar(ds, activeKey = "") {
-  const ctx = document.getElementById("levelBar");
-  if (!ctx) return;
-
-  const labels = Array.isArray(ds?.labels) ? ds.labels.map(String) : [];
-  const data = labels.map((_, i) => Number((ds?.data || [])[i] || 0));
-  const bg = labels.map((l) => (activeKey && eqCI(l, activeKey) ? colorFor(l) : colorFor(l) + "99"));
-  const border = labels.map((l) => colorFor(l));
-
-  const cfg = {
-    type: "bar",
-    data: { labels, datasets: [{ label: "Level", data, backgroundColor: bg, borderColor: border, borderWidth: 1.5 }] },
-    options: {
-      indexAxis: "x",
-      onClick: (_, elements) => {
-        if (!elements || !elements.length) return;
-        const idx = elements[0].index;
-        const key = labels[idx];
-        actions.toggleLevel(key);
-      },
-      plugins: { legend: { display: false } },
-      scales: {
-        x: {
-          type: "category",
-          ticks: { callback: (_, idx) => trunc(labels[idx]), maxRotation: 0, autoSkip: true },
-        },
-        y: { beginAtZero: true },
-      },
-      categoryPercentage: 0.8,
-      barPercentage: 0.9,
-      animation: false,
-      maintainAspectRatio: false,
-      responsive: true,
+  // Config base
+  const opts = {
+    responsive: true,
+    animation: { duration: 500, easing: "easeOutQuart" },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          // Asegura que el título del tooltip coincida con la etiqueta visible
+          title(items) {
+            return items.map(i => (chart?.data?.labels?.[i.dataIndex] ?? ""));
+          },
+          label(ctx) {
+            const val = ctx.parsed.y ?? ctx.parsed; // barra vertical
+            // Muestra "Level: X" o "Cantidad: X" según prefieras
+            return `Cantidad: ${val}`;
+          }
+        }
+      }
     },
+    scales: {
+      x: {
+        ticks: { color: AXIS },
+        grid: { color: GRID }
+      },
+      y: {
+        beginAtZero: true,
+        ticks: { color: AXIS },
+        grid: { color: GRID }
+      }
+    },
+    onClick(evt, _elements, _chart) {
+      // Busca el elemento exacto clickeado
+      const points = chart.getElementsAtEventForMode(evt, "nearest", { intersect: true }, true);
+      if (!points || !points.length) return;
+      const idx = points[0].index;
+      const key = currentKeys[idx];    // clave real (no la etiqueta formateada)
+      if (!key) return;
+
+      actions.toggleLevel(key);        // ← aplica el filtro de Level
+    }
   };
 
-  if (levelChart) {
-    levelChart.data.labels = labels;
-    levelChart.data.datasets[0].data = data;
-    levelChart.data.datasets[0].backgroundColor = bg;
-    levelChart.data.datasets[0].borderColor = border;
-    levelChart.update();
-  } else {
-    levelChart = new window.Chart(ctx, cfg);
-  }
+  // Crea el chart vacío
+  chart = new Chart(ctx, {
+    type: "bar",
+    data: { labels: [], datasets: [{ label: "Level", data: [], backgroundColor: "#A855F7" }] },
+    options: opts,
+  });
+
+  // Función de render (se llama al inicio y en cada cambio de estado)
+  const render = () => {
+    const st = getState();
+    const { labels, data, keys } = levelDataForCurrentFilter(st);
+
+    currentKeys = Array.isArray(keys) ? keys.slice() : labels.slice(); // respaldo de claves exactas
+    chart.data.labels = labels;
+    chart.data.datasets[0].data = data;
+    chart.update();
+  };
+
+  // Render inicial + suscripción reactiva
+  render();
+  const off = onStateChange(render);
+
+  // Devuelve cleanup
+  return () => {
+    off && off();
+    if (chart) { chart.destroy(); chart = null; }
+  };
 }

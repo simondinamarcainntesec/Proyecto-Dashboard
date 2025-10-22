@@ -167,6 +167,11 @@
   {{ device_counts_by_action|json_script:"device-counts-by-action" }}
   {{ action_counts_by_device|json_script:"action-counts-by-device" }}
   {{ action_counts_by_severity|json_script:"action-counts-by-severity" }}
+    
+  {{ trend_by_subtype|json_script:"trend-by-subtype" }}
+  {{ subtype_counts_by_hour|json_script:"subtype-counts-by-hour" }}
+  {{ level_counts_by_subtype|json_script:"level-counts-by-subtype" }}
+
 
   {{ hour_labels|json_script:"hour-labels" }}
   {{ hour_data|json_script:"hour-data" }}
@@ -190,7 +195,11 @@
   {{ device_counts_by_level|json_script:"device-counts-by-level" }}
   {{ action_counts_by_level|json_script:"action-counts-by-level" }}
   {{ severity_counts_by_level|json_script:"severity-counts-by-level" }}
+  {{ trend_by_level|json_script:"trend-by-level" }}                <!-- trend por level -->
+  {{ level_counts_by_hour|json_script:"level-counts-by-hour" }}    <!-- hourly por level -->
+  {{ subtype_counts_by_level|json_script:"subtype-counts-by-level" }} <!-- subtype por level -->
 
+  <!-- Subtype base -->
   {{ subtype_counts|json_script:"subtype-counts" }}
   {{ device_counts_by_subtype|json_script:"device-counts-by-subtype" }}
   {{ action_counts_by_subtype|json_script:"action-counts-by-subtype" }}
@@ -205,7 +214,7 @@
   <!-- Chart.js global -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- Bundle modular del dashboard -->
+  <!-- Bundle modular del dashboard (importa state/selectors internamente) -->
   <script type="module" src="{% static 'js/alarms_one/dashboard.js' %}"></script>
 </body>
 </html>

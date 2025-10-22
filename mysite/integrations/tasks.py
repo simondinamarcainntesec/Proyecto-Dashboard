@@ -33,11 +33,14 @@ def tarea_obtener_token():
             f.write(token)
         logging.info("Token actualizado correctamente")
 
+        # Lanzar la ingesta luego de obtener el token
+        from integrations.tasks import tarea_ingesta_api
+        tarea_ingesta_api.delay()
+
     except subprocess.CalledProcessError as e:
         logging.error(f"Error al ejecutar obtener_token.py: {e}")
     except Exception as e:
         logging.exception(f"Error inesperado al obtener token: {e}")
-
 # === Tarea de ingesta usando _map_api_alarm_to_model ===
 TOKEN_FILE = os.path.join(os.path.dirname(__file__), '../../token.txt')
 

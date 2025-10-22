@@ -103,4 +103,3 @@ export function renderLogDescriptionBar(ds, activeKey = "", topN = 10) {
     logDescChart = new window.Chart(ctx, cfg);
   }
 }
-

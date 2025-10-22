@@ -122,8 +122,6 @@ export function calcKpis(state) {
 
 /* =========================================================
  *  TREND (Alarmas por día)
- *  (Si agregas trend-by-level / trend-by-subtype / trend-by-logdesc en backend,
- *   se activan automáticamente las ramas de abajo.)
  * =======================================================*/
 export function trendDataForCurrentFilter(state) {
   const { canonicalDeviceKey } = data;
@@ -174,14 +172,50 @@ function baseTrend(labels, items) {
 }
 
 /* =========================================================
- *  HOURLY (Alarmas por hora) – opcionales por pivote si backend lo provee
+ *  HOURLY (Alarmas por hora)
  * =======================================================*/
 export function hourDataForCurrentFilter(state) {
-  // Puedes mantener tu versión actual si ya la tienes; esta es una referencia.
-  const labels = data.trendLabelsHour || [];
-  // Fallback global
-  const map = readJSON("hour-data") || {};
-  return { labels, data: labels.map(h => Number(map[h] || 0)), label: "Total" };
+  const labels = data.hourLabels || [];          // "00".."23"
+  let series = data.hourData || [];              // total por hora
+  let label = "Alarmas (por hora, rango actual)";
+
+  // Por Device
+  if (state.deviceFilter && data.devByHourRaw) {
+    const dk = data.canonicalDeviceKey(state.deviceFilter);
+    series = labels.map((h) => Number((data.devByHourRaw[h] || {})[dk] || 0));
+    label = `Alarmas por hora — Dispositivo: ${dk}`;
+  }
+  // Por Severidad
+  else if (state.severityFilter && data.sevByHourRaw) {
+    series = labels.map((h) => {
+      const m = data.sevByHourRaw[h] || {};
+      const hk = findKeyCI(m, state.severityFilter) || state.severityFilter;
+      return Number(m[hk] || 0);
+    });
+    label = `Alarmas por hora — Severidad: ${state.severityFilter}`;
+  }
+  // Por Acción
+  else if (state.actionFilter && data.actByHourNorm) {
+    series = labels.map((h) => Number((data.actByHourNorm[h] || {})[state.actionFilter] || 0));
+    label = `Alarmas por hora — Acción: ${state.actionFilter}`;
+  }
+  // Por Msg Severity
+  else if (state.msgSeverityFilter && data.msgSeverityByHourRaw) {
+    series = labels.map((h) => Number((data.msgSeverityByHourRaw[h] || {})[state.msgSeverityFilter] || 0));
+    label = `Alarmas por hora — Msg Severity: ${state.msgSeverityFilter}`;
+  }
+  // Por Level
+  else if (state.levelFilter && data.levelCountsByHourRaw) {
+    series = labels.map((h) => Number((data.levelCountsByHourRaw[h] || {})[state.levelFilter] || 0));
+    label = `Alarmas por hora — Level: ${state.levelFilter}`;
+  }
+  // Por Subtype
+  else if (state.subtypeFilter && data.subtypeByHourRaw) {
+    series = labels.map((h) => Number((data.subtypeByHourRaw[h] || {})[state.subtypeFilter] || 0));
+    label = `Alarmas por hora — Subtype: ${state.subtypeFilter}`;
+  }
+
+  return { labels, data: series, label };
 }
 
 /* =========================================================
@@ -335,6 +369,15 @@ export function levelDataForCurrentFilter(state) {
     const labels = Object.keys(map);
     return { labels, data: labels.map(k=>map[k]), keys: labels };
   }
+
+  // Subtype → Level (NUEVO)
+  if (state.subtypeFilter && data.levelBySubtypeRaw) {
+    const stKey = findKeyCI(data.levelBySubtypeRaw, state.subtypeFilter) ?? state.subtypeFilter;
+    const per = data.levelBySubtypeRaw[stKey] || {};
+    const labels = Object.keys(per);
+    return { labels, data: labels.map(k => Number(per[k] || 0)), keys: labels };
+  }
+
   const m = normalizeMapValues(data.levelCountsRaw);
   const labels = Object.keys(m);
   return { labels, data: labels.map(k => Number(m[k] || 0)), keys: labels };
@@ -360,6 +403,15 @@ export function subtypeDataForCurrentFilter(state) {
     const labels = Object.keys(map);
     return { labels, data: labels.map(k=>map[k]), keys: labels };
   }
+
+  // Level → Subtype
+  if (state.levelFilter && data.subtypeByLevelRaw) {
+    const levKey = findKeyCI(data.subtypeByLevelRaw, state.levelFilter) ?? state.levelFilter;
+    const per = data.subtypeByLevelRaw[levKey] || {};
+    const labels = Object.keys(per);
+    return { labels, data: labels.map(k => Number(per[k] || 0)), keys: labels };
+  }
+
   if (state.severityFilter && data.severityBySubtypeRaw) {
     const per = data.severityBySubtypeRaw;
     const map = {};
@@ -379,7 +431,6 @@ export function subtypeDataForCurrentFilter(state) {
  *  LOG DESCRIPTION (barras)
  * =======================================================*/
 export function logDescriptionDataForCurrentFilter(state) {
-  // Por device
   if (state.deviceFilter && data.deviceByLogDescRaw) {
     const devKey = data.canonicalDeviceKey(state.deviceFilter);
     const map = {};
@@ -389,7 +440,6 @@ export function logDescriptionDataForCurrentFilter(state) {
     const keys = Object.keys(map);
     return { labels: keys, data: keys.map(k => map[k]), keys };
   }
-  // Por action
   if (state.actionFilter && data.actionByLogDescRaw) {
     const map = {};
     Object.entries(data.actionByLogDescRaw).forEach(([desc, perAct]) => {
@@ -400,7 +450,6 @@ export function logDescriptionDataForCurrentFilter(state) {
     const keys = Object.keys(map);
     return { labels: keys, data: keys.map(k => map[k]), keys };
   }
-  // Por severity
   if (state.severityFilter && data.severityByLogDescRaw) {
     const map = {};
     Object.entries(data.severityByLogDescRaw).forEach(([desc, perSev]) => {
@@ -411,7 +460,6 @@ export function logDescriptionDataForCurrentFilter(state) {
     return { labels: keys, data: keys.map(k => map[k]), keys };
   }
 
-  // Base (top N global backend)
   const m = normalizeMapValues(data.logDescCountsRaw);
   const keys = Object.keys(m);
   return { labels: keys, data: keys.map(k => Number(m[k] || 0)), keys };
