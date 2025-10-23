@@ -22,6 +22,11 @@ def _norm_sev(val):
     return s.lower() if s else "n/a"
 
 
+def _norm_msg_sev(val):
+    s = (val or "").strip()
+    return s.lower() if s else "n/a"
+
+
 def _norm_act(val):
     # No forzamos lowercase aquí (el front ya normaliza),
     # pero convertimos None/"" en "N/A" para evitar claves vacías en dicts
@@ -46,9 +51,13 @@ def _norm_subtype(val):
 
 
 def _base_qs(dt_from=None, dt_to=None):
+    """
+    Query base. Usa [dt_from, dt_to) (to exclusivo) para evitar doble conteo
+    cuando el 'to' es el inicio del siguiente día local.
+    """
     qs = Alarm.objects.all()
     if dt_from and dt_to:
-        qs = qs.filter(event_time__range=(dt_from, dt_to))
+        qs = qs.filter(event_time__gte=dt_from, event_time__lt=dt_to)
     return qs
 
 
@@ -113,6 +122,8 @@ def build_trend_by_device(dt_from=None, dt_to=None, top_n=10):
         .annotate(total=Count("id"))
         .order_by("-total")[:top_n]
     )
+    # Usar valores RAW para filtrar; normalizar solo para las claves de salida.
+    top_raw = [r["device_name"] for r in top]
     top_devices = [_norm_dev(r["device_name"]) for r in top]
 
     daily = (
@@ -125,7 +136,7 @@ def build_trend_by_device(dt_from=None, dt_to=None, top_n=10):
     idx = {d: i for i, d in enumerate(labels)}
 
     device_rows = (
-        qs.filter(device_name__in=[None] + top_devices)  # cubrir N/A si corresponde
+        qs.filter(device_name__in=[None] + top_raw)  # cubrir N/A si corresponde
         .annotate(date=TruncDay("event_time", tzinfo=CL_TZ))
         .values("date", "device_name")
         .annotate(total=Count("id"))
@@ -411,25 +422,25 @@ def build_msg_severity_bar_data(dt_from=None, dt_to=None, top_n=10):
     qs = _base_qs(dt_from, dt_to)
 
     rows = qs.values("msg_severity").annotate(total=Count("id")).order_by("-total")[:top_n]
-    msg_severity_counts = {(r["msg_severity"] or "N/A"): r["total"] for r in rows}
+    msg_severity_counts = {(_norm_msg_sev(r["msg_severity"])): r["total"] for r in rows}
 
     by_msg_dev = defaultdict(Counter)
     for r in qs.values("msg_severity", "device_name").annotate(total=Count("id")):
-        msg = r["msg_severity"] or "N/A"
+        msg = _norm_msg_sev(r["msg_severity"])
         dev = _norm_dev(r["device_name"])
         by_msg_dev[msg][dev] = r["total"]
     device_counts_by_msg_severity = {msg: dict(cnt) for msg, cnt in by_msg_dev.items()}
 
     by_msg_act = defaultdict(Counter)
     for r in qs.values("msg_severity", "actions").annotate(total=Count("id")):
-        msg = r["msg_severity"] or "N/A"
+        msg = _norm_msg_sev(r["msg_severity"])
         act = _norm_act(r["actions"])
         by_msg_act[msg][act] = r["total"]
     action_counts_by_msg_severity = {msg: dict(cnt) for msg, cnt in by_msg_act.items()}
 
     by_msg_sev = defaultdict(Counter)
     for r in qs.values("msg_severity", "severity").annotate(total=Count("id")):
-        msg = r["msg_severity"] or "N/A"
+        msg = _norm_msg_sev(r["msg_severity"])
         sev = _norm_sev(r["severity"])
         by_msg_sev[msg][sev] = r["total"]
     severity_counts_by_msg_severity = {msg: dict(cnt) for msg, cnt in by_msg_sev.items()}
@@ -444,7 +455,7 @@ def build_msg_severity_bar_data(dt_from=None, dt_to=None, top_n=10):
         h = r.get("h")
         if h:
             hour = h.strftime("%H")
-            msg = r["msg_severity"] or "N/A"
+            msg = _norm_msg_sev(r["msg_severity"])
             by_hour_msg[hour][msg] += r["total"]
     msg_severity_counts_by_hour = {h: dict(cnt) for h, cnt in by_hour_msg.items()}
 
@@ -479,7 +490,7 @@ def build_trend_by_msg_severity(dt_from=None, dt_to=None):
     trend_by_msg_severity = defaultdict(lambda: [0] * len(labels))
     for r in rows:
         date_str = r["date"].strftime("%Y-%m-%d")
-        msg = r["msg_severity"] or "N/A"
+        msg = _norm_msg_sev(r["msg_severity"])
         i = idx.get(date_str)
         if i is not None:
             trend_by_msg_severity[msg][i] = r["total"]
@@ -558,6 +569,8 @@ def build_subtype_bar_data(dt_from=None, dt_to=None, top_n=10):
         action_counts_by_subtype,
         severity_counts_by_subtype,
     )
+
+
 # === TREND POR SUBTYPE (para cruzar Subtype -> Trend) ===
 def build_trend_by_subtype(dt_from=None, dt_to=None):
     """
@@ -585,7 +598,6 @@ def build_trend_by_subtype(dt_from=None, dt_to=None):
           .order_by("date")
     )
 
-    from collections import defaultdict
     trend_by_subtype = defaultdict(lambda: [0] * len(labels))
     for r in rows:
         date_str = r["date"].strftime("%Y-%m-%d")
@@ -606,7 +618,6 @@ def build_subtype_counts_by_hour(dt_from=None, dt_to=None):
     """
     qs = _base_qs(dt_from, dt_to)
 
-    from collections import defaultdict, Counter
     by_hour = defaultdict(Counter)
 
     rows = (
@@ -757,29 +768,7 @@ def build_subtype_counts_by_level(dt_from=None, dt_to=None):
     # cast a dict normal
     return {"subtype_counts_by_level": {lvl: dict(cnt) for lvl, cnt in out.items()}}
 
-# === HOURLY POR SUBTYPE (para cruzar Subtype -> Hourly) ===
-def build_subtype_counts_by_hour(dt_from=None, dt_to=None):
-    """
-    { "00": { subtype: n, ... }, "01": {...}, ..., "23": {...} }
-    """
-    qs = _base_qs(dt_from, dt_to)
-    from collections import defaultdict, Counter
-    by_hour = defaultdict(Counter)
 
-    rows = (
-        qs.annotate(h=TruncHour("event_time", tzinfo=CL_TZ))
-          .values("h", "subtype")
-          .annotate(total=Count("id"))
-    )
-    for r in rows:
-        h = r.get("h")
-        if not h:
-            continue
-        hour = h.strftime("%H")
-        st = (r["subtype"] or "N/A")
-        by_hour[hour][st] += r["total"]
-
-    return {h: dict(cnt) for h, cnt in by_hour.items()}
 # === LEVEL POR SUBTYPE (para cruzar Subtype -> Level) ===
 def build_level_counts_by_subtype(dt_from=None, dt_to=None, top_n=None):
     """
@@ -789,7 +778,6 @@ def build_level_counts_by_subtype(dt_from=None, dt_to=None, top_n=None):
     Si top_n es int, recorta los levels por subtype a los más frecuentes.
     """
     qs = _base_qs(dt_from, dt_to)
-    from collections import defaultdict, Counter
     by_subtype = defaultdict(Counter)
 
     rows = (
@@ -807,3 +795,111 @@ def build_level_counts_by_subtype(dt_from=None, dt_to=None, top_n=None):
             for st, cnt in by_subtype.items()
         }
     return {st: dict(cnt) for st, cnt in by_subtype.items()}
+
+# === MSG_SEVERITY por LEVEL/SUBTYPE (para cruzar Level/Subtype -> msg_severity) ===
+def build_msg_severity_by_level(dt_from=None, dt_to=None):
+    """
+    Devuelve: { level: { msg_severity(normalizada): total, ... }, ... }
+    """
+    qs = _base_qs(dt_from, dt_to)
+    rows = (
+        qs.values("level", "msg_severity")
+          .annotate(total=Count("id"))
+          .order_by("level", "-total")
+    )
+    from collections import defaultdict, Counter
+    out = defaultdict(Counter)
+    for r in rows:
+        lvl = _norm_level(r["level"])
+        msg = _norm_msg_sev(r["msg_severity"])
+        out[lvl][msg] += r["total"]
+    return {"msg_severity_by_level": {lvl: dict(cnt) for lvl, cnt in out.items()}}
+
+
+def build_msg_severity_by_subtype(dt_from=None, dt_to=None):
+    """
+    Devuelve: { subtype: { msg_severity(normalizada): total, ... }, ... }
+    """
+    qs = _base_qs(dt_from, dt_to)
+    rows = (
+        qs.values("subtype", "msg_severity")
+          .annotate(total=Count("id"))
+          .order_by("subtype", "-total")
+    )
+    from collections import defaultdict, Counter
+    out = defaultdict(Counter)
+    for r in rows:
+        st = _norm_subtype(r["subtype"])
+        msg = _norm_msg_sev(r["msg_severity"])
+        out[st][msg] += r["total"]
+    return {"msg_severity_by_subtype": {st: dict(cnt) for st, cnt in out.items()}}
+
+from collections import defaultdict, Counter
+
+def build_level_by_msg_severity(dt_from=None, dt_to=None):
+    """
+    { msg_severity: { level: total, ... }, ... }
+    """
+    qs = _base_qs(dt_from, dt_to)
+    rows = (
+        qs.values("msg_severity", "level")
+          .annotate(total=Count("id"))
+    )
+    out = defaultdict(Counter)
+    for r in rows:
+        msg = _norm_msg_sev(r["msg_severity"])
+        lvl = _norm_level(r["level"])
+        out[msg][lvl] += r["total"]
+    return {"level_by_msg_severity": {msg: dict(cnt) for msg, cnt in out.items()}}
+
+
+def build_subtype_by_msg_severity(dt_from=None, dt_to=None):
+    """
+    { msg_severity: { subtype: total, ... }, ... }
+    """
+    qs = _base_qs(dt_from, dt_to)
+    rows = (
+        qs.values("msg_severity", "subtype")
+          .annotate(total=Count("id"))
+    )
+    out = defaultdict(Counter)
+    for r in rows:
+        msg = _norm_msg_sev(r["msg_severity"])
+        st  = _norm_subtype(r["subtype"])
+        out[msg][st] += r["total"]
+    return {"subtype_by_msg_severity": {msg: dict(cnt) for msg, cnt in out.items()}}
+
+def build_hour_series_by_subtype(dt_from=None, dt_to=None):
+    """
+    Devuelve: { subtype: [c00, c01, ..., c23] } en TZ America/Santiago,
+    alineado a las mismas 24 etiquetas "00".."23".
+    """
+    qs = _base_qs(dt_from, dt_to)
+
+    # base 24 horas
+    hour_labels = [f"{i:02d}" for i in range(24)]
+    index = {h: i for i, h in enumerate(hour_labels)}
+
+    # contar por hora y subtype
+    rows = (
+        qs.annotate(h=TruncHour("event_time", tzinfo=CL_TZ))
+          .values("h", "subtype")
+          .annotate(total=Count("id"))
+    )
+
+    from collections import defaultdict
+    series = defaultdict(lambda: [0] * 24)
+
+    for r in rows:
+        h = r.get("h")
+        if not h:
+            continue
+        hour = h.strftime("%H")
+        st = _norm_subtype(r["subtype"])
+        pos = index.get(hour)
+        if pos is not None:
+            series[st][pos] += r["total"]
+
+    return {"hour_series_by_subtype": dict(series)}
+
+

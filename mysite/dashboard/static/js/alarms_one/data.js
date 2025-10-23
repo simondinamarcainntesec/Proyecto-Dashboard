@@ -59,7 +59,13 @@ const trendBySubtype = readJSON("trend-by-subtype") || {};             // { subt
 const subtypeByHourRaw = readJSON("subtype-counts-by-hour") || {};     // { "00": { subtype: n }, ... }
 
 // Subtype → Level (para cruzar Subtype -> Level)
-const levelBySubtypeRaw = readJSON("level-counts-by-subtype") || {};   // { subtype: { level: n } }
+const levelBySubtypeRaw = readJSON("level-counts-by-subtype") || {};
+const msgSeverityByLevelRaw = readJSON("msg-severity-by-level") || {};       // { level: { msg: n } }
+const msgSeverityBySubtypeRaw = readJSON("msg-severity-by-subtype") || {};
+const levelByMsgSeverityRaw = readJSON("level-by-msg-severity") || {};     // { msg: { level: n } }
+const subtypeByMsgSeverityRaw = readJSON("subtype-by-msg-severity") || {};
+const hourSeriesBySubtypeRaw = readJSON("hour-series-by-subtype") || {}; // { msg: { subtype: n } }
+   // { subtype: { level: n } }
 
 /* ========== NORMALIZACIONES / ÍNDICES ========== */
 
@@ -169,4 +175,9 @@ export default {
 
   // Subtype → Level
   levelBySubtypeRaw,
+  msgSeverityByLevelRaw,
+  msgSeverityBySubtypeRaw,
+  levelByMsgSeverityRaw,
+  subtypeByMsgSeverityRaw,
+  hourSeriesBySubtypeRaw,
 };

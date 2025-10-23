@@ -14,5 +14,5 @@ urlpatterns = [
     path("", login_required(home_view), name="home"),
     path("inyeccion_api/", include(("inyeccion_api.urls", "inyeccion_api"), namespace="inyeccion_api")),
     path("dashboard/", include("dashboard.urls")),
-
+    path("integrations/", include("integrations.urls")),
 ]

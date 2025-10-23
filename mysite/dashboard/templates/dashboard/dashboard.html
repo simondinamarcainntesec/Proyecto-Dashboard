@@ -1,4 +1,4 @@
-{% load static %}
+{% load static cache %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -7,7 +7,7 @@
   <title>Portal Clientes – Panel</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v={% now 'U' %}">
 </head>
 
 <body class="layout">
@@ -35,7 +35,7 @@
         <h1 class="top-title">Tenant: <span class="top-tenant">Fashions Park</span></h1>
       </div>
       <div class="top-right">
-        <button class="btn ghost" title="Actualizar">⟳</button>
+        <button class="btn ghost" title="Actualizar" id="btn-refresh">⟳</button>
         <button class="btn ghost" title="Exportar">⬇︎</button>
         <div class="user">
           <div class="user-avatar">U</div>
@@ -48,19 +48,20 @@
     <section class="toolbar">
       <form id="date-filter" method="get" class="toolbar-row">
         <div class="group">
-          <span class="chip">Últimos 7 días</span>
-          <span class="chip">Últimos 30 días</span>
-          <span class="chip">Este mes</span>
+          <!-- chips clickeables con animación -->
+          <button type="button" class="chip chip-btn" data-range="7d">Últimos 7 días</button>
+          <button type="button" class="chip chip-btn" data-range="30d">Últimos 30 días</button>
+          <button type="button" class="chip chip-btn" data-range="month">Este mes</button>
         </div>
 
         <div class="group">
           <label class="date-range">
             <span>Desde</span>
-            <input type="date" name="from" value="{{ from_date_str }}" />
+            <input id="inp-from" type="date" name="from" value="{{ from_date_str }}" />
           </label>
           <label class="date-range">
             <span>Hasta</span>
-            <input type="date" name="to" value="{{ to_date_str }}" />
+            <input id="inp-to" type="date" name="to" value="{{ to_date_str }}" />
           </label>
           <button class="btn primary" type="submit">Aplicar</button>
           <a class="btn ghost" href="?">Limpiar</a>
@@ -68,17 +69,20 @@
       </form>
     </section>
 
-    <!-- KPIs -->
+    {% comment %} --- KPIs en caché (varían por rango) --- {% endcomment %}
+    {% cache 300 "kpis_hist" from_date_str to_date_str %}
     <section class="grid grid-kpis">
       <div class="card kpi"><div class="kpi-label">Disponibilidad (simulado)</div><div class="kpi-value">99,8%</div></div>
       <div class="card kpi"><div class="kpi-label">Alta Severidad</div><div class="kpi-value" id="kpi-high">{{ kpi_high }}</div></div>
       <div class="card kpi"><div class="kpi-label">Total Alarmas</div><div class="kpi-value" id="kpi-total">{{ kpi_total }}</div></div>
       <div class="card kpi"><div class="kpi-label">Dispositivos Detectados</div><div class="kpi-value" id="kpi-devices">{{ kpi_dispositivos }}</div></div>
     </section>
+    {% endcache %}
 
+    {% comment %} --- Gráficos/tabla en caché (varían por rango) --- {% endcomment %}
+    {% cache 300 "grid_hist" from_date_str to_date_str %}
     <!-- GRILLA PRINCIPAL -->
     <section class="grid grid-main">
-      <!-- FILA 1: Alarmas por día | Alarmas por hora -->
       <div class="card chart card--trend">
         <div class="card-head"><h3>Alarmas por día</h3></div>
         <div class="card-body"><canvas id="trendChart"></canvas></div>
@@ -89,7 +93,6 @@
         <div class="card-body"><canvas id="hourlyChart"></canvas></div>
       </div>
 
-      <!-- FILA 2: Severidad (donut) | Acciones -->
       <div class="card chart card--donut">
         <div class="card-head"><h3>Severidad</h3></div>
         <div class="card-body"><canvas id="severityDonut"></canvas></div>
@@ -100,7 +103,6 @@
         <div class="card-body"><canvas id="actionBar"></canvas></div>
       </div>
 
-      <!-- FILA 3: Level | Subtype -->
       <div class="card chart card--level">
         <div class="card-head"><h3>Level</h3></div>
         <div class="card-body"><canvas id="levelBar"></canvas></div>
@@ -111,9 +113,6 @@
         <div class="card-body"><canvas id="subtypeBar"></canvas></div>
       </div>
 
-      <!-- FILA 4: Log Description (a lo ancho - 2 columnas) -->
-
-      <!-- FILA 5: Tabla (1/2) | Severidad Alarma (1/2) -->
       <div class="card table card--table">
         <div class="card-head between">
           <h3>Dispositivos recientes</h3>
@@ -144,11 +143,14 @@
         <div class="card-body"><canvas id="msgSeverityBar"></canvas></div>
       </div>
     </section>
+    {% endcache %}
 
     <footer class="footnote">Última actualización: hace 7 min</footer>
   </div>
 
-  <!-- JSON embebidos para charts.js -->
+  {% comment %} --- Bloque de JSON embebido en caché (varía por rango) --- {% endcomment %}
+  {% cache 300 "payload_hist" from_date_str to_date_str %}
+  <!-- JSON embebidos (sin cambios) -->
   {{ trend_labels|json_script:"trend-labels" }}
   {{ trend_data|json_script:"trend-data" }}
   {{ severity_trends|json_script:"severity-trends" }}
@@ -167,11 +169,10 @@
   {{ device_counts_by_action|json_script:"device-counts-by-action" }}
   {{ action_counts_by_device|json_script:"action-counts-by-device" }}
   {{ action_counts_by_severity|json_script:"action-counts-by-severity" }}
-    
+
   {{ trend_by_subtype|json_script:"trend-by-subtype" }}
   {{ subtype_counts_by_hour|json_script:"subtype-counts-by-hour" }}
   {{ level_counts_by_subtype|json_script:"level-counts-by-subtype" }}
-
 
   {{ hour_labels|json_script:"hour-labels" }}
   {{ hour_data|json_script:"hour-data" }}
@@ -182,7 +183,6 @@
   {{ trend_labels_hour|json_script:"trend-labels-hour" }}
   {{ trend_by_hour|json_script:"trend-by-hour" }}
 
-  <!-- msg_severity -->
   {{ msg_severity_counts|json_script:"msg-severity-counts" }}
   {{ device_counts_by_msg_severity|json_script:"device-counts-by-msg-severity" }}
   {{ action_counts_by_msg_severity|json_script:"action-counts-by-msg-severity" }}
@@ -190,31 +190,117 @@
   {{ msg_severity_counts_by_hour|json_script:"msg-severity-counts-by-hour" }}
   {{ trend_by_msg_severity|json_script:"trend-by-msg-severity" }}
 
-  <!-- Level/Subtype -->
   {{ level_counts|json_script:"level-counts" }}
   {{ device_counts_by_level|json_script:"device-counts-by-level" }}
   {{ action_counts_by_level|json_script:"action-counts-by-level" }}
   {{ severity_counts_by_level|json_script:"severity-counts-by-level" }}
-  {{ trend_by_level|json_script:"trend-by-level" }}                <!-- trend por level -->
-  {{ level_counts_by_hour|json_script:"level-counts-by-hour" }}    <!-- hourly por level -->
-  {{ subtype_counts_by_level|json_script:"subtype-counts-by-level" }} <!-- subtype por level -->
+  {{ trend_by_level|json_script:"trend-by-level" }}
+  {{ level_counts_by_hour|json_script:"level-counts-by-hour" }}
+  {{ subtype_counts_by_level|json_script:"subtype-counts-by-level" }}
+  {{ msg_severity_by_level|json_script:"level-by-msg-severity" }}
+  {{ msg_severity_by_subtype|json_script:"msg-severity-by-subtype" }}
 
-  <!-- Subtype base -->
   {{ subtype_counts|json_script:"subtype-counts" }}
   {{ device_counts_by_subtype|json_script:"device-counts-by-subtype" }}
   {{ action_counts_by_subtype|json_script:"action-counts-by-subtype" }}
   {{ severity_counts_by_subtype|json_script:"severity-counts-by-subtype" }}
 
-  <!-- log_description -->
   {{ logdesc_counts|json_script:"logdesc-counts" }}
   {{ device_counts_by_logdesc|json_script:"device-counts-by-logdesc" }}
   {{ action_counts_by_logdesc|json_script:"action-counts-by-logdesc" }}
   {{ severity_counts_by_logdesc|json_script:"severity-counts-by-logdesc" }}
+  {{ level_by_msg_severity|json_script:"level-by-msg-severity" }}
+  {{ subtype_by_msg_severity|json_script:"subtype-by-msg-severity" }}
+  {{ hour_series_by_subtype|json_script:"hour-series-by-subtype" }}
+  {% endcache %}
 
-  <!-- Chart.js global -->
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- Bundle modular del dashboard (importa state/selectors internamente) -->
+  <!-- Acciones rápidas + defaults 30 días -->
+  <script>
+    (function () {
+      /* utilidades */
+      function pad(n){ return String(n).padStart(2,'0'); }
+      function toLocalIsoDate(dt){
+        return dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
+      }
+      function toLocalIsoDateTime(dt){
+        return dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate())
+               +'T'+pad(dt.getHours())+':'+pad(dt.getMinutes())+':'+pad(dt.getSeconds());
+      }
+      function minusDays(dt, days){
+        return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()-days, dt.getHours(), dt.getMinutes(), dt.getSeconds());
+      }
+      function firstDayOfMonth(dt){
+        return new Date(dt.getFullYear(), dt.getMonth(), 1, 0,0,0);
+      }
+
+      /* marcar chip activa según query (simple) */
+      const p = new URLSearchParams(location.search);
+      const chips = document.querySelectorAll('.chip-btn');
+      function setActiveChip(range){
+        chips.forEach(c=>c.classList.toggle('is-active', c.dataset.range===range));
+      }
+
+      /* click chips -> navegar con from/to exactos */
+      function goWithRange(range){
+        const now = new Date(); // local exacto
+        let from;
+        if(range==='7d'){ from = minusDays(now,7); }
+        else if(range==='30d'){ from = minusDays(now,30); }
+        else if(range==='month'){ from = firstDayOfMonth(now); }
+        else { from = minusDays(now,30); }
+
+        const params = new URLSearchParams(window.location.search);
+        params.set('from', toLocalIsoDateTime(from));
+        params.set('to',   toLocalIsoDateTime(now));
+        window.location.search = params.toString();
+      }
+      chips.forEach(btn=>{
+        btn.addEventListener('click', ()=> goWithRange(btn.dataset.range));
+      });
+
+      /* Default inputs: 30 días hasta hoy si llegan vacíos */
+      const inpFrom = document.getElementById('inp-from');
+      const inpTo   = document.getElementById('inp-to');
+      if (inpFrom && inpTo) {
+        if (!inpFrom.value || !inpTo.value) {
+          const now = new Date();
+          const from = minusDays(now, 30);
+          inpFrom.value = toLocalIsoDate(from);
+          inpTo.value   = toLocalIsoDate(now);
+        }
+      }
+
+      /* marcar chip si desde/hasta coincide con alguno de los presets */
+      if (p.has('from') && p.has('to')) {
+        const toQ  = new Date(p.get('to').replace(' ', 'T'));
+        const fromQ= new Date(p.get('from').replace(' ', 'T'));
+        const diffMs = toQ - fromQ;
+        const dayMs = 24*60*60*1000;
+        if (Math.abs(diffMs - 7*dayMs) < dayMs) setActiveChip('7d');
+        else if (Math.abs(diffMs - 30*dayMs) < dayMs) setActiveChip('30d');
+        else {
+          const firstMonth = firstDayOfMonth(toQ);
+          if (fromQ.getFullYear()===firstMonth.getFullYear() &&
+              fromQ.getMonth()===firstMonth.getMonth() &&
+              fromQ.getDate()===firstMonth.getDate()) setActiveChip('month');
+        }
+      }
+
+      /* refresh -> mantiene from, actualiza to = ahora */
+      const r = document.getElementById('btn-refresh');
+      if (r) r.addEventListener('click', ()=>{
+        const now = new Date();
+        const params = new URLSearchParams(window.location.search);
+        params.set('to', toLocalIsoDateTime(now));
+        window.location.search = params.toString();
+      });
+    })();
+  </script>
+
+  <!-- Bundle modular -->
   <script type="module" src="{% static 'js/alarms_one/dashboard.js' %}"></script>
 </body>
 </html>

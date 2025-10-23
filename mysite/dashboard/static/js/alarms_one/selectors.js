@@ -121,6 +121,23 @@ export function calcKpis(state) {
 }
 
 /* =========================================================
+ *  (NUEVO) SEVERIDAD ALARMA (barra) → cambia a MSG_SEVERITY si hay level
+ * =======================================================*/
+// << NUEVO: función para el bar de “Severidad Alarma”
+export function severityBarDataForCurrentFilter(state) {
+  // Si hay filtro de level, el bar debe usar msg_severity (requisito del usuario)
+  if (state.levelFilter) {
+    const m = normalizeMapValues(data.msgSeverityCountsRaw);
+    const labels = Object.keys(m);
+    return { labels, data: labels.map(k => Number(m[k] || 0)), keys: labels, mode: "msg" };
+  }
+  // Default: usar severity global
+  const m = normalizeMapValues(data.severityCounts);
+  const labels = Object.keys(m);
+  return { labels, data: labels.map(k => Number(m[k] || 0)), keys: labels, mode: "severity" };
+}
+
+/* =========================================================
  *  TREND (Alarmas por día)
  * =======================================================*/
 export function trendDataForCurrentFilter(state) {
@@ -133,6 +150,13 @@ export function trendDataForCurrentFilter(state) {
   if (state.actionFilter && data.trendByAction?.[state.actionFilter]) {
     return baseTrend(data.trendLabels, [{ label: `Acción: ${prettyActionLabel(state.actionFilter)}`, data: data.trendByAction[state.actionFilter], color: "#8B5CF6" }]);
   }
+
+  // << NUEVO: Hora → trend por día sólo para ese bucket horario
+  if (state.hourFilter && data.trendByHourRaw?.[state.hourFilter]) {
+    const series = data.trendByHourRaw[state.hourFilter] || [];
+    return baseTrend(data.trendLabelsHour, [{ label: `Hora ${state.hourFilter}:00`, data: series, color: "#0EA5E9" }]);
+  }
+
   if (state.msgSeverityFilter && data.trendByMsgSeverityRaw?.[state.msgSeverityFilter]) {
     return baseTrend(data.trendLabels, [{ label: `Msg severity: ${state.msgSeverityFilter}`, data: data.trendByMsgSeverityRaw[state.msgSeverityFilter], color: "#F43F5E" }]);
   }
@@ -142,9 +166,7 @@ export function trendDataForCurrentFilter(state) {
   if (state.subtypeFilter && data.trendBySubtype?.[state.subtypeFilter]) {
     return baseTrend(data.trendLabels, [{ label: `Subtype: ${state.subtypeFilter}`, data: data.trendBySubtype[state.subtypeFilter], color: "#22C55E" }]);
   }
-  if (state.logDescriptionFilter && data.trendByLogDesc?.[state.logDescriptionFilter]) {
-    return baseTrend(data.trendLabels, [{ label: `Log: ${state.logDescriptionFilter}`, data: data.trendByLogDesc[state.logDescriptionFilter], color: "#FB7185" }]);
-  }
+  // Ojo: no hay trend por logdesc en el backend; dejar sin branch
 
   // Default: por severidad (posibilidad de ocultar una)
   const datasets = Object.keys(data.severityTrendsMap).map((sev) => {
@@ -179,42 +201,71 @@ export function hourDataForCurrentFilter(state) {
   let series = data.hourData || [];              // total por hora
   let label = "Alarmas (por hora, rango actual)";
 
-  // Por Device
+  // ── PRIORIDAD ABSOLUTA: SUBTYPE
+  if (state.subtypeFilter) {
+    const json = data.hourSeriesBySubtypeRaw || {};
+    const keys = Object.keys(json || {});
+    console.debug("[hourly] subtypeFilter:", state.subtypeFilter, "keys json:", keys.length ? keys.slice(0,5) : keys);
+
+    if (keys.length) {
+      const subKey = findKeyCI(json, state.subtypeFilter) ?? state.subtypeFilter;
+      const arr = json[subKey] || [];
+      console.debug("[hourly] usando hour-series-by-subtype →", subKey, "len:", arr?.length);
+
+      series = Array.isArray(arr) ? labels.map((_, i) => Number(arr[i] || 0)) : labels.map(() => 0);
+      label = `Alarmas por hora — Subtype: ${subKey}`;
+      return { labels, data: series, label };
+    }
+
+    // Fallback si por alguna razón el JSON exclusivo no está disponible
+    const map = data.subtypeByHourRaw || {};
+    console.debug("[hourly] fallback subtypeByHourRaw");
+    series = labels.map((h) => Number((map[h] || {})[state.subtypeFilter] || 0));
+    label = `Alarmas por hora — Subtype: ${state.subtypeFilter}`;
+    return { labels, data: series, label };
+  }
+
+  // Device
   if (state.deviceFilter && data.devByHourRaw) {
     const dk = data.canonicalDeviceKey(state.deviceFilter);
     series = labels.map((h) => Number((data.devByHourRaw[h] || {})[dk] || 0));
     label = `Alarmas por hora — Dispositivo: ${dk}`;
+    return { labels, data: series, label };
   }
-  // Por Severidad
-  else if (state.severityFilter && data.sevByHourRaw) {
+
+  // Severidad
+  if (state.severityFilter && data.sevByHourRaw) {
     series = labels.map((h) => {
       const m = data.sevByHourRaw[h] || {};
       const hk = findKeyCI(m, state.severityFilter) || state.severityFilter;
       return Number(m[hk] || 0);
     });
     label = `Alarmas por hora — Severidad: ${state.severityFilter}`;
-  }
-  // Por Acción
-  else if (state.actionFilter && data.actByHourNorm) {
-    series = labels.map((h) => Number((data.actByHourNorm[h] || {})[state.actionFilter] || 0));
-    label = `Alarmas por hora — Acción: ${state.actionFilter}`;
-  }
-  // Por Msg Severity
-  else if (state.msgSeverityFilter && data.msgSeverityByHourRaw) {
-    series = labels.map((h) => Number((data.msgSeverityByHourRaw[h] || {})[state.msgSeverityFilter] || 0));
-    label = `Alarmas por hora — Msg Severity: ${state.msgSeverityFilter}`;
-  }
-  // Por Level
-  else if (state.levelFilter && data.levelCountsByHourRaw) {
-    series = labels.map((h) => Number((data.levelCountsByHourRaw[h] || {})[state.levelFilter] || 0));
-    label = `Alarmas por hora — Level: ${state.levelFilter}`;
-  }
-  // Por Subtype
-  else if (state.subtypeFilter && data.subtypeByHourRaw) {
-    series = labels.map((h) => Number((data.subtypeByHourRaw[h] || {})[state.subtypeFilter] || 0));
-    label = `Alarmas por hora — Subtype: ${state.subtypeFilter}`;
+    return { labels, data: series, label };
   }
 
+  // Acción
+  if (state.actionFilter && data.actByHourNorm) {
+    series = labels.map((h) => Number((data.actByHourNorm[h] || {})[state.actionFilter] || 0));
+    label = `Alarmas por hora — Acción: ${state.actionFilter}`;
+    return { labels, data: series, label };
+  }
+
+  // Msg Severity
+  if (state.msgSeverityFilter && data.msgSeverityByHourRaw) {
+    series = labels.map((h) => Number((data.msgSeverityByHourRaw[h] || {})[state.msgSeverityFilter] || 0));
+    label = `Alarmas por hora — Msg Severity: ${state.msgSeverityFilter}`;
+    return { labels, data: series, label };
+  }
+
+  // Level
+  if (state.levelFilter && data.levelCountsByHourRaw) {
+    series = labels.map((h) => Number((data.levelCountsByHourRaw[h] || {})[state.levelFilter] || 0));
+    label = `Alarmas por hora — Level: ${state.levelFilter}`;
+    return { labels, data: series, label };
+  }
+
+  // Default
   return { labels, data: series, label };
 }
 
@@ -278,6 +329,7 @@ export function actionDataForCurrentFilter(state) {
 export function msgSeverityDataForCurrentFilter(state) {
   const { canonicalDeviceKey } = data;
 
+  // Device → msg_severity por dispositivo
   if (state.deviceFilter && data.deviceByMsgSeverityRaw) {
     const devKey = canonicalDeviceKey(state.deviceFilter);
     const map = {};
@@ -287,6 +339,8 @@ export function msgSeverityDataForCurrentFilter(state) {
     const keys = Object.keys(map);
     return { labels: keys, data: keys.map(k => map[k]), keys, colors: keys.map(colorForMsgSeverity) };
   }
+
+  // Severidad base → distribución de msg_severity dentro de esa severidad (si existe)
   if (state.severityFilter && data.severityByMsgSeverityRaw) {
     const map = {};
     Object.entries(data.severityByMsgSeverityRaw).forEach(([msg, perSev]) => {
@@ -296,6 +350,8 @@ export function msgSeverityDataForCurrentFilter(state) {
     const keys = Object.keys(map);
     return { labels: keys, data: keys.map(k => map[k]), keys, colors: keys.map(colorForMsgSeverity) };
   }
+
+  // Acción → msg_severity por acción
   if (state.actionFilter && data.actionByMsgSeverityRaw) {
     const map = {};
     Object.entries(data.actionByMsgSeverityRaw).forEach(([msg, perAct]) => {
@@ -306,24 +362,32 @@ export function msgSeverityDataForCurrentFilter(state) {
     const keys = Object.keys(map);
     return { labels: keys, data: keys.map(k => map[k]), keys, colors: keys.map(colorForMsgSeverity) };
   }
+
+  // Hora → msg_severity por hora
   if (state.hourFilter && data.msgSeverityByHourRaw?.[state.hourFilter]) {
     const m = data.msgSeverityByHourRaw[state.hourFilter] || {};
     const keys = Object.keys(m);
     return { labels: keys, data: keys.map(k => Number(m[k] || 0)), keys, colors: keys.map(colorForMsgSeverity) };
   }
-  // NUEVOS: Level/Subtype/LogDesc → severidades por ese pivot
-  if (state.levelFilter && data.severityByLevelRaw) {
-    const levKey = findKeyCI(data.severityByLevelRaw, state.levelFilter) ?? state.levelFilter;
-    const perSev = data.severityByLevelRaw[levKey] || {};
-    const labels = Object.keys(perSev);
-    return { labels, data: labels.map(k => Number(perSev[k] || 0)), keys: labels, colors: labels.map(colorForMsgSeverity) };
+
+  // NUEVO: Level → msg_severity por level (usa JSON exclusivo)
+  if (state.levelFilter && data.msgSeverityByLevelRaw) {
+    const levKey = findKeyCI(data.msgSeverityByLevelRaw, state.levelFilter) ?? state.levelFilter;
+    const per = data.msgSeverityByLevelRaw[levKey] || {};
+    const labels = Object.keys(per);
+    return { labels, data: labels.map(k => Number(per[k] || 0)), keys: labels, colors: labels.map(colorForMsgSeverity) };
   }
-  if (state.subtypeFilter && data.severityBySubtypeRaw) {
-    const subKey = findKeyCI(data.severityBySubtypeRaw, state.subtypeFilter) ?? state.subtypeFilter;
-    const perSev = data.severityBySubtypeRaw[subKey] || {};
-    const labels = Object.keys(perSev);
-    return { labels, data: labels.map(k => Number(perSev[k] || 0)), keys: labels, colors: labels.map(colorForMsgSeverity) };
+
+  // NUEVO: Subtype → msg_severity por subtype (usa JSON exclusivo)
+  if (state.subtypeFilter && data.msgSeverityBySubtypeRaw) {
+    const subKey = findKeyCI(data.msgSeverityBySubtypeRaw, state.subtypeFilter) ?? state.subtypeFilter;
+    const per = data.msgSeverityBySubtypeRaw[subKey] || {};
+    const labels = Object.keys(per);
+    return { labels, data: labels.map(k => Number(per[k] || 0)), keys: labels, colors: labels.map(colorForMsgSeverity) };
   }
+
+  // (Opcional) Log Description → si quieres que también filtre por msg_severity,
+  // crea un JSON similar en backend. Por ahora dejamos la rama original si la usabas:
   if (state.logDescriptionFilter && data.severityByLogDescRaw) {
     const logKey = findKeyCI(data.severityByLogDescRaw, state.logDescriptionFilter) ?? state.logDescriptionFilter;
     const perSev = data.severityByLogDescRaw[logKey] || {};
@@ -331,10 +395,12 @@ export function msgSeverityDataForCurrentFilter(state) {
     return { labels, data: labels.map(k => Number(perSev[k] || 0)), keys: labels, colors: labels.map(colorForMsgSeverity) };
   }
 
+  // Default global: msg_severity total
   const m = normalizeMapValues(data.msgSeverityCountsRaw);
   const keys = Object.keys(m);
   return { labels: keys, data: keys.map(k => Number(m[k] || 0)), keys, colors: keys.map(colorForMsgSeverity) };
 }
+
 
 /* =========================================================
  *  LEVEL / SUBTYPE (barras)
@@ -370,6 +436,21 @@ export function levelDataForCurrentFilter(state) {
     return { labels, data: labels.map(k=>map[k]), keys: labels };
   }
 
+  // << NUEVO: Hora → Level
+  if (state.hourFilter && data.levelCountsByHourRaw) {
+    const map = data.levelCountsByHourRaw[state.hourFilter] || {};
+    const labels = Object.keys(map);
+    return { labels, data: labels.map(k => Number(map[k] || 0)), keys: labels };
+  }
+  // Msg severity → Level
+  if (state.msgSeverityFilter && data.levelByMsgSeverityRaw) {
+    const msgKey = findKeyCI(data.levelByMsgSeverityRaw, state.msgSeverityFilter) ?? state.msgSeverityFilter;
+    const per = data.levelByMsgSeverityRaw[msgKey] || {};
+    const labels = Object.keys(per);
+    return { labels, data: labels.map(k => Number(per[k] || 0)), keys: labels };
+  }
+
+
   // Subtype → Level (NUEVO)
   if (state.subtypeFilter && data.levelBySubtypeRaw) {
     const stKey = findKeyCI(data.levelBySubtypeRaw, state.subtypeFilter) ?? state.subtypeFilter;
@@ -381,6 +462,7 @@ export function levelDataForCurrentFilter(state) {
   const m = normalizeMapValues(data.levelCountsRaw);
   const labels = Object.keys(m);
   return { labels, data: labels.map(k => Number(m[k] || 0)), keys: labels };
+
 }
 
 export function subtypeDataForCurrentFilter(state) {
@@ -402,6 +484,21 @@ export function subtypeDataForCurrentFilter(state) {
     });
     const labels = Object.keys(map);
     return { labels, data: labels.map(k=>map[k]), keys: labels };
+  }
+    // Msg severity → Subtype
+  if (state.msgSeverityFilter && data.subtypeByMsgSeverityRaw) {
+    const msgKey = findKeyCI(data.subtypeByMsgSeverityRaw, state.msgSeverityFilter) ?? state.msgSeverityFilter;
+    const per = data.subtypeByMsgSeverityRaw[msgKey] || {};
+    const labels = Object.keys(per);
+    return { labels, data: labels.map(k => Number(per[k] || 0)), keys: labels };
+  }
+
+
+  // << NUEVO: Hora → Subtype
+  if (state.hourFilter && data.subtypeByHourRaw) {
+    const map = data.subtypeByHourRaw[state.hourFilter] || {};
+    const labels = Object.keys(map);
+    return { labels, data: labels.map(k => Number(map[k] || 0)), keys: labels };
   }
 
   // Level → Subtype

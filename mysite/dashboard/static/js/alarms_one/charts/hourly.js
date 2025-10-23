@@ -16,24 +16,44 @@ export function renderHourly(state) {
 
   // --- Helpers ---
   const zeros = (n) => Array.from({ length: n }, () => 0);
-  const safeNum = (v) => Number.isFinite(Number(v)) ? Number(v) : 0;
+  const safeNum = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
   let series = Array.isArray(data.hourData) ? data.hourData.slice() : zeros(labels.length);
   let label = "Alarmas (por hora, rango actual)";
 
   // ============================
-  // Filtrado por pivote activo
+  // PRIORIDAD ABSOLUTA: SUBTYPE
   // ============================
-  if (state.deviceFilter) {
+  if (state.subtypeFilter) {
+    // 1) JSON exclusivo con serie directa por subtype
+    if (data.hourSeriesBySubtypeRaw && typeof data.hourSeriesBySubtypeRaw === "object") {
+      const subKey =
+        findKeyCI(data.hourSeriesBySubtypeRaw, state.subtypeFilter) ?? state.subtypeFilter;
+      const arr = data.hourSeriesBySubtypeRaw[subKey] || [];
+      series = Array.isArray(arr)
+        ? labels.map((_, i) => safeNum(arr[i]))
+        : zeros(labels.length);
+      label = `Alarmas por hora — Subtype: ${subKey}`;
+    } else {
+      // 2) Fallback al mapa por hora (si no está el exclusivo)
+      series = labels.map((h) => {
+        const bucket = data.subtypeByHourRaw?.[h] || {};
+        const sk = findKeyCI(bucket, state.subtypeFilter) || state.subtypeFilter;
+        return safeNum(bucket[sk]);
+      });
+      label = `Alarmas por hora — Subtype: ${state.subtypeFilter}`;
+    }
+  }
+
+  // ============================
+  // Otros pivots (si NO hay subtype)
+  // ============================
+  else if (state.deviceFilter) {
     const dk = data.canonicalDeviceKey(state.deviceFilter);
-    series = labels.map((h) => {
-      const m = data.devByHourRaw?.[h] || {};
-      return safeNum(m[dk]);
-    });
+    series = labels.map((h) => safeNum((data.devByHourRaw?.[h] || {})[dk]));
     label = `Alarmas por hora — Dispositivo: ${dk}`;
 
   } else if (state.levelFilter) {
-    // Soporte LEVEL con fallback si no hay datos
     const hasLevelHourly = !!data.levelCountsByHourRaw && typeof data.levelCountsByHourRaw === "object";
     const trySeries = hasLevelHourly
       ? labels.map((h) => {
@@ -49,7 +69,6 @@ export function renderHourly(state) {
       series = trySeries;
       label = `Alarmas por hora — Level: ${state.levelFilter}`;
     } else {
-      // Fallback silencioso: si no hay agregados por level, mantén la serie global
       series = Array.isArray(data.hourData) ? data.hourData.slice() : zeros(labels.length);
       label = "Alarmas (por hora, rango actual)";
       console.info("[hourly] Sin datos por level; usando serie global.");
@@ -64,17 +83,11 @@ export function renderHourly(state) {
     label = `Alarmas por hora — Severidad: ${state.severityFilter}`;
 
   } else if (state.actionFilter) {
-    series = labels.map((h) => {
-      const m = data.actByHourNorm?.[h] || {};
-      return safeNum(m[state.actionFilter]);
-    });
+    series = labels.map((h) => safeNum((data.actByHourNorm?.[h] || {})[state.actionFilter]));
     label = `Alarmas por hora — Acción: ${state.actionFilter}`;
 
   } else if (state.msgSeverityFilter) {
-    series = labels.map((h) => {
-      const m = data.msgSeverityByHourRaw?.[h] || {};
-      return safeNum(m[state.msgSeverityFilter]);
-    });
+    series = labels.map((h) => safeNum((data.msgSeverityByHourRaw?.[h] || {})[state.msgSeverityFilter]));
     label = `Alarmas por hora — Msg Severity: ${state.msgSeverityFilter}`;
   }
 
@@ -120,7 +133,7 @@ export function renderHourly(state) {
       const points = chart.getElementsAtEventForMode(evt, "nearest", { intersect: true }, true);
       if (!points.length) return;
       const idx = points[0].index;
-      const h = labels[idx]; // usa el índice de labels base (no formateadas)
+      const h = labels[idx]; 
       actions.toggleHour(h);
     };
   } else {

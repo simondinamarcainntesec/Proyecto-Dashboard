@@ -58,7 +58,7 @@ export const ACTION_ALIASES = {
   "block": "Blocked",
   "blocked": "Blocked",
   "resolved": "Resolved",
-  "closed": "Resolved",
+  "closed": "Closed",
   "2": "Resolved",
 };
 

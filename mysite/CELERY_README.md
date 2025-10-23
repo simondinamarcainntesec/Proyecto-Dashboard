@@ -33,8 +33,8 @@ Option B — if you are already inside `mysite/` (the inner package directory):
 source ../venv/bin/activate
 
 # run celery pointing at the package; when run from here use the same -A mysite
-celery -A mysite beat -l info &
-celery -A mysite worker -l info --concurrency=1 &
+nohup celery -A mysite beat -l info &
+nohup celery -A mysite worker -l info --concurrency=1 &
 ```
 
 Notes about why commands can fail

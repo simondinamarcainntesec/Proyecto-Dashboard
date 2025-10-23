@@ -24,6 +24,7 @@ import { renderDeviceTable } from "./charts/devicesTable.js";
 // === NUEVO ===
 // REEMPLAZA el render clásico por el montaje reactivo de Level:
 import { mountLevelBar } from "./charts/level.js";
+
 import { renderSubtypeBar } from "./charts/subtype.js";
 import { renderLogDescriptionBar } from "./charts/logDescription.js";
 

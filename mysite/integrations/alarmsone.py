@@ -1,71 +1,75 @@
-# mysite/integrations/alarmsone.py
-import os, json
-from datetime import datetime, timezone
+import os
+import subprocess
 import httpx
+from datetime import datetime, timedelta
 
-BASE_URL = os.getenv("ALARMSONE_BASE_URL", "https://alarmsone.manageengine.com/rest/json")
-
-def _token() -> str:
-    t = os.getenv("ALARMSONE_TOKEN")
-    if not t:
-        raise RuntimeError("Falta ALARMSONE_TOKEN")
-    return t
-
-def _to_ms(dt: datetime) -> int:
-    # datetime → epoch ms (UTC)
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    else:
-        dt = dt.astimezone(timezone.utc)
-    return int(dt.timestamp() * 1000)
-
-def list_alarms(*, from_dt: datetime, to_dt: datetime, status="all",
-                size=20, start=0, groupby=None, search_json: dict | None = None):
-    url = f"{BASE_URL}/listAlarms"
-    headers = {
-        "Authorization": f"Bearer {_token()}",
-        "Accept": "application/json",
-    }
-    params = {
-        "fromDate": _to_ms(from_dt),
-        "toDate": _to_ms(to_dt),
-        "filter": status,
-        "size": size,
-        "from": start,
-    }
-    if groupby:
-        params["groupby"] = groupby
-    if search_json:
-        params["searchJson"] = json.dumps(search_json, ensure_ascii=False)
-
-    with httpx.Client(timeout=30.0) as client:
-        r = client.get(url, headers=headers, params=params)
-        r.raise_for_status()
-        return r.json(), str(r.url)
-
-def list_alarms_all(
-    *, from_dt, to_dt, status="all", page_size=200, max_pages=10,
-    groupby=None, search_json: dict | None = None
-):
-    """
-    Descarga varias 'páginas' de listAlarms.
-    - page_size: cuántos por página (la API limita; 200 suele ir bien).
-    - max_pages: tope de páginas para no abusar en dev.
-    Devuelve: {"total": <int|None>, "alarms": [ ... ] }
-    """
-    alarms = []
-    total = None
-    for p in range(max_pages):
-        start = p * page_size
-        raw, _ = list_alarms(
-            from_dt=from_dt, to_dt=to_dt, status=status,
-            size=page_size, start=start,
-            groupby=groupby, search_json=search_json
+# -------------------------
+# Función para obtener token vía script externo
+# -------------------------
+def obtener_token_via_script():
+    # Ajusta la ruta completa al script
+    script_path = "/home/inntesec-ia/Proyecto-Dashboard/obtener_token.py"
+    
+    try:
+        result = subprocess.run(
+            ["python3", script_path],
+            capture_output=True,
+            text=True,
+            timeout=25
         )
-        data = raw.get("data") or raw
-        batch = data.get("alarms", []) or []
-        total = data.get("total", total)
-        alarms.extend(batch)
-        if not batch or len(batch) < page_size:
-            break
-    return {"total": total, "alarms": alarms}
+        if result.returncode == 0:
+            token = result.stdout.strip()
+            if token:
+                print(f"✅ Token obtenido correctamente: {token[:10]}...")  # opcional
+                return token
+            else:
+                print("❌ El script devolvió vacío, no se obtuvo token")
+                return None
+        else:
+            print(f"❌ Error ejecutando script obtener_token.py (exit {result.returncode})")
+            print(result.stderr or result.stdout)
+            return None
+    except Exception as e:
+        print(f"❌ Excepción ejecutando obtener_token.py: {e}")
+        return None
+
+# -------------------------
+# Función principal para obtener token
+# -------------------------
+def get_token():
+    token = obtener_token_via_script()
+    if not token:
+        raise RuntimeError("No se pudo obtener el token desde obtener_token.py")
+    return token
+
+# -------------------------
+# Ejemplo de uso de token en petición HTTPX
+# -------------------------
+def list_alarms_all(from_dt: int, to_dt: int):
+    token = get_token()
+    headers = {"Authorization": f"Bearer {token}"}
+
+    url = f"https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate={from_dt}&toDate={to_dt}&filter=all&size=200&from=0"
+    
+    try:
+        with httpx.Client(timeout=30) as client:
+            response = client.get(url, headers=headers)
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPStatusError as e:
+        print(f"❌ HTTP error: {e}")
+        return None
+    except Exception as e:
+        print(f"❌ Error de conexión: {e}")
+        return None
+
+# -------------------------
+# Test rápido
+# -------------------------
+if __name__ == "__main__":
+    print("Token:", get_token())
+    # Ejemplo: desde hace 7 días hasta hoy
+    from_dt = int((datetime.now() - timedelta(days=7)).timestamp() * 1000)
+    to_dt = int(datetime.now().timestamp() * 1000)
+    alarms = list_alarms_all(from_dt, to_dt)
+    print("Cantidad de alarmas:", len(alarms) if alarms else 0)

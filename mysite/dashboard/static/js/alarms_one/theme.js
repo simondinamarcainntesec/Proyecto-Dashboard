@@ -15,7 +15,8 @@ export const palette = {
   default: "#8B5CF6",
 };
 
-export const colorFor = (sev) => palette[String(sev || "").toLowerCase()] || palette.default;
+export const colorFor = (sev) =>
+  palette[String(sev || "").toLowerCase()] || palette.default;
 
 export function colorForMsgSeverity(label) {
   const k = String(label || "").trim().toLowerCase();
@@ -27,25 +28,55 @@ export function colorForMsgSeverity(label) {
 }
 
 export function setupChartJSDefaults(Chart) {
-  const fontFamily = "'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+  const fontFamily =
+    "'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+
+  // === Fuentes globales ===
   Chart.defaults.font.family = fontFamily;
   Chart.defaults.color = TXT;
   Chart.defaults.font.size = 15;
   Chart.defaults.font.weight = "700";
+
+  // === Leyenda (ajustes visuales globales) ===
   Chart.defaults.plugins.legend.labels.usePointStyle = true;
   Chart.defaults.plugins.legend.labels.pointStyle = "circle";
   Chart.defaults.plugins.legend.labels.font = { size: 15, weight: "700" };
-  Chart.defaults.plugins.legend.labels.color = TXT;
-  Chart.defaults.plugins.tooltip.titleFont = { size: 15, family: fontFamily, weight: "700" };
-  Chart.defaults.plugins.tooltip.bodyFont = { size: 15, family: fontFamily, weight: "700" };
+
+  // ⚡ Fuerza color BLANCO para la leyenda
+  Chart.defaults.plugins.legend.labels.color = "#FFFFFF";
+
+  // === Tooltip ===
+  Chart.defaults.plugins.tooltip.titleFont = {
+    size: 15,
+    family: fontFamily,
+    weight: "700",
+  };
+  Chart.defaults.plugins.tooltip.bodyFont = {
+    size: 15,
+    family: fontFamily,
+    weight: "700",
+  };
   Chart.defaults.plugins.tooltip.titleColor = EMPH;
   Chart.defaults.plugins.tooltip.bodyColor = EMPH;
+
+  // === Escalas ===
   Chart.defaults.scales = {
     ...Chart.defaults.scales,
-    linear: { ticks: { color: AXIS, font: { size: 14, weight: "700" } }, grid: { color: GRID } },
-    category: { ticks: { color: AXIS, font: { size: 14, weight: "700" } }, grid: { color: GRID } },
+    linear: {
+      ticks: { color: AXIS, font: { size: 14, weight: "700" } },
+      grid: { color: GRID },
+    },
+    category: {
+      ticks: { color: AXIS, font: { size: 14, weight: "700" } },
+      grid: { color: GRID },
+    },
   };
+
+  // === Comportamiento general ===
   Chart.defaults.responsive = true;
   Chart.defaults.maintainAspectRatio = false;
-  Chart.defaults.devicePixelRatio = Math.max(1.5, window.devicePixelRatio || 1);
+  Chart.defaults.devicePixelRatio = Math.max(
+    1.5,
+    window.devicePixelRatio || 1
+  );
 }
