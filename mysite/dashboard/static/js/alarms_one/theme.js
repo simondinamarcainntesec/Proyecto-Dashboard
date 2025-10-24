@@ -80,3 +80,28 @@ export function setupChartJSDefaults(Chart) {
     window.devicePixelRatio || 1
   );
 }
+
+// theme.js (agrega al final, o junto a tus otras utils)
+
+// Devuelve un color atenuado (gris con alpha) para “apagar” barras no activas
+export function dimmedBarFill() {
+  return "rgba(229,231,235,0.18)"; // gris clarito, mismo mood de tu UI
+}
+export function dimmedBarBorder() {
+  return "rgba(229,231,235,0.85)";
+}
+
+// Dado un arreglo de labels y un label activo, arma arrays de bg/border
+// usando una función de color para el estado “activo”.
+export function computeFocusColors(labels, activeLabel, getActiveColor) {
+  const isActive = (lbl) =>
+    String(lbl).trim().toLowerCase() === String(activeLabel || "").trim().toLowerCase();
+
+  const backgroundColor = labels.map((lbl) =>
+    isActive(lbl) ? getActiveColor(lbl) : dimmedBarFill()
+  );
+  const borderColor = labels.map((lbl) =>
+    isActive(lbl) ? getActiveColor(lbl) : dimmedBarBorder()
+  );
+  return { backgroundColor, borderColor };
+}

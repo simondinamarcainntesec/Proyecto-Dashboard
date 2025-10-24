@@ -1,8 +1,7 @@
-
+// charts/level.js
 import { getState, onStateChange, actions } from "../state.js";
 import { levelDataForCurrentFilter } from "../selectors.js";
 import { AXIS, GRID } from "../theme.js";
-
 
 const LEVEL_NAME_MAP = {
   "0": "notice",
@@ -14,17 +13,17 @@ const LEVEL_NAME_MAP = {
   "6": "warning",
 };
 
-
 const COLOR_BY_NAME = {
-  notice: "#8B5CF6",       // purple
-  alert: "#10B981",        // emerald
-  error: "#F59E0B",        // amber
-  information: "#3B82F6",  // blue
-  critical: "#EF4444",     // red
-  "n/a": "#06B6D4",        // cyan
-  warning: "#F97316",      // orange
+  notice: "#8B5CF6",
+  alert: "#10B981",
+  error: "#F59E0B",
+  information: "#3B82F6",
+  critical: "#EF4444",
+  "n/a": "#06B6D4",
+  warning: "#F97316",
 };
-const DEFAULT_COLOR = "#9CA3AF"; // gris fallback
+
+const DEFAULT_COLOR = "#9CA3AF";
 const withAlpha = (hex, alphaHex = "CC") =>
   (hex || DEFAULT_COLOR).slice(0, 7) + alphaHex;
 
@@ -37,56 +36,64 @@ const colorForPretty = (name) =>
   COLOR_BY_NAME[String(name ?? "").trim().toLowerCase()] || DEFAULT_COLOR;
 
 function buildDataset() {
+  const state = getState();
   const { labels: rawLabels, data: values = [], keys: rawKeys } =
-    levelDataForCurrentFilter(getState());
-
+    levelDataForCurrentFilter(state);
 
   const keys =
     Array.isArray(rawKeys) && rawKeys.length === (rawLabels || []).length
       ? rawKeys.map(String)
       : (rawLabels || []).map(String);
 
-
   const prettyNames = keys.map((k) => pretty(k));
 
-
-  const fill = prettyNames.map((p) => withAlpha(colorForPretty(p)));
-  const stroke = prettyNames.map((p) => colorForPretty(p));
-
-
+  // label mostrado → clave original (para click)
   const labelToKey = Object.fromEntries(prettyNames.map((p, i) => [p, keys[i]]));
-
 
   const series = prettyNames.map((_, i) => Number(values[i] || 0));
 
-  return { labels: prettyNames, series, fill, stroke, labelToKey };
+  // === EFECTO DE FOCO ===
+  const activePretty = state.levelFilter ? pretty(state.levelFilter) : null;
+
+  const backgroundColors = prettyNames.map((p) => {
+    if (activePretty && p.toLowerCase() !== activePretty.toLowerCase()) {
+      return "rgba(255,255,255,0.18)";
+    }
+    return withAlpha(colorForPretty(p), "FF");
+  });
+
+  return { labels: prettyNames, series, backgroundColors, labelToKey };
 }
 
 function render() {
-  const { labels, series, fill, labelToKey } = buildDataset();
+  const { labels, series, backgroundColors, labelToKey } = buildDataset();
+
+  const BORDER = "#e5e7eb";
 
   const cfg = {
     type: "bar",
     data: {
-      labels, 
+      labels,
       datasets: [
         {
           label: "Level",
-          data: series,                
-          backgroundColor: fill,      
-          borderColor: "#e5e7eb",      
+          data: series,
+          backgroundColor: backgroundColors,
+          borderColor: BORDER,          // borde blanco permanente
+          hoverBorderColor: BORDER,
           borderWidth: 2,
-          hoverBorderColor: "#e5e7eb",
+          hoverBorderWidth: 2,
+          borderSkipped: false,
         },
       ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      indexAxis: "x",                 
-      animation: { duration: 600, easing: "easeOutQuart" }, 
+      indexAxis: "x",
+      animation: { duration: 600, easing: "easeOutQuart" },
       plugins: {
-        legend: { display: false },    
+        legend: { display: false },
         tooltip: {
           callbacks: {
             title: (items) => (items?.[0] ? String(items[0].label) : ""),
@@ -94,6 +101,7 @@ function render() {
           },
         },
       },
+      elements: { bar: { borderWidth: 2, borderSkipped: false } },
       scales: {
         x: {
           type: "category",
@@ -126,7 +134,6 @@ function render() {
     const ctx = canvas.getContext("2d");
     chart = new window.Chart(ctx, cfg);
     chart.$levelLabelToKey = labelToKey;
-
 
     canvas.onclick = (evt) => {
       if (!chart) return;

@@ -1,4 +1,5 @@
 from inyeccion_api.models import Alarm
+from inyeccion_api.views import _to_datetime_santiago, _format_aotags, _message_extract_multiple_sources, _get_value_case_insensitive
 
 def _map_api_alarm_to_model(a: dict) -> Alarm | None:
     """

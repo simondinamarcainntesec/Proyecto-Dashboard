@@ -5,6 +5,7 @@ import { getState, onStateChange } from "./state.js";
 import "./data.js";
 import {
   getActiveCounts,
+  getActiveCountsForDonut,
   calcKpis,
   trendDataForCurrentFilter,
   actionDataForCurrentFilter,
@@ -52,7 +53,7 @@ function updateAll() {
 
   renderKPIs();
   renderTrend(trendDataForCurrentFilter(st));
-  renderDonut(st, getActiveCounts(st));
+  renderDonut(st, getActiveCountsForDonut(st));
   renderDeviceTable(st);
   renderActionBar(actionDataForCurrentFilter(st));
   renderMsgSeverityBar(msgSeverityDataForCurrentFilter(st), st.msgSeverityFilter);
@@ -144,5 +145,4 @@ onStateChange(() => {
   updateAll();
 });
 
-// (Opcional) Si en algún momento desmontas la vista:
-// window.addEventListener("beforeunload", () => { unmountLevel && unmountLevel(); });
+// (Opcional) Si en al

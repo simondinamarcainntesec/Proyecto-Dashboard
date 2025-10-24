@@ -125,17 +125,48 @@ export function calcKpis(state) {
  * =======================================================*/
 // << NUEVO: función para el bar de “Severidad Alarma”
 export function severityBarDataForCurrentFilter(state) {
-  // Si hay filtro de level, el bar debe usar msg_severity (requisito del usuario)
-  if (state.levelFilter) {
-    const m = normalizeMapValues(data.msgSeverityCountsRaw);
-    const labels = Object.keys(m);
-    return { labels, data: labels.map(k => Number(m[k] || 0)), keys: labels, mode: "msg" };
+  // CASO 1: Hay un level seleccionado
+  // => mostrar msg_severity (campo msg_severity del modelo) para ese level
+  if (state.levelFilter && data.msgSeverityByLevelRaw) {
+    // data.msgSeverityByLevelRaw viene de build_msg_severity_by_level
+    // {
+    //   "notice": { "high": 1485, "medium": 972, ... },
+    //   "critical": { "high": 983, ... },
+    //   ...
+    // }
+
+    const levKey =
+      findKeyCI(data.msgSeverityByLevelRaw, state.levelFilter) ??
+      state.levelFilter;
+
+    const per = data.msgSeverityByLevelRaw[levKey] || {};
+
+    const labels = Object.keys(per); // ["high","medium","low",...]
+    const values = labels.map(k => Number(per[k] || 0));
+
+    return {
+      labels,
+      data: values,
+      keys: labels,   // importante para el click handler
+      mode: "msg",    // <- esto le dice al chart "estoy mostrando msg_severity"
+    };
   }
-  // Default: usar severity global
+
+  // CASO 2: No hay level seleccionado
+  // => mostramos severidad clásica (campo severity, el de tu donut)
+  //    Esto mantiene tu comportamiento anterior cuando nadie clickeó nada.
   const m = normalizeMapValues(data.severityCounts);
   const labels = Object.keys(m);
-  return { labels, data: labels.map(k => Number(m[k] || 0)), keys: labels, mode: "severity" };
+  const values = labels.map(k => Number(m[k] || 0));
+
+  return {
+    labels,
+    data: values,
+    keys: labels,
+    mode: "severity", // <- ahora esto explícitamente significa "campo severity"
+  };
 }
+
 
 /* =========================================================
  *  TREND (Alarmas por día)
@@ -593,4 +624,26 @@ export function deviceRowsForCurrentFilter(state) {
     return top10(bySev[state.severityFilter]);
   }
   return top10(data.deviceCountsAll);
+}
+
+// Nuevo: mismos datos que getActiveCounts pero SIN recortar por severityFilter
+export function getActiveCountsForDonut(state) {
+  const [kind, key] = activePivot(state);
+
+  let base;
+  switch (kind) {
+    case "device":  base = sevForDevice(key); break;
+    case "action":  base = sevForAction(key); break;
+    case "hour":    base = sevForHour(key); break;
+    case "msg":     base = sevForMsgSeverity(key); break;
+    case "level":   base = sevForLevel(key); break;
+    case "subtype": base = sevForSubtype(key); break;
+    case "logdesc": base = sevForLogDesc(key); break;
+    default:        base = data.severityCounts; break;
+  }
+
+  base = normalizeCountsLabels(base);
+  // OJO: aquí NO llamamos a applySeveritySlice
+  if (!base || Object.keys(base).length === 0) return { "N/A": 0 };
+  return base;
 }

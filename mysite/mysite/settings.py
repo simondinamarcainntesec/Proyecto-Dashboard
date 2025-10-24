@@ -31,8 +31,8 @@ PASSWORD_HASHERS = ["django.contrib.auth.hashers.Argon2PasswordHasher"]
 TIME_ZONE = "America/Santiago"
 USE_TZ = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
-CSRF_TRUSTED_ORIGINS = ["http://localhost", "http://127.0.0.1"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.0","ia-customer-portal.eastus2.cloudapp.azure.com","127.0.0.1"]
+CSRF_TRUSTED_ORIGINS = ["http://localhost", "http://127.0.0.0"]
 
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "/templates/home"
@@ -150,8 +150,11 @@ CACHES = {
 
 
 # Configuración de Celery
-CELERY_TIMEZONE = "America/Santiago"
-# Broker/result backend se pueden configurar aquí si prefieres centralizarlo en settings,
-# pero ahora la configuración principal de beat_schedule vive en `mysite/celery.py`.
-CELERY_BROKER_URL = "redis://localhost:6379/0"
+# === Celery Config ===
+CELERY_BROKER_URL = "redis://localhost:6379/0"        # o el host que uses
 CELERY_RESULT_BACKEND = "redis://localhost:6379/1"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = "America/Santiago"
+CELERY_ENABLE_UTC = False

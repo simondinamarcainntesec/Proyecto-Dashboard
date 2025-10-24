@@ -197,7 +197,7 @@
   {{ trend_by_level|json_script:"trend-by-level" }}
   {{ level_counts_by_hour|json_script:"level-counts-by-hour" }}
   {{ subtype_counts_by_level|json_script:"subtype-counts-by-level" }}
-  {{ msg_severity_by_level|json_script:"level-by-msg-severity" }}
+  {{ msg_severity_by_level|json_script:"msg-severity-by-level" }}
   {{ msg_severity_by_subtype|json_script:"msg-severity-by-subtype" }}
 
   {{ subtype_counts|json_script:"subtype-counts" }}
@@ -217,90 +217,10 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- Acciones rápidas + defaults 30 días -->
-  <script>
-    (function () {
-      /* utilidades */
-      function pad(n){ return String(n).padStart(2,'0'); }
-      function toLocalIsoDate(dt){
-        return dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
-      }
-      function toLocalIsoDateTime(dt){
-        return dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate())
-               +'T'+pad(dt.getHours())+':'+pad(dt.getMinutes())+':'+pad(dt.getSeconds());
-      }
-      function minusDays(dt, days){
-        return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()-days, dt.getHours(), dt.getMinutes(), dt.getSeconds());
-      }
-      function firstDayOfMonth(dt){
-        return new Date(dt.getFullYear(), dt.getMonth(), 1, 0,0,0);
-      }
+  <!-- Helpers de rango y refresh (antes inline) -->
+  <script defer src="{% static 'js/alarms_one/date_filters.js' %}?v={% now 'U' %}"></script>
 
-      /* marcar chip activa según query (simple) */
-      const p = new URLSearchParams(location.search);
-      const chips = document.querySelectorAll('.chip-btn');
-      function setActiveChip(range){
-        chips.forEach(c=>c.classList.toggle('is-active', c.dataset.range===range));
-      }
-
-      /* click chips -> navegar con from/to exactos */
-      function goWithRange(range){
-        const now = new Date(); // local exacto
-        let from;
-        if(range==='7d'){ from = minusDays(now,7); }
-        else if(range==='30d'){ from = minusDays(now,30); }
-        else if(range==='month'){ from = firstDayOfMonth(now); }
-        else { from = minusDays(now,30); }
-
-        const params = new URLSearchParams(window.location.search);
-        params.set('from', toLocalIsoDateTime(from));
-        params.set('to',   toLocalIsoDateTime(now));
-        window.location.search = params.toString();
-      }
-      chips.forEach(btn=>{
-        btn.addEventListener('click', ()=> goWithRange(btn.dataset.range));
-      });
-
-      /* Default inputs: 30 días hasta hoy si llegan vacíos */
-      const inpFrom = document.getElementById('inp-from');
-      const inpTo   = document.getElementById('inp-to');
-      if (inpFrom && inpTo) {
-        if (!inpFrom.value || !inpTo.value) {
-          const now = new Date();
-          const from = minusDays(now, 30);
-          inpFrom.value = toLocalIsoDate(from);
-          inpTo.value   = toLocalIsoDate(now);
-        }
-      }
-
-      /* marcar chip si desde/hasta coincide con alguno de los presets */
-      if (p.has('from') && p.has('to')) {
-        const toQ  = new Date(p.get('to').replace(' ', 'T'));
-        const fromQ= new Date(p.get('from').replace(' ', 'T'));
-        const diffMs = toQ - fromQ;
-        const dayMs = 24*60*60*1000;
-        if (Math.abs(diffMs - 7*dayMs) < dayMs) setActiveChip('7d');
-        else if (Math.abs(diffMs - 30*dayMs) < dayMs) setActiveChip('30d');
-        else {
-          const firstMonth = firstDayOfMonth(toQ);
-          if (fromQ.getFullYear()===firstMonth.getFullYear() &&
-              fromQ.getMonth()===firstMonth.getMonth() &&
-              fromQ.getDate()===firstMonth.getDate()) setActiveChip('month');
-        }
-      }
-
-      /* refresh -> mantiene from, actualiza to = ahora */
-      const r = document.getElementById('btn-refresh');
-      if (r) r.addEventListener('click', ()=>{
-        const now = new Date();
-        const params = new URLSearchParams(window.location.search);
-        params.set('to', toLocalIsoDateTime(now));
-        window.location.search = params.toString();
-      });
-    })();
-  </script>
-
-  <!-- Bundle modular -->
-  <script type="module" src="{% static 'js/alarms_one/dashboard.js' %}"></script>
+  <!-- App principal -->
+  <script type="module" src="{% static 'js/alarms_one/dashboard.js' %}?v={% now 'U' %}"></script>
 </body>
 </html>

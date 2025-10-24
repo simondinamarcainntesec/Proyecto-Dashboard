@@ -61,10 +61,14 @@ export function renderSubtypeBar(ds, activeKey = "") {
       ? local.keys.map(String)
       : labels.slice();
 
-  const fill = currentKeys.map((k) => withAlpha(colorForSubtype(k)));
-  const stroke = currentKeys.map((k) => colorForSubtype(k));
-  const activeIdx = currentKeys.findIndex((k) => eqCI(k, activeKey));
-  if (activeIdx >= 0) fill[activeIdx] = stroke[activeIdx];
+  // ====== EFECTO DE FOCO ======
+  const backgroundColors = currentKeys.map((k) => {
+    if (activeKey && !eqCI(k, activeKey)) return "rgba(255,255,255,0.18)";
+    return withAlpha(colorForSubtype(k), "FF");
+  });
+
+  // borde blanco permanente
+  const BORDER = "#e5e7eb";
 
   const cfg = {
     type: "bar",
@@ -73,10 +77,12 @@ export function renderSubtypeBar(ds, activeKey = "") {
       datasets: [{
         label: "Subtype",
         data: values,
-        backgroundColor: fill,
-        borderColor: "#e5e7eb",  // contorno blanco uniforme
+        backgroundColor: backgroundColors,
+        borderColor: BORDER,
+        hoverBorderColor: BORDER,
         borderWidth: 2,
-        hoverBorderColor: "#e5e7eb",
+        hoverBorderWidth: 2,
+        borderSkipped: false,
       }],
     },
     options: {
@@ -85,7 +91,7 @@ export function renderSubtypeBar(ds, activeKey = "") {
       animation: { duration: 600, easing: "easeOutQuart" },
       indexAxis: "x",
       plugins: {
-        legend: { display: false },   // igual que las otras barras
+        legend: { display: false },
         tooltip: {
           callbacks: {
             title: (items) => (items?.[0] ? String(items[0].label) : ""),
@@ -93,6 +99,7 @@ export function renderSubtypeBar(ds, activeKey = "") {
           },
         },
       },
+      elements: { bar: { borderWidth: 2, borderSkipped: false } },
       scales: {
         x: {
           type: "category",
@@ -124,8 +131,6 @@ export function renderSubtypeBar(ds, activeKey = "") {
 
   if (!chart) {
     chart = new window.Chart(canvas, cfg);
-
-    // click en barra → filtro por subtype
     canvas.addEventListener("click", (evt) => {
       if (!chart) return;
       const elp = chart.getElementsAtEventForMode(evt, "nearest", { intersect: true }, true);
