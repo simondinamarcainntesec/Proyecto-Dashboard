@@ -1570,3 +1570,134 @@ For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/St
 [2025-10-27 16:05:02,970: INFO/ForkPoolWorker-1] 📊 Total alarmas recibidas hoy: 760
 [2025-10-27 16:05:03,908: INFO/ForkPoolWorker-1] ✅ Ingesta diaria completada. Nuevas filas insertadas: 36
 [2025-10-27 16:05:03,911: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_ingesta_api[55c863a8-32b7-40f2-949e-092e21cf5a59] succeeded in 3.905494394013658s: None
+[2025-10-27 17:00:00,000: INFO/MainProcess] Scheduler: Sending due task obtener-token-cada-hora (integrations.tasks.tarea_obtener_token)
+[2025-10-27 17:00:00,008: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[f988e375-517f-4190-a84b-6c3aed89da30] received
+[2025-10-27 17:00:00,009: INFO/ForkPoolWorker-1] 🔑 Solicitando nuevo token desde la API...
+[2025-10-27 17:00:00,899: WARNING/ForkPoolWorker-1] ✅ Token obtenido correctamente: 1000.a1c80...
+[2025-10-27 17:00:00,900: INFO/ForkPoolWorker-1] ✅ Token guardado correctamente.
+[2025-10-27 17:00:00,901: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_obtener_token[f988e375-517f-4190-a84b-6c3aed89da30] succeeded in 0.8918319640215486s: '1000.a1c80890df133345272442dbdc8bcccb.7089a422faab1da2dcbe8b102ec504ac'
+[2025-10-27 17:05:00,000: INFO/MainProcess] Scheduler: Sending due task ingesta-api-cada-65-min (integrations.tasks.tarea_ingesta_api)
+[2025-10-27 17:05:00,003: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[cef96b2f-3c03-4687-a8ce-dcbe44cf6a10] received
+[2025-10-27 17:05:00,004: INFO/ForkPoolWorker-1] 🚀 Inicio de ingesta diaria de API
+[2025-10-27 17:05:00,056: INFO/ForkPoolWorker-1] 🧹 Alarmas antiguas eliminadas: 2
+[2025-10-27 17:05:00,056: INFO/ForkPoolWorker-1] 📅 Trayendo alarmas desde 2025-10-27 00:00:00-03:00 hasta 2025-10-27 14:05:00.004935-03:00 (ms: 1761534000000 → 1761584700004)
+[2025-10-27 17:05:00,985: WARNING/ForkPoolWorker-1] ✅ Token obtenido correctamente: 1000.5e7b8...
+[2025-10-27 17:05:02,440: INFO/ForkPoolWorker-1] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1761534000000&toDate=1761584700004&filter=all&size=200&from=0 "HTTP/1.1 200 "
+[2025-10-27 17:05:02,518: INFO/ForkPoolWorker-1] 📦 Página 1, 200 alarmas cargadas (total: 200)
+[2025-10-27 17:05:02,849: INFO/ForkPoolWorker-1] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1761534000000&toDate=1761584700004&filter=all&size=200&from=200 "HTTP/1.1 200 "
+[2025-10-27 17:05:02,924: INFO/ForkPoolWorker-1] 📦 Página 2, 200 alarmas cargadas (total: 400)
+[2025-10-27 17:05:03,231: INFO/ForkPoolWorker-1] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1761534000000&toDate=1761584700004&filter=all&size=200&from=400 "HTTP/1.1 200 "
+[2025-10-27 17:05:03,304: INFO/ForkPoolWorker-1] 📦 Página 3, 200 alarmas cargadas (total: 600)
+[2025-10-27 17:05:03,662: INFO/ForkPoolWorker-1] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1761534000000&toDate=1761584700004&filter=all&size=200&from=600 "HTTP/1.1 200 "
+[2025-10-27 17:05:03,741: INFO/ForkPoolWorker-1] 📦 Página 3, 171 alarmas cargadas (total: 771)
+[2025-10-27 17:05:03,741: INFO/ForkPoolWorker-1] 📊 Total alarmas recibidas hoy: 771
+[2025-10-27 17:05:04,635: INFO/ForkPoolWorker-1] ✅ Ingesta diaria completada. Nuevas filas insertadas: 11
+[2025-10-27 17:05:04,638: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_ingesta_api[cef96b2f-3c03-4687-a8ce-dcbe44cf6a10] succeeded in 4.634166579984594s: None
+[2025-10-27 18:00:00,000: INFO/MainProcess] Scheduler: Sending due task obtener-token-cada-hora (integrations.tasks.tarea_obtener_token)
+[2025-10-27 18:00:00,003: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[a6cfdc0b-3c0c-46b7-8443-4ea3e25bd402] received
+[2025-10-27 18:00:00,004: INFO/ForkPoolWorker-1] 🔑 Solicitando nuevo token desde la API...
+[2025-10-27 18:00:01,067: WARNING/ForkPoolWorker-1] ✅ Token obtenido correctamente: 1000.5e7b8...
+[2025-10-27 18:00:01,068: INFO/ForkPoolWorker-1] ✅ Token guardado correctamente.
+[2025-10-27 18:00:01,069: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_obtener_token[a6cfdc0b-3c0c-46b7-8443-4ea3e25bd402] succeeded in 1.0651836189790629s: '1000.5e7b8772136ce3ff7ce321af14b18c9f.2ab02cb5c77aaf122945482cecd39560'
+[2025-10-27 18:05:00,000: INFO/MainProcess] Scheduler: Sending due task ingesta-api-cada-65-min (integrations.tasks.tarea_ingesta_api)
+[2025-10-27 18:05:00,010: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[8b997555-9f50-4f9f-84be-521f8c6aa102] received
+[2025-10-27 18:05:00,011: INFO/ForkPoolWorker-1] 🚀 Inicio de ingesta diaria de API
+[2025-10-27 18:05:00,155: INFO/ForkPoolWorker-1] 🧹 Alarmas antiguas eliminadas: 5
+[2025-10-27 18:05:00,155: INFO/ForkPoolWorker-1] 📅 Trayendo alarmas desde 2025-10-27 00:00:00-03:00 hasta 2025-10-27 15:05:00.011494-03:00 (ms: 1761534000000 → 1761588300011)
+[2025-10-27 18:05:01,113: WARNING/ForkPoolWorker-1] ✅ Token obtenido correctamente: 1000.6cfc3...
+[2025-10-27 18:05:01,483: INFO/ForkPoolWorker-1] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1761534000000&toDate=1761588300011&filter=all&size=200&from=0 "HTTP/1.1 200 "
+[2025-10-27 18:05:01,631: INFO/ForkPoolWorker-1] 📦 Página 1, 200 alarmas cargadas (total: 200)
+[2025-10-27 18:05:02,006: INFO/ForkPoolWorker-1] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1761534000000&toDate=1761588300011&filter=all&size=200&from=200 "HTTP/1.1 200 "
+[2025-10-27 18:05:02,092: INFO/ForkPoolWorker-1] 📦 Página 2, 200 alarmas cargadas (total: 400)
+[2025-10-27 18:05:02,456: INFO/ForkPoolWorker-1] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1761534000000&toDate=1761588300011&filter=all&size=200&from=400 "HTTP/1.1 200 "
+[2025-10-27 18:05:02,530: INFO/ForkPoolWorker-1] 📦 Página 3, 200 alarmas cargadas (total: 600)
+[2025-10-27 18:05:02,896: INFO/ForkPoolWorker-1] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1761534000000&toDate=1761588300011&filter=all&size=200&from=600 "HTTP/1.1 200 "
+[2025-10-27 18:05:03,001: INFO/ForkPoolWorker-1] 📦 Página 3, 183 alarmas cargadas (total: 783)
+[2025-10-27 18:05:03,001: INFO/ForkPoolWorker-1] 📊 Total alarmas recibidas hoy: 783
+[2025-10-27 18:05:03,886: INFO/ForkPoolWorker-1] ✅ Ingesta diaria completada. Nuevas filas insertadas: 12
+[2025-10-27 18:05:03,889: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_ingesta_api[8b997555-9f50-4f9f-84be-521f8c6aa102] succeeded in 3.8784904470085166s: None
+[2025-10-27 19:00:00,000: INFO/MainProcess] Scheduler: Sending due task obtener-token-cada-hora (integrations.tasks.tarea_obtener_token)
+[2025-10-27 19:00:00,012: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[97468c06-e660-49d0-a26c-0c15859f0f0b] received
+[2025-10-27 19:00:00,014: INFO/ForkPoolWorker-1] 🔑 Solicitando nuevo token desde la API...
+[2025-10-27 19:00:01,005: WARNING/ForkPoolWorker-1] ✅ Token obtenido correctamente: 1000.6cfc3...
+[2025-10-27 19:00:01,006: INFO/ForkPoolWorker-1] ✅ Token guardado correctamente.
+[2025-10-27 19:00:01,007: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_obtener_token[97468c06-e660-49d0-a26c-0c15859f0f0b] succeeded in 0.993921828980092s: '1000.6cfc33ed642b3ea01ff1b8fa1638424b.355d679e9e6d96af8850ac08abd3dbb9'
+[2025-10-27 19:05:00,000: INFO/MainProcess] Scheduler: Sending due task ingesta-api-cada-65-min (integrations.tasks.tarea_ingesta_api)
+[2025-10-27 19:05:00,008: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[7996b5f2-8b0e-4465-b99d-ea381b167177] received
+[2025-10-27 19:05:00,010: INFO/ForkPoolWorker-1] 🚀 Inicio de ingesta diaria de API
+[2025-10-27 19:05:00,012: ERROR/ForkPoolWorker-1] ❌ Error inesperado durante la ingesta diaria: connection failed: connection to server at "127.0.0.1", port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+Traceback (most recent call last):
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/db/backends/postgresql/base.py", line 332, in get_new_connection
+    connection = self.Database.connect(**conn_params)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/psycopg/connection.py", line 120, in connect
+    raise last_ex.with_traceback(None)
+psycopg.OperationalError: connection failed: connection to server at "127.0.0.1", port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/inntesec-ia/Proyecto-Dashboard/mysite/integrations/tasks.py", line 54, in tarea_ingesta_api
+    eliminadas, _ = Alarm.objects.filter(event_time__lt=limite).delete()
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/db/models/query.py", line 1199, in delete
+    num_deleted, num_deleted_per_model = collector.delete()
+                                         ^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/db/models/deletion.py", line 454, in delete
+    with transaction.atomic(using=self.using, savepoint=False):
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/db/transaction.py", line 198, in __enter__
+    if not connection.get_autocommit():
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/db/backends/base/base.py", line 454, in get_autocommit
+    self.ensure_connection()
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/db/backends/base/base.py", line 278, in ensure_connection
+    with self.wrap_database_errors:
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/db/backends/postgresql/base.py", line 332, in get_new_connection
+    connection = self.Database.connect(**conn_params)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/psycopg/connection.py", line 120, in connect
+    raise last_ex.with_traceback(None)
+django.db.utils.OperationalError: connection failed: connection to server at "127.0.0.1", port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+[2025-10-27 19:05:00,028: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_ingesta_api[7996b5f2-8b0e-4465-b99d-ea381b167177] succeeded in 0.01841186103411019s: None
+[2025-10-27 20:00:00,000: INFO/MainProcess] Scheduler: Sending due task obtener-token-cada-hora (integrations.tasks.tarea_obtener_token)
+[2025-10-27 20:00:00,008: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[a988e8a2-096b-4d6c-89ca-cc26e739e590] received
+[2025-10-27 20:00:00,011: INFO/ForkPoolWorker-1] 🔑 Solicitando nuevo token desde la API...
+[2025-10-27 20:00:20,630: WARNING/ForkPoolWorker-1] ❌ Error ejecutando script obtener_token.py (exit 2)
+[2025-10-27 20:00:20,630: WARNING/ForkPoolWorker-1] Error al llamar la API: The read operation timed out
+[2025-10-27 20:00:20,630: ERROR/ForkPoolWorker-1] ❌ Error al obtener token: No se recibió token desde la API
+[2025-10-27 20:00:20,644: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_obtener_token[a988e8a2-096b-4d6c-89ca-cc26e739e590] retry: Retry in 10s: ValueError('No se recibió token desde la API')
+[2025-10-27 20:00:20,650: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[a988e8a2-096b-4d6c-89ca-cc26e739e590] received
+[2025-10-27 20:00:30,636: INFO/ForkPoolWorker-1] 🔑 Solicitando nuevo token desde la API...
+[2025-10-27 20:00:49,738: WARNING/ForkPoolWorker-1] ✅ Token obtenido correctamente: 1000.1d14d...
+[2025-10-27 20:00:49,739: INFO/ForkPoolWorker-1] ✅ Token guardado correctamente.
+[2025-10-27 20:00:49,741: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_obtener_token[a988e8a2-096b-4d6c-89ca-cc26e739e590] succeeded in 19.105253791960422s: '1000.1d14d6df74db265acbb8625ab908cf13.bdc68a84afa96e3a570f712470440412'

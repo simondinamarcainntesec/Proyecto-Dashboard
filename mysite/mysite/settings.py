@@ -64,6 +64,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'tenants.middleware.ActiveTenantMiddleware',
 ]
 
 ROOT_URLCONF = 'mysite.urls'
@@ -159,3 +160,10 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "America/Santiago"
 CELERY_ENABLE_UTC = False
+
+AUTH_USER_MODEL = 'tenants.TenantUser'
+
+AUTHENTICATION_BACKENDS = [
+    'tenants.auth_backends.TenantBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]

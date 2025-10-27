@@ -8,9 +8,19 @@
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v={% now 'U' %}">
+
+  <!-- Estilos mínimos del overlay -->
 </head>
 
 <body class="layout">
+  <!-- Overlay de carga -->
+  <div id="loading-overlay" role="status" aria-live="polite" aria-label="Cargando">
+    <div class="loading-card">
+      <div class="spinner" aria-hidden="true"></div>
+      <div class="loading-text">Cargando datos…</div>
+    </div>
+  </div>
+
   <!-- Sidebar -->
   <aside class="sidebar">
     <div class="brand">
@@ -24,6 +34,7 @@
       <a class="nav-item" href="#"><span class="nav-ico">🚨</span>Alertas</a>
       <a class="nav-item" href="#"><span class="nav-ico">🧾</span>Auditoría</a>
       <a class="nav-item" href="#"><span class="nav-ico">⚙️</span>Ajustes</a>
+      <!-- Este link disparará el overlay al hacer clic -->
       <a class="nav-item" href="{% url 'dashboard_realtime' %}"><span class="nav-ico">⏱️</span>Tiempo Real</a>
     </nav>
   </aside>
@@ -36,7 +47,7 @@
         <h1 class="top-title">Tenant: <span class="top-tenant">Fashions Park</span></h1>
       </div>
       <div class="top-right">
-        <button class="btn ghost" title="Actualizar" id="btn-refresh">⟳</button>
+        <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
         <button class="btn ghost" title="Exportar">⬇︎</button>
         <div class="user">
           <div class="user-avatar">U</div>
@@ -49,7 +60,6 @@
     <section class="toolbar">
       <form id="date-filter" method="get" class="toolbar-row">
         <div class="group">
-          <!-- chips clickeables con animación -->
           <button type="button" class="chip chip-btn" data-range="7d">Últimos 7 días</button>
           <button type="button" class="chip chip-btn" data-range="30d">Últimos 30 días</button>
           <button type="button" class="chip chip-btn" data-range="month">Este mes</button>
@@ -70,7 +80,6 @@
       </form>
     </section>
 
-    {% comment %} --- KPIs en caché (varían por rango) --- {% endcomment %}
     {% cache 300 "kpis_hist" from_date_str to_date_str %}
     <section class="grid grid-kpis">
       <div class="card kpi"><div class="kpi-label">Disponibilidad (simulado)</div><div class="kpi-value">99,8%</div></div>
@@ -80,9 +89,7 @@
     </section>
     {% endcache %}
 
-    {% comment %} --- Gráficos/tabla en caché (varían por rango) --- {% endcomment %}
     {% cache 300 "grid_hist" from_date_str to_date_str %}
-    <!-- GRILLA PRINCIPAL -->
     <section class="grid grid-main">
       <div class="card chart card--trend">
         <div class="card-head"><h3>Alarmas por día</h3></div>
@@ -149,9 +156,7 @@
     <footer class="footnote">Última actualización: hace 7 min</footer>
   </div>
 
-  {% comment %} --- Bloque de JSON embebido en caché (varía por rango) --- {% endcomment %}
   {% cache 300 "payload_hist" from_date_str to_date_str %}
-  <!-- JSON embebidos (sin cambios) -->
   {{ trend_labels|json_script:"trend-labels" }}
   {{ trend_data|json_script:"trend-data" }}
   {{ severity_trends|json_script:"severity-trends" }}
@@ -218,9 +223,11 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <script defer src="{% static 'js/alarms_one/date_filters.js' %}?v={% now 'U' %}"></script>
+  <!-- Nuevo: controlador del overlay (archivo separado) -->
+  <script defer src="{% static 'js/alarms_one/page_loading.js' %}?v={% now 'U' %}"></script>
 
   <!-- App principal -->
+  <script defer src="{% static 'js/alarms_one/date_filters.js' %}?v={% now 'U' %}"></script>
   <script type="module" src="{% static 'js/alarms_one/dashboard.js' %}?v={% now 'U' %}"></script>
 </body>
 </html>

@@ -172,57 +172,96 @@ export function severityBarDataForCurrentFilter(state) {
  *  TREND (Alarmas por día)
  * =======================================================*/
 export function trendDataForCurrentFilter(state) {
+  // Helper local para armar la config del chart
+  function baseTrend(labels, items) {
+    const datasets = items.map(({ label, data, color }) => ({
+      label,
+      data,
+      borderColor: color,
+      backgroundColor: color + "33",
+      borderWidth: 3,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      fill: true,
+      tension: 0.35,
+    }));
+    return { labels, datasets };
+  }
+
   const { canonicalDeviceKey } = data;
 
+  // === Helpers de totales ===
+  const labels = Array.isArray(data.trendLabels) ? data.trendLabels : [];
+  const sumSeveritySeries = () => {
+    const map = data.severityTrendsMap || {};
+    const L = labels.length || (Object.values(map)[0]?.data?.length || 0);
+    const total = new Array(L).fill(0);
+    for (const k of Object.keys(map)) {
+      const arr = map[k]?.data || [];
+      for (let i = 0; i < L; i++) total[i] += Number(arr[i] || 0);
+    }
+    return total;
+  };
+  const totalSeries =
+    (Array.isArray(data.trendData) && data.trendData.length)
+      ? data.trendData
+      : sumSeveritySeries();
+
+  // === Filtros específicos (igual que antes) ===
   if (state.deviceFilter && data.trendByDevice?.[canonicalDeviceKey(state.deviceFilter)]) {
     const dk = canonicalDeviceKey(state.deviceFilter);
-    return baseTrend(data.trendLabels, [{ label: dk, data: data.trendByDevice[dk], color: "#60A5FA" }]);
+    return baseTrend(data.trendLabels, [
+      { label: dk, data: data.trendByDevice[dk], color: "#60A5FA" },
+    ]);
   }
   if (state.actionFilter && data.trendByAction?.[state.actionFilter]) {
-    return baseTrend(data.trendLabels, [{ label: `Acción: ${prettyActionLabel(state.actionFilter)}`, data: data.trendByAction[state.actionFilter], color: "#8B5CF6" }]);
+    return baseTrend(data.trendLabels, [
+      { label: `Acción: ${prettyActionLabel(state.actionFilter)}`, data: data.trendByAction[state.actionFilter], color: "#8B5CF6" },
+    ]);
   }
-
-  // << NUEVO: Hora → trend por día sólo para ese bucket horario
   if (state.hourFilter && data.trendByHourRaw?.[state.hourFilter]) {
     const series = data.trendByHourRaw[state.hourFilter] || [];
-    return baseTrend(data.trendLabelsHour, [{ label: `Hora ${state.hourFilter}:00`, data: series, color: "#0EA5E9" }]);
+    return baseTrend(data.trendLabelsHour, [
+      { label: `Hora ${state.hourFilter}:00`, data: series, color: "#0EA5E9" },
+    ]);
   }
-
   if (state.msgSeverityFilter && data.trendByMsgSeverityRaw?.[state.msgSeverityFilter]) {
-    return baseTrend(data.trendLabels, [{ label: `Msg severity: ${state.msgSeverityFilter}`, data: data.trendByMsgSeverityRaw[state.msgSeverityFilter], color: "#F43F5E" }]);
+    return baseTrend(data.trendLabels, [
+      { label: `Severidad Alarma: ${state.msgSeverityFilter}`, data: data.trendByMsgSeverityRaw[state.msgSeverityFilter], color: "#F43F5E" },
+    ]);
   }
   if (state.levelFilter && data.trendByLevel?.[state.levelFilter]) {
-    return baseTrend(data.trendLabels, [{ label: `Level: ${state.levelFilter}`, data: data.trendByLevel[state.levelFilter], color: "#0EA5E9" }]);
+    return baseTrend(data.trendLabels, [
+      { label: `Level: ${state.levelFilter}`, data: data.trendByLevel[state.levelFilter], color: "#0EA5E9" },
+    ]);
   }
   if (state.subtypeFilter && data.trendBySubtype?.[state.subtypeFilter]) {
-    return baseTrend(data.trendLabels, [{ label: `Subtype: ${state.subtypeFilter}`, data: data.trendBySubtype[state.subtypeFilter], color: "#22C55E" }]);
+    return baseTrend(data.trendLabels, [
+      { label: `Subtype: ${state.subtypeFilter}`, data: data.trendBySubtype[state.subtypeFilter], color: "#22C55E" },
+    ]);
   }
-  // Ojo: no hay trend por logdesc en el backend; dejar sin branch
 
-  // Default: por severidad (posibilidad de ocultar una)
-  const datasets = Object.keys(data.severityTrendsMap).map((sev) => {
-    const sevKey = String(sev).trim();
-    const hidden = state.severityFilter &&
-      sevKey.toLowerCase() !== String(state.severityFilter).trim().toLowerCase();
-    const base = colorFor(sevKey);
-    return {
-      label: sevKey,
-      data: data.severityTrendsMap[sev]?.data || new Array(data.trendLabels.length).fill(0),
-      borderColor: base, backgroundColor: base + "33",
-      borderWidth: 3, pointRadius: hidden ? 0 : 3, pointHoverRadius: hidden ? 0 : 5,
-      fill: true, tension: 0.35, hidden,
-    };
-  });
-  return { labels: data.trendLabels, datasets };
+  // === Si hay filtro de severidad puntual ===
+  if (state.severityFilter) {
+    const want = String(state.severityFilter).trim().toLowerCase();
+    const map = data.severityTrendsMap || {};
+    const matchKey = Object.keys(map).find(
+      (k) => String(k).trim().toLowerCase() === want
+    );
+    const series = (matchKey && map[matchKey]?.data?.length)
+      ? map[matchKey].data
+      : new Array(labels.length).fill(0);
+    return baseTrend(labels, [
+      { label: matchKey || want, data: series, color: "#60A5FA" },
+    ]);
+  }
+
+  // === Default: TOTAL (sin desgloses) ===
+  return baseTrend(labels, [
+    { label: "Alarmas por día", data: totalSeries, color: "#60A5FA" },
+  ]);
 }
-function baseTrend(labels, items) {
-  const datasets = items.map(({ label, data, color }) => ({
-    label, data,
-    borderColor: color, backgroundColor: color + "33",
-    borderWidth: 3, pointRadius: 3, pointHoverRadius: 5, fill: true, tension: 0.35,
-  }));
-  return { labels, datasets };
-}
+
 
 /* =========================================================
  *  HOURLY (Alarmas por hora)

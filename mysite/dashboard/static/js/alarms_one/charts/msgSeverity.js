@@ -13,10 +13,10 @@ export function renderMsgSeverityBar(payload, activeKey) {
 
   const { labels = [], data = [], keys = [] } = payload;
 
-  // Si no viene activeKey, usamos el filtro actual del state
+  // Foco actual (si corresponde)
   const focus = (activeKey ?? getState()?.msgSeverityFilter ?? "").toString();
 
-  // Colores (atenúa todo lo que no sea el foco)
+  // Colores (atenúa lo que no es foco)
   const bg = labels.map((lbl) =>
     focus && norm(lbl) !== norm(focus) ? "rgba(255,255,255,0.18)" : colorForMsgSeverity(lbl)
   );
@@ -25,7 +25,7 @@ export function renderMsgSeverityBar(payload, activeKey) {
   );
 
   if (!chart) {
-    // Creación inicial (animamos solo la primera vez)
+    // Creación inicial
     chart = new Chart(ctx, {
       type: "bar",
       data: {
@@ -44,12 +44,18 @@ export function renderMsgSeverityBar(payload, activeKey) {
         animation: { duration: 600, easing: "easeOutQuart" },
         plugins: { legend: { display: false }, tooltip: { enabled: true } },
         scales: {
-          x: { beginAtZero: true, ticks: { color: "#E5E7EB" }, grid: { color: "rgba(229,231,235,0.14)" } },
+          x: {
+            beginAtZero: true,
+            ticks: { color: "#E5E7EB" },
+            grid: { color: "rgba(229,231,235,0.14)" },
+          },
           y: {
+            // 👇 Forzamos escala categórica para evitar 0,1,2,3
             type: "category",
             ticks: {
               color: "#E5E7EB",
-              callback: (_, i) => labels[i],
+              // 👇 Leemos SIEMPRE desde chart.data.labels (no cerramos sobre `labels`)
+              callback: (_, i) => (chart?.data?.labels?.[i] ?? ""),
             },
             grid: { color: "rgba(229,231,235,0.14)" },
           },
@@ -57,7 +63,7 @@ export function renderMsgSeverityBar(payload, activeKey) {
       },
     });
 
-    // Click → toggle del filtro (usamos la clave cruda del payload)
+    // Click → toggle del filtro con la key cruda
     ctx.canvas.onclick = (evt) => {
       const elp = chart.getElementsAtEventForMode(evt, "nearest", { intersect: true }, true);
       if (!elp.length) return;
@@ -65,7 +71,7 @@ export function renderMsgSeverityBar(payload, activeKey) {
       actions.toggleMsgSeverity?.(keys[idx]);
     };
 
-    // Guardamos geometría para detectar cambios reales
+    // Guardamos geometría
     chart.$static = { labels: labels.slice(), values: data.slice() };
     return;
   }
@@ -82,14 +88,14 @@ export function renderMsgSeverityBar(payload, activeKey) {
     chart.$static.values.every((v, i) => Number(v) === Number(data[i]));
 
   if (sameLabels && sameValues) {
-    // Sólo cambia el foco → actualizamos colores sin animación
+    // Solo cambia foco → actualiza colores
     const ds = chart.data.datasets[0];
     ds.backgroundColor = bg;
     ds.borderColor = borders;
     ds.hoverBorderColor = borders;
     chart.update("none");
   } else {
-    // Cambió labels/data → actualizamos todo (con animación normal)
+    // Actualización completa
     chart.data.labels = labels.slice();
     chart.data.datasets[0].data = data.slice();
     chart.data.datasets[0].backgroundColor = bg;

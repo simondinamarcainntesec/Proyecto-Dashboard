@@ -1,23 +1,21 @@
-// dashboard.js (HISTÓRICO)
+// dashboard.realtime.js (TIEMPO REAL) — sin trend
 import { setupChartJSDefaults } from "./theme.js";
 import { $ } from "./utils.js";
 import { getState, onStateChange } from "./state.js";
 import "./data.js";
 
 import {
-  getActiveCounts,
   getActiveCountsForDonut,
   calcKpis,
-  trendDataForCurrentFilter,
   actionDataForCurrentFilter,
   msgSeverityDataForCurrentFilter,
-  levelDataForCurrentFilter,
+  levelDataForCurrentFilter,          // lo mantenemos por coherencia de tipos/exports
   subtypeDataForCurrentFilter,
   logDescriptionDataForCurrentFilter,
 } from "./selectors.js";
 
 import { renderDonut } from "./charts/donut.js";
-import { renderTrend } from "./charts/trend.js";
+// ❌ NO importamos trend.js en realtime
 import { renderActionBar } from "./charts/actions.js";
 import { renderMsgSeverityBar } from "./charts/msgSeverity.js";
 import { renderHourly } from "./charts/hourly.js";
@@ -29,9 +27,9 @@ import { renderLogDescriptionBar } from "./charts/logDescription.js";
 // ======================================================
 // 1) Inicialización global
 // ======================================================
-console.log("[dashboard] Iniciando dashboard AlarmsOne (histórico)...");
+console.log("[realtime] Iniciando dashboard AlarmsOne (tiempo real)...");
 setupChartJSDefaults(window.Chart);
-console.log("[dashboard] Chart.js detectado:", !!window.Chart);
+console.log("[realtime] Chart.js detectado:", !!window.Chart);
 
 // ======================================================
 // 2) Render de KPIs y actualización general
@@ -48,15 +46,13 @@ function renderKPIs() {
 
 function updateAll() {
   const st = getState();
-  console.log("[dashboard] Estado actual:", st);
+  console.log("[realtime] Estado actual:", st);
 
   renderKPIs();
 
-  // Trend por día (histórico)
-  const trendConf = trendDataForCurrentFilter(st);
-  renderTrend(trendConf);
+  // ❌ NO hay trend en tiempo real
 
-  // Donut de severidad
+  // Donut de severidad (usa filtros activos)
   renderDonut(st, getActiveCountsForDonut(st));
 
   // Tabla dispositivos
@@ -71,32 +67,17 @@ function updateAll() {
   // Alarmas por hora
   renderHourly(st);
 
-  // Level se actualiza por subscripción (montado una sola vez)
-  // renderLevelBar(levelDataForCurrentFilter(st), st.levelFilter); ← no llamar aquí
-
+  // Level está montado con subscripción (no re-render explícito aquí)
   // Subtype y Log Description
   renderSubtypeBar(subtypeDataForCurrentFilter(st), st.subtypeFilter);
   renderLogDescriptionBar(logDescriptionDataForCurrentFilter(st), st.logDescriptionFilter);
 
-  console.log("[dashboard] Gráficos actualizados correctamente ✅");
+  console.log("[realtime] Gráficos actualizados correctamente ✅");
 }
 
 // ======================================================
-// 3) Comportamiento UX (filtros, tabla)
+// 3) Utilidades UI (tabla)
 // ======================================================
-function wireDateFilter() {
-  const form = $("#date-filter");
-  if (!form) return;
-  const from = form.querySelector('input[name="from"]');
-  const to = form.querySelector('input[name="to"]');
-  if (from && to) {
-    from.addEventListener("change", () => { to.min = from.value || ""; });
-    to.addEventListener("change", () => { from.max = to.value || ""; });
-    to.min = from.value || "";
-    from.max = to.value || "";
-  }
-}
-
 function wireTableSort() {
   const table = document.getElementById("device-table");
   if (!table) return;
@@ -122,16 +103,15 @@ function wireTableSort() {
 }
 
 // ======================================================
-// 4) Boot (inicio al cargar el documento)
+// 4) Boot
 // ======================================================
 let unmountLevel = null;
 
 function boot() {
-  console.log("[dashboard] DOM listo → inicializando (histórico)...");
-  wireDateFilter();
+  console.log("[realtime] DOM listo → inicializando...");
   wireTableSort();
 
-  // Monta Level UNA sola vez. Internamente se subscribe a onStateChange
+  // Monta Level UNA sola vez
   unmountLevel = mountLevelBar("levelBar");
 
   // Render inicial del resto
@@ -148,12 +128,12 @@ if (document.readyState === "loading") {
 // 5) Redibujo ante cambios de filtros
 // ======================================================
 onStateChange(() => {
-  console.log("[dashboard] Cambio detectado en filtros → refrescando...");
+  console.log("[realtime] Cambio detectado en filtros → refrescando...");
   updateAll();
 });
 
 // ======================================================
-// 6) Botón refresh (reutiliza el overlay por data-loading="instant")
+// 6) Botón refresh (si lo tienes en la topbar)
 // ======================================================
 (function () {
   const r = document.getElementById('btn-refresh');

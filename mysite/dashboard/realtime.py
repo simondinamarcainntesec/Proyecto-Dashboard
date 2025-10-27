@@ -174,7 +174,7 @@ def _value_for_column_fallback(alarm: dict, column: str):
 value_for_column = _value_for_column_from_views or _value_for_column_fallback
 
 # ---------- vistas ----------
-@login_required
+
 def realtime_page(request):
     try:
         _, _, alarms = _fetch_alarms_today_direct()
@@ -197,8 +197,7 @@ def realtime_page(request):
     except Exception as e:
         return HttpResponseBadRequest(f"realtime_page error: {type(e).__name__}: {e}")
 
-@require_GET
-@login_required
+
 def realtime_data(request):
     try:
         _, _, alarms = _fetch_alarms_today_direct()
@@ -226,8 +225,7 @@ def _presence_summary(alarms, columns):
         cols_out[col] = {"non_empty": cnt, "percent": round((cnt / total * 100.0), 2) if total else 0.0}
     return {"total_rows": total, "columns": cols_out}
 
-@require_GET
-@login_required
+
 def debug_whitelist_today_direct(request):
     try:
         _, _, alarms = _fetch_alarms_today_direct()

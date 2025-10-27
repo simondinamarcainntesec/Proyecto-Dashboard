@@ -237,3 +237,25 @@ body{
 
 /* Footer */
 .footnote{color:#9aa7bd; font-size:.85rem; padding:0 4px 10px 4px}
+
+    #loading-overlay{
+      position:fixed; inset:0; display:grid; place-items:center;
+      background:rgba(2,6,23,0.72); backdrop-filter:blur(2px);
+      z-index:9999; opacity:0; visibility:hidden;
+      transition:opacity .15s ease-out, visibility .15s ease-out;
+    }
+    #loading-overlay.is-active{ opacity:1; visibility:visible; }
+    .loading-card{
+      display:flex; align-items:center; gap:14px; padding:14px 18px;
+      border-radius:14px; background:var(--surface,#0f172a);
+      box-shadow:var(--shadow,0 10px 28px rgba(2,6,23,.25)); color:var(--text,#e5e7eb);
+      font-weight:600;
+    }
+    .spinner{
+      width:22px; height:22px; border-radius:50%;
+      border:3px solid rgba(229,231,235,0.25);
+      border-top-color: rgba(229,231,235,0.95);
+      animation:spin .8s linear infinite;
+    }
+    @keyframes spin{ to{ transform:rotate(360deg); } }
+

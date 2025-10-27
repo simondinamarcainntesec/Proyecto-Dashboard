@@ -8,9 +8,18 @@
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/realtime.css' %}?v={% now 'U' %}">
 </head>
 
 <body class="layout">
+  <!-- Overlay de carga (presente y oculto por defecto) -->
+  <div id="loading-overlay" role="status" aria-live="polite" hidden>
+    <div class="loading-card">
+      <div class="spinner" aria-hidden="true"></div>
+      <div class="loading-text">Cargando datos…</div>
+    </div>
+  </div>
+
   <!-- Sidebar -->
   <aside class="sidebar">
     <div class="brand">
@@ -18,8 +27,8 @@
     </div>
 
     <nav class="nav">
-      <a class="nav-item" href="/dashboard/">Panel Histórico</a>
-      <a class="nav-item is-active" href="#">Tiempo Real</a>
+      <a class="nav-item js-nav" href="/dashboard/" id="link-historico">Panel Histórico</a>
+      <a class="nav-item is-active" href="#" aria-current="page">Tiempo Real</a>
     </nav>
   </aside>
 
@@ -39,7 +48,6 @@
       </div>
     </header>
 
-
     <!-- KPIs -->
     <section class="grid grid-kpis">
       <div class="card kpi"><div class="kpi-label">Disponibilidad (simulado)</div><div class="kpi-value">99,8%</div></div>
@@ -50,11 +58,6 @@
 
     <!-- Gráficos -->
     <section class="grid grid-main">
-      <div class="card chart card--trend">
-        <div class="card-head"><h3>Alarmas por día</h3></div>
-        <div class="card-body"><canvas id="trendChart"></canvas></div>
-      </div>
-
       <div class="card chart card--hourly">
         <div class="card-head"><h3>Alarmas por hora</h3></div>
         <div class="card-body"><canvas id="hourlyChart"></canvas></div>
@@ -110,83 +113,74 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+  <!-- JSON embebidos (mismos IDs que histórico) -->
+  {{ trend_labels|json_script:"trend-labels" }}
+  {{ trend_data|json_script:"trend-data" }}
+  {{ severity_trends|json_script:"severity-trends" }}
+  {{ severity_counts|json_script:"severity-counts" }}
 
-  <script>
-    (function () {
-      const r = document.getElementById('btn-refresh');
-      if (r) r.addEventListener('click', () => {
-        const params = new URLSearchParams(window.location.search);
-        params.set('_', Date.now().toString());
-        window.location.search = params.toString();
-      });
-    })();
-  </script>
+  {{ device_counts|json_script:"device-counts" }}
+  {{ action_counts|json_script:"action-counts" }}
 
-  <!-- JSON embebidos -->
-{# --- JSON embebidos (IDs EXACTOS del histórico) --- #}
-{{ trend_labels|json_script:"trend-labels" }}
-{{ trend_data|json_script:"trend-data" }}
-{{ severity_trends|json_script:"severity-trends" }}
-{{ severity_counts|json_script:"severity-counts" }}
+  {{ device_counts_by_severity|json_script:"device-counts-by-severity" }}
+  {{ device_counts_by_severity_full|json_script:"device-counts-by-severity-full" }}
 
-{{ device_counts|json_script:"device-counts" }}
-{{ action_counts|json_script:"action-counts" }}
+  {{ trend_by_device|json_script:"trend-by-device" }}
+  {{ top_devices|json_script:"top-devices" }}
 
-{{ device_counts_by_severity|json_script:"device-counts-by-severity" }}
-{{ device_counts_by_severity_full|json_script:"device-counts-by-severity-full" }}
+  {{ trend_by_action|json_script:"trend-by-action" }}
+  {{ device_counts_by_action|json_script:"device-counts-by-action" }}
+  {{ action_counts_by_device|json_script:"action-counts-by-device" }}
+  {{ action_counts_by_severity|json_script:"action-counts-by-severity" }}
 
-{{ trend_by_device|json_script:"trend-by-device" }}
-{{ top_devices|json_script:"top-devices" }}
+  {{ trend_by_subtype|json_script:"trend-by-subtype" }}
+  {{ subtype_counts_by_hour|json_script:"subtype-counts-by-hour" }}
+  {{ level_counts_by_subtype|json_script:"level-counts-by-subtype" }}
 
-{{ trend_by_action|json_script:"trend-by-action" }}
-{{ device_counts_by_action|json_script:"device-counts-by-action" }}
-{{ action_counts_by_device|json_script:"action-counts-by-device" }}
-{{ action_counts_by_severity|json_script:"action-counts-by-severity" }}
+  {{ hour_labels|json_script:"hour-labels" }}
+  {{ hour_data|json_script:"hour-data" }}
+  {{ severity_counts_by_hour|json_script:"severity-counts-by-hour" }}
+  {{ device_counts_by_hour|json_script:"device-counts-by-hour" }}
+  {{ device_counts_by_hour_full|json_script:"device-counts-by-hour-full" }}
+  {{ action_counts_by_hour|json_script:"action-counts-by-hour" }}
+  {{ trend_labels_hour|json_script:"trend-labels-hour" }}
+  {{ trend_by_hour|json_script:"trend-by-hour" }}
 
-{{ trend_by_subtype|json_script:"trend-by-subtype" }}
-{{ subtype_counts_by_hour|json_script:"subtype-counts-by-hour" }}
-{{ level_counts_by_subtype|json_script:"level-counts-by-subtype" }}
+  {{ msg_severity_counts|json_script:"msg-severity-counts" }}
+  {{ device_counts_by_msg_severity|json_script:"device-counts-by-msg-severity" }}
+  {{ action_counts_by_msg_severity|json_script:"action-counts-by-msg-severity" }}
+  {{ severity_counts_by_msg_severity|json_script:"severity-counts-by-msg-severity" }}
+  {{ msg_severity_counts_by_hour|json_script:"msg-severity-counts-by-hour" }}
+  {{ trend_by_msg_severity|json_script:"trend-by-msg-severity" }}
 
-{{ hour_labels|json_script:"hour-labels" }}
-{{ hour_data|json_script:"hour-data" }}
-{{ severity_counts_by_hour|json_script:"severity-counts-by-hour" }}
-{{ device_counts_by_hour|json_script:"device-counts-by-hour" }}
-{{ device_counts_by_hour_full|json_script:"device-counts-by-hour-full" }}
-{{ action_counts_by_hour|json_script:"action-counts-by-hour" }}
-{{ trend_labels_hour|json_script:"trend-labels-hour" }}
-{{ trend_by_hour|json_script:"trend-by-hour" }}
+  {{ level_counts|json_script:"level-counts" }}
+  {{ device_counts_by_level|json_script:"device-counts-by-level" }}
+  {{ action_counts_by_level|json_script:"action-counts-by-level" }}
+  {{ severity_counts_by_level|json_script:"severity-counts-by-level" }}
+  {{ trend_by_level|json_script:"trend-by-level" }}
+  {{ level_counts_by_hour|json_script:"level-counts-by-hour" }}
+  {{ subtype_counts_by_level|json_script:"subtype-counts-by-level" }}
+  {{ msg_severity_by_level|json_script:"msg-severity-by-level" }}
+  {{ msg_severity_by_subtype|json_script:"msg-severity-by-subtype" }}
 
-{{ msg_severity_counts|json_script:"msg-severity-counts" }}
-{{ device_counts_by_msg_severity|json_script:"device-counts-by-msg-severity" }}
-{{ action_counts_by_msg_severity|json_script:"action-counts-by-msg-severity" }}
-{{ severity_counts_by_msg_severity|json_script:"severity-counts-by-msg-severity" }}
-{{ msg_severity_counts_by_hour|json_script:"msg-severity-counts-by-hour" }}
-{{ trend_by_msg_severity|json_script:"trend-by-msg-severity" }}
+  {{ subtype_counts|json_script:"subtype-counts" }}
+  {{ device_counts_by_subtype|json_script:"device-counts-by-subtype" }}
+  {{ action_counts_by_subtype|json_script:"action-counts-by-subtype" }}
+  {{ severity_counts_by_subtype|json_script:"severity-counts-by-subtype" }}
 
-{{ level_counts|json_script:"level-counts" }}
-{{ device_counts_by_level|json_script:"device-counts-by-level" }}
-{{ action_counts_by_level|json_script:"action-counts-by-level" }}
-{{ severity_counts_by_level|json_script:"severity-counts-by-level" }}
-{{ trend_by_level|json_script:"trend-by-level" }}
-{{ level_counts_by_hour|json_script:"level-counts-by-hour" }}
-{{ subtype_counts_by_level|json_script:"subtype-counts-by-level" }}
-{{ msg_severity_by_level|json_script:"msg-severity-by-level" }}
-{{ msg_severity_by_subtype|json_script:"msg-severity-by-subtype" }}
+  {{ logdesc_counts|json_script:"logdesc-counts" }}
+  {{ device_counts_by_logdesc|json_script:"device-counts-by-logdesc" }}
+  {{ action_counts_by_logdesc|json_script:"action-counts-by-logdesc" }}
+  {{ severity_counts_by_logdesc|json_script:"severity-counts-by-logdesc" }}
 
-{{ subtype_counts|json_script:"subtype-counts" }}
-{{ device_counts_by_subtype|json_script:"device-counts-by-subtype" }}
-{{ action_counts_by_subtype|json_script:"action-counts-by-subtype" }}
-{{ severity_counts_by_subtype|json_script:"severity-counts-by-subtype" }}
+  {{ level_by_msg_severity|json_script:"level-by-msg-severity" }}
+  {{ subtype_by_msg_severity|json_script:"subtype-by-msg-severity" }}
+  {{ hour_series_by_subtype|json_script:"hour-series-by-subtype" }}
 
-{{ logdesc_counts|json_script:"logdesc-counts" }}
-{{ device_counts_by_logdesc|json_script:"device-counts-by-logdesc" }}
-{{ action_counts_by_logdesc|json_script:"action-counts-by-logdesc" }}
-{{ severity_counts_by_logdesc|json_script:"severity-counts-by-logdesc" }}
+  <!-- Loader de navegación/recarga (debe ir ANTES de dashboard.realtime) -->
+  <script type="module" src="{% static 'js/alarms_one/page-loader.js' %}?v={% now 'U' %}"></script>
 
-{{ level_by_msg_severity|json_script:"level-by-msg-severity" }}
-{{ subtype_by_msg_severity|json_script:"subtype-by-msg-severity" }}
-{{ hour_series_by_subtype|json_script:"hour-series-by-subtype" }}
-
-  <script type="module" src="{% static 'js/alarms_one/dashboard.js' %}"></script>
+  <!-- App realtime -->
+  <script type="module" src="{% static 'js/alarms_one/dashboard.realtime.js' %}?v={% now 'U' %}"></script>
 </body>
 </html>

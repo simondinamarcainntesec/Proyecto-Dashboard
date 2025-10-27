@@ -1,6 +1,22 @@
 from datetime import datetime, timedelta, timezone
 import pytz
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from tenants.decorators import tenant_required 
+
+
+@tenant_required  # <-- protege la vista para que solo usuarios con tenant ingresen
+def dashboard_view(request):
+    # Si el usuario está autenticado y el middleware ya cargó el tenant:
+    tenant = request.tenant  
+
+    # Ejemplo: obtener los clientes de ese tenant
+    clientes = tenant.clients.all() if tenant else []
+
+    return render(request, "dashboard/dashboard.html", {
+        "tenant": tenant,
+        "clientes": clientes,
+    })
+
 
 from .charts import (
     build_trend_data,
