@@ -24,6 +24,7 @@
       <a class="nav-item" href="#"><span class="nav-ico">🚨</span>Alertas</a>
       <a class="nav-item" href="#"><span class="nav-ico">🧾</span>Auditoría</a>
       <a class="nav-item" href="#"><span class="nav-ico">⚙️</span>Ajustes</a>
+      <a class="nav-item" href="{% url 'dashboard_realtime' %}"><span class="nav-ico">⏱️</span>Tiempo Real</a>
     </nav>
   </aside>
 
@@ -217,7 +218,6 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- Helpers de rango y refresh (antes inline) -->
   <script defer src="{% static 'js/alarms_one/date_filters.js' %}?v={% now 'U' %}"></script>
 
   <!-- App principal -->

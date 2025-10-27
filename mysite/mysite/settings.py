@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'api_client',
     'dashboard',
     'integrations',
+    'tenants',
 ]
 
 MIDDLEWARE = [

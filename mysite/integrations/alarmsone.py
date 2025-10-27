@@ -7,7 +7,6 @@ from datetime import datetime, timedelta
 # Función para obtener token vía script externo
 # -------------------------
 def obtener_token_via_script():
-    # Ajusta la ruta completa al script
     script_path = "/home/inntesec-ia/Proyecto-Dashboard/obtener_token.py"
     
     try:

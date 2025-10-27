@@ -5,13 +5,12 @@ from django.core.cache import cache
 from django.conf import settings
 
 # --- Configuración de la API ---
-# Puedes mantener estos valores aquí o moverlos a tu archivo settings.py para mayor seguridad.
 API_URL = "https://iaproductivo.inntesec.cl/webhook/3c850e31-e699-4fa6-9fed-513d4ccd281b"
 API_SECRET = "@L^E4$h!f^r1VmwD#c1B#C8XzM#B4pON"
 API_HEADER_NAME = "passkey"
 VERIFY_SSL = True
 
-# Claves candidatas para buscar el token en la respuesta JSON
+
 CANDIDATE_KEYS = {"Acces_token", "access_token", "token", "Access_Token", "ACCESS_TOKEN"}
 
 
@@ -91,7 +90,7 @@ def get_data_from_api():
     headers = {
         "Authorization": f"Bearer {token}"
     }
-    # RECUERDA: Reemplaza esta URL con la del endpoint que quieres consultar
+
     data_url = "https://api.example.com/data" 
     
     try:

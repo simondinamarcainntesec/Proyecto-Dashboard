@@ -2,13 +2,13 @@
 
 import requests
 from django.db import transaction
-from inyeccion_api.models import Alarm  # o el nombre real de tu modelo
+from inyeccion_api.models import Alarm      
 from datetime import datetime
 import pytz
 
 tz = pytz.timezone("America/Santiago")
 
-API_URL = os.getenv("ALARMSONE_BASE_URL", "https://alarmsone.manageengine.com/rest/json")  # cambia esto por tu endpoint real
+API_URL = os.getenv("ALARMSONE_BASE_URL", "https://alarmsone.manageengine.com/rest/json")  
 
 
 def obtener_datos_api():

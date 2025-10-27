@@ -19,7 +19,7 @@ def _today_range_ms_scl():
     now_utc = now_local.astimezone(_pytimezone.utc)
     return int(start_utc.timestamp() * 1000), int(now_utc.timestamp() * 1000)
 
-# ---------- token Zoho ----------
+
 def _get_token_via_script_local():
     script_path = "/home/inntesec-ia/Proyecto-Dashboard/obtener_token.py"
     out = subprocess.run(["python3", script_path], capture_output=True, text=True, timeout=25)
@@ -30,7 +30,7 @@ def _get_token_via_script_local():
         raise RuntimeError("obtener_token.py devolvió vacío")
     return token
 
-# ---------- fetch directo AlarmsOne ----------
+
 def _fetch_alarms_today_direct(max_pages=50, page_size=1000):
     token = _get_token_via_script_local()
     headers = {"Authorization": f"Zoho-oauthtoken {token}"}
@@ -55,7 +55,7 @@ def _fetch_alarms_today_direct(max_pages=50, page_size=1000):
         offset += page_size
     return from_ms, to_ms, all_rows
 
-# ---------- extractores (usa los de views si están, si no fallback local) ----------
+
 _get_value_case_insensitive = getattr(v, "_get_value_case_insensitive", None)
 _to_datetime_santiago      = getattr(v, "_to_datetime_santiago", None)
 _format_aotags             = getattr(v, "_format_aotags", None)
@@ -180,7 +180,6 @@ def realtime_page(request):
         _, _, alarms = _fetch_alarms_today_direct()
         ctx = build_realtime_context(alarms, value_for_column, tzname="America/Santiago")
 
-        # KPIs simples (compatibles con tu template)
         kpi_total = sum(ctx.get("severity_counts", {}).values())
         kpi_high  = (ctx.get("severity_counts", {}).get("high", 0) +
                      ctx.get("severity_counts", {}).get("critical", 0))
@@ -190,7 +189,6 @@ def realtime_page(request):
             "kpi_total": kpi_total,
             "kpi_high":  kpi_high,
             "kpi_dispositivos": kpi_dev,
-            # Embebidos: los nombres EXACTOS que tu HTML espera
             **ctx
         }
         return render(request, "dashboard/realtime.html", page_ctx)
@@ -211,7 +209,7 @@ def realtime_data(request):
     except Exception as e:
         return HttpResponseBadRequest(f"realtime_data error: {type(e).__name__}: {e}")
 
-# --- Depuración (misma URL que tenías) ---
+
 def _presence_summary(alarms, columns):
     total = len(alarms)
     cols_out = {}

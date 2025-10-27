@@ -39,7 +39,6 @@
       </div>
     </header>
 
-    <!-- SIN barra de filtros por fechas (tiempo real = día de hoy) -->
 
     <!-- KPIs -->
     <section class="grid grid-kpis">
@@ -111,7 +110,7 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- Botón refrescar (solo actualiza la URL con timestamp para forzar nueva query del backend si lo deseas) -->
+
   <script>
     (function () {
       const r = document.getElementById('btn-refresh');
@@ -188,9 +187,6 @@
 {{ subtype_by_msg_severity|json_script:"subtype-by-msg-severity" }}
 {{ hour_series_by_subtype|json_script:"hour-series-by-subtype" }}
 
-
-
-  <!-- Tu JS (reutiliza el de histórico) -->
   <script type="module" src="{% static 'js/alarms_one/dashboard.js' %}"></script>
 </body>
 </html>

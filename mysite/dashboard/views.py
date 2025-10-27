@@ -187,7 +187,7 @@ def dashboard_view(request):
         return dt_utc.astimezone(CL_TZ).date().isoformat()
 
     from_date_str = raw_from or utc_to_local_date_str(dt_from_utc)
-    # ✅ ya no restamos 1 día: si vino date-only, el to_exclusive es +1 día, pero en UI queremos ver “hoy”
+    # ya no restamos 1 día: si vino date-only, el to_exclusive es +1 día, pero en UI queremos ver “hoy”
     to_date_str = raw_to or utc_to_local_date_str(dt_to_utc_exclusive)
 
     context = {

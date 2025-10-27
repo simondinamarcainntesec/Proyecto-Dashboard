@@ -19,7 +19,7 @@ def tarea_obtener_token(self):
     """
     try:
         logging.info("🔑 Solicitando nuevo token desde la API...")
-        token = obtener_token_via_script()  # tu función real para pedir token
+        token = obtener_token_via_script()  # Usamos la función del módulo alarmsone
 
         if not token:
             raise ValueError("No se recibió token desde la API")

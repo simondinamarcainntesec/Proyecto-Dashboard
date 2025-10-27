@@ -3,7 +3,6 @@ import requests
 # URL del webhook
 WEBHOOK_URL = "https://iaproductivo.inntesec.cl/webhook/4721cd5e-0c36-4773-8292-fa3b8580cebd"
 
-# Tu passkey correcta
 PASSKEY = "@aDv%6rSBPXXhD*iW7dl6PCjOZ4a0Fkc"  # reemplaza con la passkey real
 
 # Parámetro a enviar
@@ -11,7 +10,7 @@ PARAMS = {"value": "registros_telegram"}
 
 def consultar_webhook():
     try:
-        headers = {"passkey": PASSKEY}  # se envía como header, no Authorization
+        headers = {"passkey": PASSKEY}  # se envía como header
 
         response = requests.get(WEBHOOK_URL, headers=headers, params=PARAMS)
         response.raise_for_status()  # lanza excepción si status != 2xx

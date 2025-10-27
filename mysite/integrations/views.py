@@ -5,13 +5,12 @@ from django.utils.timezone import now
 from datetime import timedelta
 import logging, os
 from inyeccion_api.models import Alarm
-from inyeccion_api.utils import _map_api_alarm_to_model  # Usa tus funciones existentes
+from inyeccion_api.utils import _map_api_alarm_to_model
 import pathlib
 from integrations.alarmsone import list_alarms_all
 
-BASE_DIR = pathlib.Path(__file__).resolve().parent.parent.parent  # Sube hasta Proyecto-Dashboard/
+BASE_DIR = pathlib.Path(__file__).resolve().parent.parent.parent 
 TOKEN_FILE = BASE_DIR / "token.txt"
- # ajusta la ruta según tu proyecto
 
 def obtener_alarmas_desde_api(request):
     """
