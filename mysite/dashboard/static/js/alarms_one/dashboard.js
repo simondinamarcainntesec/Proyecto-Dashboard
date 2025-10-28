@@ -3,6 +3,8 @@ import { setupChartJSDefaults } from "./theme.js";
 import { $ } from "./utils.js";
 import { getState, onStateChange } from "./state.js";
 import "./data.js";
+import { getPeakHour } from "./selectors.js";
+
 
 import {
   getActiveCounts,
@@ -36,6 +38,14 @@ console.log("[dashboard] Chart.js detectado:", !!window.Chart);
 // ======================================================
 // 2) Render de KPIs y actualización general
 // ======================================================
+
+function formatHourRange(h) {
+  const hour = Number(h);
+  const hh = String(hour).padStart(2, "0"); // 00..23
+  const ampm = hour < 12 ? "am" : "pm";
+  return `${hh}:00–${hh}:59 ${ampm}`;
+}
+
 function renderKPIs() {
   const { total, high, devices } = calcKpis(getState());
   const elTotal = $("#kpi-total");
@@ -44,6 +54,9 @@ function renderKPIs() {
   if (elTotal) elTotal.textContent = total;
   if (elHigh) elHigh.textContent = high;
   if (elDevices) elDevices.textContent = devices;
+  const { hour } = getPeakHour();         // devuelve { hour, count }
+  const elPeak = document.getElementById("kpi-peak-hour");
+  if (elPeak) elPeak.textContent = (hour == null) ? "—" : formatHourRange(hour);
 }
 
 function updateAll() {

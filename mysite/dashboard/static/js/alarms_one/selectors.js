@@ -686,3 +686,37 @@ export function getActiveCountsForDonut(state) {
   if (!base || Object.keys(base).length === 0) return { "N/A": 0 };
   return base;
 }
+
+// ✅ NUEVO helper para KPI "hora con más alarmas"
+// === Nuevo KPI: hora con más alarmas (base "global hoy", sin filtros) ===
+
+
+export function getPeakHour(/* state no usado por ahora */) {
+  // Preferimos el total por hora ya calculado:
+  const series = Array.isArray(data.hourData) ? data.hourData : [];
+
+  // Fallback si no viniera hourData: suma de severidades por hora (sevByHourRaw)
+  let arr = series;
+  if (!arr.length) {
+    const sevByHour = data.sevByHourRaw || {}; // { "00": { sev: n }, ... }
+    const tmp = new Array(24).fill(0);
+    for (const [hh, m] of Object.entries(sevByHour)) {
+      const h = Number(hh);
+      if (Number.isInteger(h) && h >= 0 && h <= 23) {
+        tmp[h] = Object.values(m || {}).reduce((a, b) => a + (Number(b) || 0), 0);
+      }
+    }
+    arr = tmp;
+  }
+
+  let max = -1, idx = -1;
+  for (let i = 0; i < 24; i++) {
+    const v = Number(arr[i] || 0);
+    if (v > max) { max = v; idx = i; }
+  }
+  return {
+    hour: idx >= 0 ? String(idx).padStart(2, "0") : null,
+    count: Math.max(0, max),
+  };
+}
+

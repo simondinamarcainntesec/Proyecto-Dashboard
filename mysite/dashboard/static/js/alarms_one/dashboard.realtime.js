@@ -12,6 +12,7 @@ import {
   levelDataForCurrentFilter,     // coherencia de exports
   subtypeDataForCurrentFilter,
   logDescriptionDataForCurrentFilter,
+  getPeakHour,                   
 } from "./selectors.js";
 
 import { renderDonut } from "./charts/donut.js";
@@ -23,38 +24,60 @@ import { mountLevelBar } from "./charts/level.js";
 import { renderSubtypeBar } from "./charts/subtype.js";
 import { renderLogDescriptionBar } from "./charts/logDescription.js";
 
-// ======================================================
-// 0) Helper: ¿hay estado vacío?
-//    Si el template renderizó el "empty-state", no montamos gráficos.
-// ======================================================
+
 function isEmptyState() {
   return !!document.querySelector(".empty-state");
 }
 
 // ======================================================
-// 1) Inicialización global (solo si no es empty-state)
+// 1) Inicialización global
 // ======================================================
 console.log("[realtime] Iniciando dashboard AlarmsOne (tiempo real)...");
 setupChartJSDefaults(window.Chart);
 console.log("[realtime] Chart.js detectado:", !!window.Chart);
 
 // ======================================================
-// 2) Render de KPIs y actualización general
+// 2) KPIs
 // ======================================================
-function renderKPIs() {
-  const { total, high, devices } = calcKpis(getState());
-  const elTotal = $("#kpi-total");
-  const elHigh = $("#kpi-high");
-  const elDevices = $("#kpi-devices");
-  if (elTotal) elTotal.textContent = total;
-  if (elHigh) elHigh.textContent = high;
-  if (elDevices) elDevices.textContent = devices;
+function formatHour12(h) {
+  const hour = Number(h);
+  const ampm = hour < 12 ? "am" : "pm";
+  const h12 = hour % 12 === 0 ? 12 : hour % 12;
+  return { h12, ampm };
 }
 
+function formatHourRange(h) {
+  const hour = Number(h);
+  const hh = String(hour).padStart(2, "0");     // 00..23
+  const ampm = hour < 12 ? "am" : "pm";
+  return `${hh}:00–${hh}:59 ${ampm}`;
+}
+
+
+function renderKPIs() {
+  const { total, high, devices } = calcKpis(getState());
+  const elTotal   = $("#kpi-total");
+  const elHigh    = $("#kpi-high");
+  const elDevices = $("#kpi-devices");
+  if (elTotal)   elTotal.textContent = total;
+  if (elHigh)    elHigh.textContent = high;
+  if (elDevices) elDevices.textContent = devices;
+
+  // Nuevo KPI: hora con más alarmas (base global de hoy)
+  const { hour } = getPeakHour();
+  const elPeak = document.getElementById("kpi-peak-hour");
+  if (elPeak) elPeak.textContent = (hour == null) ? "—" : formatHourRange(hour);
+
+}
+
+// ======================================================
+// 3) Render general
+// ======================================================
 function updateAll() {
   const st = getState();
   console.log("[realtime] Estado actual:", st);
 
+  // KPIs (incluye hora pico)
   renderKPIs();
 
   // Donut de severidad
@@ -75,7 +98,7 @@ function updateAll() {
 }
 
 // ======================================================
-// 3) Utilidades UI (tabla)
+// 4) Utilidades UI (tabla)
 // ======================================================
 function wireTableSort() {
   const table = document.getElementById("device-table");
@@ -102,7 +125,7 @@ function wireTableSort() {
 }
 
 // ======================================================
-// 4) Boot
+// 5) Boot
 // ======================================================
 let unmountLevel = null;
 
@@ -137,7 +160,7 @@ if (document.readyState === "loading") {
 }
 
 // ======================================================
-// 5) Redibujo ante cambios de filtros
+// 6) Redibujo ante cambios de filtros
 // ======================================================
 onStateChange(() => {
   if (isEmptyState()) return; // no hay nada que refrescar
@@ -146,7 +169,7 @@ onStateChange(() => {
 });
 
 // ======================================================
-// 6) Botón refresh (topbar)
+// 7) Botón refresh (topbar)
 // ======================================================
 (function () {
   const r = document.getElementById('btn-refresh');

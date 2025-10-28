@@ -63,7 +63,11 @@
     {% if kpi_total|default:0 > 0 %}
       <!-- ======= APP (con datos) ======= -->
       <section class="grid grid-kpis">
-        <div class="card kpi"><div class="kpi-label">Disponibilidad (simulado)</div><div class="kpi-value">99,8%</div></div>
+        <div class="card kpi">
+          <div class="kpi-label">Hora con más alarmas</div>
+          <div class="kpi-value" id="kpi-peak-hour">—</div>
+        </div>
+
         <div class="card kpi"><div class="kpi-label">Alta Severidad</div><div class="kpi-value" id="kpi-high">{{ kpi_high }}</div></div>
         <div class="card kpi"><div class="kpi-label">Total Alarmas</div><div class="kpi-value" id="kpi-total">{{ kpi_total }}</div></div>
         <div class="card kpi"><div class="kpi-label">Dispositivos Detectados</div><div class="kpi-value" id="kpi-devices">{{ kpi_dispositivos }}</div></div>
