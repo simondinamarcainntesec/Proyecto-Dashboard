@@ -1,18 +1,57 @@
+# tenants/middleware.py
+import logging
+from django.utils.deprecation import MiddlewareMixin
+from django.contrib.auth import get_user_model
 from tenants.models import Tenant
+from tenants.context import current_tenant, current_tenant_source
 
-class ActiveTenantMiddleware:
-    """
-    Carga el tenant actual en cada request según la sesión.
-    """
-    def __init__(self, get_response):
-        self.get_response = get_response
+logger = logging.getLogger(__name__)
+User = get_user_model()
 
-    def __call__(self, request):
-        tenant_id = request.session.get("tenant_id")
+class ActiveTenantMiddleware(MiddlewareMixin):
+    """
+    Carga el tenant activo en cada request, priorizando:
+    1) Sesión (tenant_id)
+    2) Usuario autenticado (user.tenant)
+    Deja request.tenant y contextvars para managers/servicios.
+    Guarda en request.tenant_source: "session" | "user" | None
+    """
+
+
+    def process_request(self, request):
+        
         request.tenant = None
+        request.tenant_source = None
+
+        # 1) Intentar por sesión
+        tenant_id = request.session.get("tenant_id")
         if tenant_id:
-            try:
-                request.tenant = Tenant.objects.get(id=tenant_id)
-            except Tenant.DoesNotExist:
-                request.tenant = None
-        return self.get_response(request)
+            tenant = Tenant.objects.filter(id=tenant_id).first()
+            if tenant:
+                request.tenant = tenant
+                request.tenant_source = "session"
+                current_tenant.set(tenant)
+                current_tenant_source.set("session")
+                logger.debug("[Tenancy] Tenant por sesión: id=%s name=%s", tenant.id, tenant.name)
+                return  # early exit: ya seteado
+
+        # 2) Fallback: usuario autenticado
+        user = getattr(request, "user", None)
+        if user and user.is_authenticated:
+            user_tenant = getattr(user, "tenant", None)
+            if user_tenant:
+                request.tenant = user_tenant
+                request.tenant_source = "user"
+                current_tenant.set(user_tenant)
+                current_tenant_source.set("user")
+                logger.debug("[Tenancy] Tenant por usuario: id=%s name=%s", user_tenant.id, user_tenant.name)
+                return
+
+        # 3) No se encontró tenant
+        current_tenant.set(None)
+        current_tenant_source.set(None)
+        logger.debug("[Tenancy] Sin tenant asignado en el request.")
+
+    def process_response(self, request, response):
+        # Limpieza opcional (no estricta, el contextvar es por-request)
+        return response

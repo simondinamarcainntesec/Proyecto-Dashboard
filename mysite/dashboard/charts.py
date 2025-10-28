@@ -2,11 +2,13 @@ import logging
 from collections import defaultdict, Counter
 from datetime import timedelta
 import pytz
+import re
 
 from django.db.models import Count
 from django.db.models.functions import TruncDay, TruncHour
 
-from inyeccion_api.models import Alarm  # Importar model de alarmas
+from inyeccion_api.models import Alarm
+from tenants.context import current_tenant  # Importar model de alarmas
 
 logger = logging.getLogger(__name__)
 
@@ -52,13 +54,34 @@ def _norm_subtype(val):
 
 def _base_qs(dt_from=None, dt_to=None):
     """
-    Query base. Usa [dt_from, dt_to) (to exclusivo) para evitar doble conteo
-    cuando el 'to' es el inicio del siguiente día local.
+    Scoping por tenant:
+      - Si Alarm tiene FK tenant -> filtra por tenant.
+      - Si NO, usa Tenant.alarms_one_id y filtra por tags (AOTAGS).
+    Rango [dt_from, dt_to) (to exclusivo).
     """
-    qs = Alarm.objects.all()
+    t = current_tenant.get()
+    base = getattr(Alarm, "all_objects", Alarm.objects).all()
+    if t is None:
+        logger.warning("[Charts] _base_qs sin tenant → vacío")
+        return base.none()
+
+    # 1) Si el modelo Alarm ya tiene FK tenant, úsalo
+    if "tenant" in [f.name for f in Alarm._meta.get_fields()]:
+        qs = base.filter(tenant=t)
+    else:
+        # 2) Fallback: matchear AOTAGS (Tenant.alarms_one_id) dentro de Alarm.tags
+        aotag = (t.alarms_one_id or "").strip()
+        if not aotag:
+            logger.warning("[Charts] Tenant %s no tiene alarms_one_id → vacío", t.name)
+            return base.none()
+
+        pattern = rf"(^|,)\s*{re.escape(aotag)}\s*(,|$)"
+        qs = base.filter(tags__regex=pattern)
+
     if dt_from and dt_to:
         qs = qs.filter(event_time__gte=dt_from, event_time__lt=dt_to)
     return qs
+
 
 
 # =========================

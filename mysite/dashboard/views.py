@@ -1,22 +1,10 @@
 from datetime import datetime, timedelta, timezone
+import logging
 import pytz
-from django.shortcuts import render, redirect
-from tenants.decorators import tenant_required 
 
-
-@tenant_required  # <-- protege la vista para que solo usuarios con tenant ingresen
-def dashboard_view(request):
-    # Si el usuario está autenticado y el middleware ya cargó el tenant:
-    tenant = request.tenant  
-
-    # Ejemplo: obtener los clientes de ese tenant
-    clientes = tenant.clients.all() if tenant else []
-
-    return render(request, "dashboard/dashboard.html", {
-        "tenant": tenant,
-        "clientes": clientes,
-    })
-
+from django.shortcuts import render
+from django.views.decorators.cache import never_cache
+from tenants.decorators import tenant_required
 
 from .charts import (
     build_trend_data,
@@ -46,45 +34,37 @@ from .charts import (
     build_hour_series_by_subtype,
 )
 
-# TZ de la UI
+logger = logging.getLogger(__name__)
 CL_TZ = pytz.timezone("America/Santiago")
 
-
 # -----------------------------
-# Parsing flexible (fecha o fecha-hora)
+# Helpers de fecha
 # -----------------------------
 def _localize_naive(dt_naive):
     """Recibe datetime naive en hora local CL y lo vuelve aware en UTC."""
     return CL_TZ.localize(dt_naive).astimezone(timezone.utc)
 
-
 def _parse_local_any(s: str):
     """
     Devuelve (dt_utc, tipo) donde tipo ∈ {"date","datetime"}.
     Acepta:
-      - 'YYYY-MM-DD'
-      - 'DD-MM-YYYY'
-      - 'YYYY/MM/DD'
-      - 'DD/MM/YYYY'
-      - 'YYYY-MM-DDTHH:MM:SS'
-      - 'YYYY-MM-DD HH:MM:SS'
+      - 'YYYY-MM-DD' | 'DD-MM-YYYY' | 'YYYY/MM/DD' | 'DD/MM/YYYY'
+      - 'YYYY-MM-DDTHH:MM:SS' | 'YYYY-MM-DD HH:MM:SS'
     """
     if not s:
         return None, None
     s = s.strip()
 
-    # 1) intentar datetime
-    dt_formats = ["%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"]
-    for fmt in dt_formats:
+    # datetime
+    for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"):
         try:
             dt_local = datetime.strptime(s, fmt)
             return _localize_naive(dt_local), "datetime"
         except Exception:
             pass
 
-    # 2) intentar fecha (día)
-    date_formats = ["%Y-%m-%d", "%d-%m-%Y", "%Y/%m/%d", "%d/%m/%Y"]
-    for fmt in date_formats:
+    # date
+    for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%Y/%m/%d", "%d/%m/%Y"):
         try:
             d = datetime.strptime(s, fmt).date()
             start_local = datetime(d.year, d.month, d.day, 0, 0, 0)
@@ -94,39 +74,36 @@ def _parse_local_any(s: str):
 
     return None, None
 
-
+# ===========================
+# ÚNICA vista del dashboard
+# ===========================
+@never_cache
+@tenant_required
 def dashboard_view(request):
-    """Render principal del dashboard con filtros GET."""
-    now_utc = datetime.now(timezone.utc)
+    tenant = request.tenant  # <- importante para el cache por-tenant en el template
 
+    now_utc = datetime.now(timezone.utc)
     raw_from = (request.GET.get("from") or "").strip()
-    raw_to = (request.GET.get("to") or "").strip()
+    raw_to   = (request.GET.get("to") or "").strip()
 
     parsed_from_utc, kind_from = _parse_local_any(raw_from)
     parsed_to_utc,   kind_to   = _parse_local_any(raw_to)
 
-    # Rango final
+    # Rango final [from, to)
     if raw_from or raw_to:
         if parsed_from_utc and parsed_to_utc:
             dt_from_utc = parsed_from_utc
-            # si el usuario mandó fecha-hora exacta, incluimos ese segundo
-            if kind_to == "datetime":
-                dt_to_utc_exclusive = parsed_to_utc + timedelta(seconds=1)
-            else:
-                # fecha (día): cerrar al final del día local -> +1 día exclusivo
-                dt_to_utc_exclusive = parsed_to_utc + timedelta(days=1)
+            dt_to_utc_exclusive = parsed_to_utc + (timedelta(seconds=1) if kind_to == "datetime" else timedelta(days=1))
         elif parsed_from_utc and not parsed_to_utc:
             dt_from_utc = parsed_from_utc
             dt_to_utc_exclusive = now_utc + timedelta(seconds=1)
         elif parsed_to_utc and not parsed_from_utc:
-            # si solo viene "to", asumimos 30 días hacia atrás
-            dt_to_utc_exclusive = (parsed_to_utc + timedelta(seconds=1)) if kind_to == "datetime" else (parsed_to_utc + timedelta(days=1))
+            dt_to_utc_exclusive = parsed_to_utc + (timedelta(seconds=1) if kind_to == "datetime" else timedelta(days=1))
             dt_from_utc = dt_to_utc_exclusive - timedelta(days=30)
         else:
             dt_to_utc_exclusive = now_utc + timedelta(seconds=1)
             dt_from_utc = now_utc - timedelta(days=30)
     else:
-        # Default: últimos 30 días hasta ahora mismo
         dt_to_utc_exclusive = now_utc + timedelta(seconds=1)
         dt_from_utc = now_utc - timedelta(days=30)
 
@@ -141,72 +118,61 @@ def dashboard_view(request):
     trend_act = build_trend_by_action(dt_from_utc, dt_to_utc_exclusive)
     severity_counts = build_donut_data(dt_from_utc, dt_to_utc_exclusive)
 
-    device_counts, device_by_sev, device_by_sev_full = build_device_bar_data(
-        dt_from_utc, dt_to_utc_exclusive, top_n=10
-    )
-    action_counts, action_by_sev, action_by_device = build_action_bar_data(
-        dt_from_utc, dt_to_utc_exclusive, top_n=10
-    )
+    device_counts, device_by_sev, device_by_sev_full = build_device_bar_data(dt_from_utc, dt_to_utc_exclusive, top_n=10)
+    action_counts, action_by_sev, action_by_device = build_action_bar_data(dt_from_utc, dt_to_utc_exclusive, top_n=10)
     device_by_action = build_device_by_action(dt_from_utc, dt_to_utc_exclusive, top_n=10)
     kpis = build_kpis(dt_from_utc, dt_to_utc_exclusive)
     hour_payload = build_hour_filter_payload(dt_from_utc, dt_to_utc_exclusive, top_n=10)
 
     # msg_severity
-    (
-        msg_severity_counts,
-        device_counts_by_msg_severity,
-        action_counts_by_msg_severity,
-        severity_counts_by_msg_severity,
-        msg_severity_counts_by_hour,
-    ) = build_msg_severity_bar_data(dt_from_utc, dt_to_utc_exclusive, top_n=10)
+    (msg_severity_counts,
+     device_counts_by_msg_severity,
+     action_counts_by_msg_severity,
+     severity_counts_by_msg_severity,
+     msg_severity_counts_by_hour) = build_msg_severity_bar_data(dt_from_utc, dt_to_utc_exclusive, top_n=10)
     trend_msgsev = build_trend_by_msg_severity(dt_from_utc, dt_to_utc_exclusive)
 
     # level / subtype / logdesc
-    (
-        level_counts,
-        device_counts_by_level,
-        action_counts_by_level,
-        severity_counts_by_level,
-    ) = build_level_bar_data(dt_from_utc, dt_to_utc_exclusive, top_n=10)
-    (
-        subtype_counts,
-        device_counts_by_subtype,
-        action_counts_by_subtype,
-        severity_counts_by_subtype,
-    ) = build_subtype_bar_data(dt_from_utc, dt_to_utc_exclusive, top_n=10)
-    (
-        logdesc_counts,
-        device_counts_by_logdesc,
-        action_counts_by_logdesc,
-        severity_counts_by_logdesc,
-    ) = build_log_description_bar_data(dt_from_utc, dt_to_utc_exclusive, top_n=10)
+    (level_counts,
+     device_counts_by_level,
+     action_counts_by_level,
+     severity_counts_by_level) = build_level_bar_data(dt_from_utc, dt_to_utc_exclusive, top_n=10)
 
-    msgsev_by_level = build_msg_severity_by_level(dt_from_utc, dt_to_utc_exclusive)
+    (subtype_counts,
+     device_counts_by_subtype,
+     action_counts_by_subtype,
+     severity_counts_by_subtype) = build_subtype_bar_data(dt_from_utc, dt_to_utc_exclusive, top_n=10)
+
+    (logdesc_counts,
+     device_counts_by_logdesc,
+     action_counts_by_logdesc,
+     severity_counts_by_logdesc) = build_log_description_bar_data(dt_from_utc, dt_to_utc_exclusive, top_n=10)
+
+    msgsev_by_level   = build_msg_severity_by_level(dt_from_utc, dt_to_utc_exclusive)
     msgsev_by_subtype = build_msg_severity_by_subtype(dt_from_utc, dt_to_utc_exclusive)
 
-    trend_level = build_trend_by_level(dt_from_utc, dt_to_utc_exclusive)
+    trend_level   = build_trend_by_level(dt_from_utc, dt_to_utc_exclusive)
     level_by_hour = build_level_counts_by_hour(dt_from_utc, dt_to_utc_exclusive)
     subtype_by_level = build_subtype_counts_by_level(dt_from_utc, dt_to_utc_exclusive)
 
     trend_st = build_trend_by_subtype(dt_from_utc, dt_to_utc_exclusive)
     subtype_counts_by_hour = build_subtype_counts_by_hour(dt_from_utc, dt_to_utc_exclusive)
 
-    level_counts_by_subtype = build_level_counts_by_subtype(
-        dt_from_utc, dt_to_utc_exclusive, top_n=None
-    )
-    level_by_msgsev = build_level_by_msg_severity(dt_from_utc, dt_to_utc_exclusive)
+    level_counts_by_subtype = build_level_counts_by_subtype(dt_from_utc, dt_to_utc_exclusive, top_n=None)
+    level_by_msgsev   = build_level_by_msg_severity(dt_from_utc, dt_to_utc_exclusive)
     subtype_by_msgsev = build_subtype_by_msg_severity(dt_from_utc, dt_to_utc_exclusive)
     hour_series_by_subtype = build_hour_series_by_subtype(dt_from_utc, dt_to_utc_exclusive)
 
-    # Strings para inputs (mostrar solo día; si el usuario envió fecha-hora, se muestra el día correspondiente)
     def utc_to_local_date_str(dt_utc):
         return dt_utc.astimezone(CL_TZ).date().isoformat()
 
     from_date_str = raw_from or utc_to_local_date_str(dt_from_utc)
-    # ya no restamos 1 día: si vino date-only, el to_exclusive es +1 día, pero en UI queremos ver “hoy”
-    to_date_str = raw_to or utc_to_local_date_str(dt_to_utc_exclusive)
+    to_date_str   = raw_to   or utc_to_local_date_str(dt_to_utc_exclusive)
 
     context = {
+        # clave para cache fragmentado por tenant en el template
+        "tenant": tenant,
+
         "trend_labels": trend["trend_labels"],
         "trend_data": trend["trend_data"],
         "severity_trends": trend["severity_trends"],
@@ -276,4 +242,10 @@ def dashboard_view(request):
         "hour_series_by_subtype": hour_series_by_subtype["hour_series_by_subtype"],
     }
 
-    return render(request, "dashboard/dashboard.html", context)
+    resp = render(request, "dashboard/dashboard.html", context)
+    # headers anti-caché para el documento HTML
+    resp["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    resp["Pragma"] = "no-cache"
+    resp["Expires"] = "0"
+    resp["Vary"] = "Cookie"
+    return resp

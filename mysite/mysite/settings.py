@@ -14,6 +14,7 @@ from pathlib import Path
 import os
 import dj_database_url
 from celery.schedules import crontab
+import sys
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -34,7 +35,7 @@ USE_TZ = True
 ALLOWED_HOSTS = ["localhost", "127.0.0.0","ia-customer-portal.eastus2.cloudapp.azure.com","127.0.0.1"]
 CSRF_TRUSTED_ORIGINS = ["http://localhost", "http://127.0.0.0"]
 
-LOGIN_URL = "login"
+LOGIN_URL = "auth/login"
 LOGIN_REDIRECT_URL = "/templates/home"
 LOGOUT_REDIRECT_URL = "login"
 ALARMSONE_ACCESS_TOKEN = '1000.7e825b058846b3c4a526b131d516cb8b.cc3ebe0d9437edbca6d70a8efa7af8de' 
@@ -62,9 +63,9 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'tenants.middleware.ActiveTenantMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'tenants.middleware.ActiveTenantMiddleware',
 ]
 
 ROOT_URLCONF = 'mysite.urls'
@@ -167,3 +168,30 @@ AUTHENTICATION_BACKENDS = [
     'tenants.auth_backends.TenantBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "simple": {"format": "[%(levelname)s] %(name)s: %(message)s"},
+        "verbose": {"format": "[%(asctime)s] %(levelname)s %(name)s %(module)s:%(lineno)d — %(message)s"},
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "stream": sys.stdout,
+            "formatter": "simple",
+            "level": "DEBUG",
+        },
+    },
+    "loggers": {
+        # Tus módulos donde pusimos logger = logging.getLogger(__name__)
+        "tenants.middleware": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
+        "tenants.authbackends": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
+        "tenants.decorators": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
+        "auth.views": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
+
+        # (Opcional) raíz para ver otros logs
+        # "": {"handlers": ["console"], "level": "INFO"},
+    },
+}
