@@ -1,14 +1,14 @@
 import logging
-from collections import defaultdict, Counter
-from datetime import timedelta
-import pytz
 import re
+from collections import defaultdict, Counter
+import pytz
 
-from django.db.models import Count
+from django.db.models import Count, Q
+from django.db.models.expressions import RawSQL
 from django.db.models.functions import TruncDay, TruncHour
 
 from inyeccion_api.models import Alarm
-from tenants.context import current_tenant  # Importar model de alarmas
+from tenants.context import current_tenant
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +30,6 @@ def _norm_msg_sev(val):
 
 
 def _norm_act(val):
-    # No forzamos lowercase aquí (el front ya normaliza),
-    # pero convertimos None/"" en "N/A" para evitar claves vacías en dicts
     s = (val or "").strip()
     return s if s else "N/A"
 
@@ -42,7 +40,6 @@ def _norm_dev(val):
 
 
 def _norm_level(val):
-    # Para level usamos el valor tal cual, pero aseguramos "N/A" si falta
     s = (val or "").strip()
     return s if s else "N/A"
 
@@ -52,15 +49,19 @@ def _norm_subtype(val):
     return s if s else "N/A"
 
 
+# ----------------------------
+# Query base (scoping por tenant + rango)
+# ----------------------------
 def _base_qs(dt_from=None, dt_to=None):
     """
     Scoping por tenant:
       - Si Alarm tiene FK tenant -> filtra por tenant.
-      - Si NO, usa Tenant.alarms_one_id y filtra por tags (AOTAGS).
+      - Si NO, usa Tenant.alarms_one_id y filtra por tags (AOTAGS) con RawSQL seguro.
     Rango [dt_from, dt_to) (to exclusivo).
     """
     t = current_tenant.get()
     base = getattr(Alarm, "all_objects", Alarm.objects).all()
+
     if t is None:
         logger.warning("[Charts] _base_qs sin tenant → vacío")
         return base.none()
@@ -69,29 +70,37 @@ def _base_qs(dt_from=None, dt_to=None):
     if "tenant" in [f.name for f in Alarm._meta.get_fields()]:
         qs = base.filter(tenant=t)
     else:
-        # 2) Fallback: matchear AOTAGS (Tenant.alarms_one_id) dentro de Alarm.tags
+        # 2) Fallback: matchear AOTAGS (Tenant.alarms_one_id) dentro de Alarm.tags (campo CSV/coma)
         aotag = (t.alarms_one_id or "").strip()
         if not aotag:
-            logger.warning("[Charts] Tenant %s no tiene alarms_one_id → vacío", t.name)
+            logger.warning("[Charts] Tenant %s no tiene alarms_one_id → vacío", getattr(t, "name", "<sin nombre>"))
             return base.none()
 
+        # Evitar falsos positivos delimitando por comas o extremos de cadena:
+        #   (^|,)\s*<aotag>\s*(,|$)
+        # Usamos RawSQL PARAMETRIZADO (seguro). No se interpola el valor directamente.
         pattern = rf"(^|,)\s*{re.escape(aotag)}\s*(,|$)"
-        qs = base.filter(tags__regex=pattern)
+        qs = base.annotate(_match=RawSQL("tags ~ %s", [pattern])).filter(_match=True)
 
     if dt_from and dt_to:
         qs = qs.filter(event_time__gte=dt_from, event_time__lt=dt_to)
+
+    # Si tienes columnas muy pesadas, puedes limitar:
+    # qs = qs.only("id","event_time","severity","actions","device_name",
+    #              "msg_severity","level","subtype","log_description","tags")
     return qs
 
+
+def make_base_qs(dt_from, dt_to):
+    """Factory para construir 1 sola vez el queryset base y reusarlo en todos los builders."""
+    return _base_qs(dt_from, dt_to)
 
 
 # =========================
 # === TENDENCIA POR DÍA ===
 # =========================
-def build_trend_data(dt_from=None, dt_to=None):
-    """
-    Eje temporal (por día) y series por severidad (normalizada).
-    """
-    qs = _base_qs(dt_from, dt_to)
+def build_trend_data(dt_from=None, dt_to=None, qs_base=None):
+    qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
 
     # Eje temporal base (en TZ local)
     daily = (
@@ -108,7 +117,7 @@ def build_trend_data(dt_from=None, dt_to=None):
         if i is not None:
             trend_data[i] = d["total"]
 
-    # Series por severidad (en TZ local + normalización)
+    # Series por severidad
     severity_qs = (
         qs.annotate(date=TruncDay("event_time", tzinfo=CL_TZ))
         .values("date", "severity")
@@ -134,18 +143,14 @@ def build_trend_data(dt_from=None, dt_to=None):
     }
 
 
-def build_trend_by_device(dt_from=None, dt_to=None, top_n=10):
-    """
-    Series por día para los TOP N dispositivos (todas las severidades).
-    """
-    qs = _base_qs(dt_from, dt_to)
+def build_trend_by_device(dt_from=None, dt_to=None, top_n=10, qs_base=None):
+    qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
 
     top = (
         qs.values("device_name")
         .annotate(total=Count("id"))
         .order_by("-total")[:top_n]
     )
-    # Usar valores RAW para filtrar; normalizar solo para las claves de salida.
     top_raw = [r["device_name"] for r in top]
     top_devices = [_norm_dev(r["device_name"]) for r in top]
 
@@ -159,7 +164,7 @@ def build_trend_by_device(dt_from=None, dt_to=None, top_n=10):
     idx = {d: i for i, d in enumerate(labels)}
 
     device_rows = (
-        qs.filter(device_name__in=[None] + top_raw)  # cubrir N/A si corresponde
+        qs.filter(device_name__in=[None] + top_raw)
         .annotate(date=TruncDay("event_time", tzinfo=CL_TZ))
         .values("date", "device_name")
         .annotate(total=Count("id"))
@@ -177,11 +182,8 @@ def build_trend_by_device(dt_from=None, dt_to=None, top_n=10):
     return {"trend_by_device": trend_by_device, "top_devices": top_devices}
 
 
-def build_trend_by_action(dt_from=None, dt_to=None):
-    """
-    Series por día para cada acción (usa 'actions').
-    """
-    qs = _base_qs(dt_from, dt_to)
+def build_trend_by_action(dt_from=None, dt_to=None, qs_base=None):
+    qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
 
     daily = (
         qs.annotate(date=TruncDay("event_time", tzinfo=CL_TZ))
@@ -213,11 +215,8 @@ def build_trend_by_action(dt_from=None, dt_to=None):
 # ==================
 # === AGREGADOS  ===
 # ==================
-def build_donut_data(dt_from=None, dt_to=None):
-    """
-    Dict {severity(normalizada): total}
-    """
-    qs = _base_qs(dt_from, dt_to)
+def build_donut_data(dt_from=None, dt_to=None, qs_base=None):
+    qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
     raw = qs.values("severity").annotate(total=Count("id")).order_by("severity")
     out = {}
     for r in raw:
@@ -226,13 +225,8 @@ def build_donut_data(dt_from=None, dt_to=None):
     return out
 
 
-def build_device_bar_data(dt_from=None, dt_to=None, top_n=10):
-    """
-    (global, por_severidad) para tabla y cross-filter.
-    Además devuelve el mapa COMPLETO severidad->device (sin top_n)
-    para que el front pueda filtrar correctamente el donut.
-    """
-    qs = _base_qs(dt_from, dt_to)
+def build_device_bar_data(dt_from=None, dt_to=None, top_n=10, qs_base=None):
+    qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
 
     rows = qs.values("device_name").annotate(total=Count("id")).order_by("-total")[:top_n]
     device_counts = {_norm_dev(r["device_name"]): r["total"] for r in rows}
@@ -243,10 +237,7 @@ def build_device_bar_data(dt_from=None, dt_to=None, top_n=10):
         dev = _norm_dev(r["device_name"])
         by_sev[sev][dev] = r["total"]
 
-    # full (sin recortar)
     device_counts_by_severity_full = {sev: dict(cnt) for sev, cnt in by_sev.items()}
-
-    # recortado a top_n (para UI)
     device_counts_by_severity = {
         sev: dict(sorted(cnt.items(), key=lambda x: x[1], reverse=True)[:top_n])
         for sev, cnt in by_sev.items()
@@ -254,11 +245,8 @@ def build_device_bar_data(dt_from=None, dt_to=None, top_n=10):
     return device_counts, device_counts_by_severity, device_counts_by_severity_full
 
 
-def build_action_bar_data(dt_from=None, dt_to=None, top_n=10):
-    """
-    (global, por_severidad) para barra Acciones y cross-filter.
-    """
-    qs = _base_qs(dt_from, dt_to)
+def build_action_bar_data(dt_from=None, dt_to=None, top_n=10, qs_base=None):
+    qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
 
     rows = (
         qs.values("actions")
@@ -278,9 +266,8 @@ def build_action_bar_data(dt_from=None, dt_to=None, top_n=10):
         for sev, cnt in by_sev.items()
     }
 
-    # Acciones por dispositivo (para filtrar el bar al click en la tabla)
     by_dev = defaultdict(Counter)
-    for r in _base_qs(dt_from, dt_to).values("device_name", "actions").annotate(total=Count("id")):
+    for r in qs.values("device_name", "actions").annotate(total=Count("id")):
         dev = _norm_dev(r["device_name"])
         act = _norm_act(r["actions"])
         by_dev[dev][act] = r["total"]
@@ -289,11 +276,8 @@ def build_action_bar_data(dt_from=None, dt_to=None, top_n=10):
     return action_counts, action_counts_by_severity, action_counts_by_device
 
 
-def build_device_by_action(dt_from=None, dt_to=None, top_n=10):
-    """
-    Ranking de dispositivos por acción: { 'Open': {'DevA': n, ...}, 'Blocked': {...}, ... }
-    """
-    qs = _base_qs(dt_from, dt_to)
+def build_device_by_action(dt_from=None, dt_to=None, top_n=10, qs_base=None):
+    qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
 
     by_action = defaultdict(Counter)
     rows = (
@@ -313,31 +297,26 @@ def build_device_by_action(dt_from=None, dt_to=None, top_n=10):
     return device_counts_by_action
 
 
-def build_kpis(dt_from=None, dt_to=None):
-    """
-    KPIs: total, high/critical y dispositivos únicos.
-    """
-    qs = _base_qs(dt_from, dt_to)
-    total = qs.count()
-    high = qs.filter(severity__iexact="high").count() + qs.filter(severity__iexact="critical").count()
-    dispositivos = qs.values("device_name").distinct().count()
-    return {"kpi_total": total, "kpi_high": high, "kpi_dispositivos": dispositivos}
+def build_kpis(dt_from=None, dt_to=None, qs_base=None):
+    qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
+    agg = qs.aggregate(
+        total=Count("id"),
+        high_=Count("id", filter=Q(severity__iexact="high")),
+        crit_=Count("id", filter=Q(severity__iexact="critical")),
+        dispositivos=Count("device_name", distinct=True),
+    )
+    return {
+        "kpi_total": agg.get("total") or 0,
+        "kpi_high": (agg.get("high_") or 0) + (agg.get("crit_") or 0),
+        "kpi_dispositivos": agg.get("dispositivos") or 0,
+    }
 
 
 # =========================
 # === HORA (00..23)    ===
 # =========================
-def build_hour_filter_payload(dt_from, dt_to, top_n=10):
-    """
-    Devuelve:
-      - hour_labels, hour_data (histograma 00..23 en TZ local)
-      - severity_counts_by_hour: { '00': {sev: n, ...}, ... }
-      - device_counts_by_hour:   { '00': {dev: n, ...}, ... } (top_n por hora)
-      - device_counts_by_hour_full: { '00': {dev: n, ...}, ... } (FULL sin top_n)
-      - action_counts_by_hour:   { '00': {act: n, ...}, ... }
-      - trend_by_hour:           { '00': [por día], ... } usando las mismas fechas de trend_labels
-    """
-    qs = _base_qs(dt_from, dt_to)
+def build_hour_filter_payload(dt_from=None, dt_to=None, top_n=10, qs_base=None):
+    qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
 
     # 1) Histograma por hora local
     hour_rows = (
@@ -350,12 +329,12 @@ def build_hour_filter_payload(dt_from, dt_to, top_n=10):
     for r in hour_rows:
         h = r.get("h")
         if h:
-            key = h.strftime("%H")  # "00".."23"
+            key = h.strftime("%H")
             hour_counts[key] += r["total"]
     hour_labels = [f"{i:02d}" for i in range(24)]
     hour_data = [hour_counts.get(lbl, 0) for lbl in hour_labels]
 
-    # 2) Por severidad y hora (normalizada)
+    # 2) Por severidad y hora
     sev_rows = (
         qs.annotate(h=TruncHour("event_time", tzinfo=CL_TZ))
         .values("h", "severity")
@@ -370,7 +349,7 @@ def build_hour_filter_payload(dt_from, dt_to, top_n=10):
             severity_counts_by_hour[hour][sev] += r["total"]
     severity_counts_by_hour = {h: dict(m) for h, m in severity_counts_by_hour.items()}
 
-    # 3) Por dispositivo y hora (FULL y luego top_n)
+    # 3) Por dispositivo y hora
     dev_rows = (
         qs.annotate(h=TruncHour("event_time", tzinfo=CL_TZ))
         .values("h", "device_name")
@@ -389,7 +368,7 @@ def build_hour_filter_payload(dt_from, dt_to, top_n=10):
     }
     device_counts_by_hour_full = {h: dict(m) for h, m in device_counts_by_hour_full.items()}
 
-    # 4) Por acción y hora  (usa 'actions')
+    # 4) Por acción y hora
     act_rows = (
         qs.annotate(h=TruncHour("event_time", tzinfo=CL_TZ))
         .values("h", "actions")
@@ -404,7 +383,7 @@ def build_hour_filter_payload(dt_from, dt_to, top_n=10):
             action_counts_by_hour[hour][act] += r["total"]
     action_counts_by_hour = {h: dict(m) for h, m in action_counts_by_hour.items()}
 
-    # 5) Trend por día + hora (en TZ local)
+    # 5) Trend por día + hora
     daily = (
         qs.annotate(date=TruncDay("event_time", tzinfo=CL_TZ), h=TruncHour("event_time", tzinfo=CL_TZ))
         .values("date", "h")
@@ -441,8 +420,8 @@ def build_hour_filter_payload(dt_from, dt_to, top_n=10):
 # =========================
 # === msg_severity
 # =========================
-def build_msg_severity_bar_data(dt_from=None, dt_to=None, top_n=10):
-    qs = _base_qs(dt_from, dt_to)
+def build_msg_severity_bar_data(dt_from=None, dt_to=None, top_n=10, qs_base=None):
+    qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
 
     rows = qs.values("msg_severity").annotate(total=Count("id")).order_by("-total")[:top_n]
     msg_severity_counts = {(_norm_msg_sev(r["msg_severity"])): r["total"] for r in rows}
@@ -491,8 +470,8 @@ def build_msg_severity_bar_data(dt_from=None, dt_to=None, top_n=10):
     )
 
 
-def build_trend_by_msg_severity(dt_from=None, dt_to=None):
-    qs = _base_qs(dt_from, dt_to)
+def build_trend_by_msg_severity(dt_from=None, dt_to=None, qs_base=None):
+    qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
 
     daily = (
         qs.annotate(date=TruncDay("event_time", tzinfo=CL_TZ))
@@ -524,8 +503,8 @@ def build_trend_by_msg_severity(dt_from=None, dt_to=None):
 # =============================
 # === LEVEL / SUBTYPE / LOG ===
 # =============================
-def build_level_bar_data(dt_from=None, dt_to=None, top_n=10):
-    qs = _base_qs(dt_from, dt_to)
+def build_level_bar_data(dt_from=None, dt_to=None, top_n=10, qs_base=None):
+    qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
 
     rows = qs.values("level").annotate(total=Count("id")).order_by("-total")[:top_n]
     level_counts = {(r["level"] or "N/A"): r["total"] for r in rows}
@@ -559,8 +538,8 @@ def build_level_bar_data(dt_from=None, dt_to=None, top_n=10):
     )
 
 
-def build_subtype_bar_data(dt_from=None, dt_to=None, top_n=10):
-    qs = _base_qs(dt_from, dt_to)
+def build_subtype_bar_data(dt_from=None, dt_to=None, top_n=10, qs_base=None):
+    qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
 
     rows = qs.values("subtype").annotate(total=Count("id")).order_by("-total")[:top_n]
     subtype_counts = {(r["subtype"] or "N/A"): r["total"] for r in rows}
@@ -594,16 +573,8 @@ def build_subtype_bar_data(dt_from=None, dt_to=None, top_n=10):
     )
 
 
-# === TREND POR SUBTYPE (para cruzar Subtype -> Trend) ===
-def build_trend_by_subtype(dt_from=None, dt_to=None):
-    """
-    Devuelve:
-      {
-        "trend_labels": ["YYYY-MM-DD", ...],
-        "trend_by_subtype": { subtype: [c1, c2, ...], ... }
-      }
-    """
-    qs = _base_qs(dt_from, dt_to)
+def build_trend_by_subtype(dt_from=None, dt_to=None, qs_base=None):
+    qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
 
     daily = (
         qs.annotate(date=TruncDay("event_time", tzinfo=CL_TZ))
@@ -632,17 +603,10 @@ def build_trend_by_subtype(dt_from=None, dt_to=None):
     return {"trend_labels": labels, "trend_by_subtype": dict(trend_by_subtype)}
 
 
-# === HOURLY POR SUBTYPE (para cruzar Subtype -> Hourly) ===
-def build_subtype_counts_by_hour(dt_from=None, dt_to=None):
-    """
-    Devuelve:
-      { "00": { subtype: n, ... }, "01": {...}, ..., "23": {...} }
-    En TZ local.
-    """
-    qs = _base_qs(dt_from, dt_to)
+def build_subtype_counts_by_hour(dt_from=None, dt_to=None, qs_base=None):
+    qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
 
     by_hour = defaultdict(Counter)
-
     rows = (
         qs.annotate(h=TruncHour("event_time", tzinfo=CL_TZ))
           .values("h", "subtype")
@@ -659,15 +623,8 @@ def build_subtype_counts_by_hour(dt_from=None, dt_to=None):
     return {h: dict(cnt) for h, cnt in by_hour.items()}
 
 
-def build_log_description_bar_data(dt_from=None, dt_to=None, top_n=10):
-    """
-    Barras por `log_description`:
-      - logdesc_counts: { log_description: total } (TOP N)
-      - device_counts_by_logdesc: { log_description: {device: n} }
-      - action_counts_by_logdesc: { log_description: {action: n} }
-      - severity_counts_by_logdesc: { log_description: {severity: n} }
-    """
-    qs = _base_qs(dt_from, dt_to)
+def build_log_description_bar_data(dt_from=None, dt_to=None, top_n=10, qs_base=None):
+    qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
 
     rows = (
         qs.values("log_description")
@@ -706,17 +663,11 @@ def build_log_description_bar_data(dt_from=None, dt_to=None, top_n=10):
 
 
 # =======================================================
-# === NUEVOS CONTRATOS para filtrado por LEVEL completo ==
+# === CONTRATOS extra: LEVEL / SUBTYPE / MSG_SEVERITY ===
 # =======================================================
-def build_trend_by_level(dt_from=None, dt_to=None):
-    """
-    Devuelve un dict: { level: [serie diaria alineada a trend_labels] }
-    Las etiquetas de fecha (trend_labels) ya las construye build_trend_data;
-    no es necesario repetirlas aquí en el contexto.
-    """
-    qs = _base_qs(dt_from, dt_to)
+def build_trend_by_level(dt_from=None, dt_to=None, qs_base=None):
+    qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
 
-    # Eje (fechas) para indexar
     daily = (
         qs.annotate(date=TruncDay("event_time", tzinfo=CL_TZ))
         .values("date")
@@ -744,12 +695,8 @@ def build_trend_by_level(dt_from=None, dt_to=None):
     return {"trend_by_level": dict(trend_by_level)}
 
 
-def build_level_counts_by_hour(dt_from=None, dt_to=None):
-    """
-    Dict con forma: { "00": { level: count, ... }, "01": {...}, ... }
-    (los buckets están en TZ local)
-    """
-    qs = _base_qs(dt_from, dt_to)
+def build_level_counts_by_hour(dt_from=None, dt_to=None, qs_base=None):
+    qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
 
     rows = (
         qs.annotate(h=TruncHour("event_time", tzinfo=CL_TZ))
@@ -770,11 +717,8 @@ def build_level_counts_by_hour(dt_from=None, dt_to=None):
     return {"level_counts_by_hour": {h: dict(m) for h, m in out.items()}}
 
 
-def build_subtype_counts_by_level(dt_from=None, dt_to=None):
-    """
-    Dict con forma: { level: { subtype: count, ... }, ... }
-    """
-    qs = _base_qs(dt_from, dt_to)
+def build_subtype_counts_by_level(dt_from=None, dt_to=None, qs_base=None):
+    qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
 
     rows = (
         qs.values("level", "subtype")
@@ -788,27 +732,16 @@ def build_subtype_counts_by_level(dt_from=None, dt_to=None):
         st = _norm_subtype(r["subtype"])
         out[lvl][st] += r["total"]
 
-    # cast a dict normal
     return {"subtype_counts_by_level": {lvl: dict(cnt) for lvl, cnt in out.items()}}
 
 
-# === LEVEL POR SUBTYPE (para cruzar Subtype -> Level) ===
-def build_level_counts_by_subtype(dt_from=None, dt_to=None, top_n=None):
-    """
-    Devuelve:
-      { subtype: { level: total, ... }, ... }
-
-    Si top_n es int, recorta los levels por subtype a los más frecuentes.
-    """
-    qs = _base_qs(dt_from, dt_to)
+def build_level_counts_by_subtype(dt_from=None, dt_to=None, top_n=None, qs_base=None):
+    qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
     by_subtype = defaultdict(Counter)
 
-    rows = (
-        qs.values("subtype", "level")
-          .annotate(total=Count("id"))
-    )
+    rows = qs.values("subtype", "level").annotate(total=Count("id"))
     for r in rows:
-        st  = (r["subtype"] or "N/A")
+        st = (r["subtype"] or "N/A")
         lvl = (r["level"] or "N/A")
         by_subtype[st][lvl] = r["total"]
 
@@ -819,18 +752,14 @@ def build_level_counts_by_subtype(dt_from=None, dt_to=None, top_n=None):
         }
     return {st: dict(cnt) for st, cnt in by_subtype.items()}
 
-# === MSG_SEVERITY por LEVEL/SUBTYPE (para cruzar Level/Subtype -> msg_severity) ===
-def build_msg_severity_by_level(dt_from=None, dt_to=None):
-    """
-    Devuelve: { level: { msg_severity(normalizada): total, ... }, ... }
-    """
-    qs = _base_qs(dt_from, dt_to)
+
+def build_msg_severity_by_level(dt_from=None, dt_to=None, qs_base=None):
+    qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
     rows = (
         qs.values("level", "msg_severity")
           .annotate(total=Count("id"))
           .order_by("level", "-total")
     )
-    from collections import defaultdict, Counter
     out = defaultdict(Counter)
     for r in rows:
         lvl = _norm_level(r["level"])
@@ -839,17 +768,13 @@ def build_msg_severity_by_level(dt_from=None, dt_to=None):
     return {"msg_severity_by_level": {lvl: dict(cnt) for lvl, cnt in out.items()}}
 
 
-def build_msg_severity_by_subtype(dt_from=None, dt_to=None):
-    """
-    Devuelve: { subtype: { msg_severity(normalizada): total, ... }, ... }
-    """
-    qs = _base_qs(dt_from, dt_to)
+def build_msg_severity_by_subtype(dt_from=None, dt_to=None, qs_base=None):
+    qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
     rows = (
         qs.values("subtype", "msg_severity")
           .annotate(total=Count("id"))
           .order_by("subtype", "-total")
     )
-    from collections import defaultdict, Counter
     out = defaultdict(Counter)
     for r in rows:
         st = _norm_subtype(r["subtype"])
@@ -857,17 +782,10 @@ def build_msg_severity_by_subtype(dt_from=None, dt_to=None):
         out[st][msg] += r["total"]
     return {"msg_severity_by_subtype": {st: dict(cnt) for st, cnt in out.items()}}
 
-from collections import defaultdict, Counter
 
-def build_level_by_msg_severity(dt_from=None, dt_to=None):
-    """
-    { msg_severity: { level: total, ... }, ... }
-    """
-    qs = _base_qs(dt_from, dt_to)
-    rows = (
-        qs.values("msg_severity", "level")
-          .annotate(total=Count("id"))
-    )
+def build_level_by_msg_severity(dt_from=None, dt_to=None, qs_base=None):
+    qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
+    rows = qs.values("msg_severity", "level").annotate(total=Count("id"))
     out = defaultdict(Counter)
     for r in rows:
         msg = _norm_msg_sev(r["msg_severity"])
@@ -876,43 +794,30 @@ def build_level_by_msg_severity(dt_from=None, dt_to=None):
     return {"level_by_msg_severity": {msg: dict(cnt) for msg, cnt in out.items()}}
 
 
-def build_subtype_by_msg_severity(dt_from=None, dt_to=None):
-    """
-    { msg_severity: { subtype: total, ... }, ... }
-    """
-    qs = _base_qs(dt_from, dt_to)
-    rows = (
-        qs.values("msg_severity", "subtype")
-          .annotate(total=Count("id"))
-    )
+def build_subtype_by_msg_severity(dt_from=None, dt_to=None, qs_base=None):
+    qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
+    rows = qs.values("msg_severity", "subtype").annotate(total=Count("id"))
     out = defaultdict(Counter)
     for r in rows:
         msg = _norm_msg_sev(r["msg_severity"])
-        st  = _norm_subtype(r["subtype"])
+        st = _norm_subtype(r["subtype"])
         out[msg][st] += r["total"]
     return {"subtype_by_msg_severity": {msg: dict(cnt) for msg, cnt in out.items()}}
 
-def build_hour_series_by_subtype(dt_from=None, dt_to=None):
-    """
-    Devuelve: { subtype: [c00, c01, ..., c23] } en TZ America/Santiago,
-    alineado a las mismas 24 etiquetas "00".."23".
-    """
-    qs = _base_qs(dt_from, dt_to)
 
-    # base 24 horas
+def build_hour_series_by_subtype(dt_from=None, dt_to=None, qs_base=None):
+    qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
+
     hour_labels = [f"{i:02d}" for i in range(24)]
     index = {h: i for i, h in enumerate(hour_labels)}
 
-    # contar por hora y subtype
     rows = (
         qs.annotate(h=TruncHour("event_time", tzinfo=CL_TZ))
           .values("h", "subtype")
           .annotate(total=Count("id"))
     )
 
-    from collections import defaultdict
     series = defaultdict(lambda: [0] * 24)
-
     for r in rows:
         h = r.get("h")
         if not h:
@@ -924,5 +829,3 @@ def build_hour_series_by_subtype(dt_from=None, dt_to=None):
             series[st][pos] += r["total"]
 
     return {"hour_series_by_subtype": dict(series)}
-
-
