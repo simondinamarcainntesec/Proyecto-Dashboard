@@ -6,6 +6,7 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from tenants import views
 from tenants.views import tenant_login_view, logout_view
+from accounts.views import registro_cliente
 
 
 def home_view(request):
@@ -17,6 +18,7 @@ urlpatterns = [
         path("login/", tenant_login_view, name="login"),        # ← nombre oficial
         path("auth/login/", tenant_login_view, name="auth_login"),  # ← alias opcional
         path("logout/", logout_view, name="logout"),
+        path("auth/registro_cliente/", registro_cliente, name="auth/registro_cliente"),
 
         path("", login_required(home_view, login_url="login"), name="home"),
         path("inyeccion_api/", include(("inyeccion_api.urls", "inyeccion_api"), namespace="inyeccion_api")),

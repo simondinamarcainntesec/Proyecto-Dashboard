@@ -1,14 +1,19 @@
 # dashboard/realtime.py
 from __future__ import annotations
-import subprocess, httpx, pytz, json, re
+import subprocess, httpx, pytz, json, re, logging
 from datetime import datetime, timezone as _pytimezone
+from tenants.decorators import tenant_required
+from django.urls import reverse, NoReverseMatch
 from django.views.decorators.http import require_GET
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponseBadRequest
-from django.shortcuts import render
-
+from django.shortcuts import render, redirect
+from tenants.decorators import tenant_required
+from django.contrib import messages
 from . import views as v
 from .realtime_transform import build_realtime_context
+
+logger = logging.getLogger(__name__)
 
 # ---------- rango hoy 00:00 -> ahora ----------
 def _today_range_ms_scl():
@@ -56,9 +61,10 @@ def _fetch_alarms_today_direct(max_pages=50, page_size=1000):
     return from_ms, to_ms, all_rows
 
 
+# ---------- utilidades compartidas con views ----------
 _get_value_case_insensitive = getattr(v, "_get_value_case_insensitive", None)
 _to_datetime_santiago      = getattr(v, "_to_datetime_santiago", None)
-_format_aotags             = getattr(v, "_format_aotags", None)
+_format_aotags_external    = getattr(v, "_format_aotags", None)  # puede existir en views.py
 _message_extract_multiple_sources = getattr(v, "_message_extract_multiple_sources", None)
 
 if _get_value_case_insensitive is None:
@@ -83,7 +89,6 @@ if _to_datetime_santiago is None:
             return ""
 
 if _message_extract_multiple_sources is None:
-    import re, json
     _KEYVAL_ROW_REGEX = re.compile(r"<td[^>]*>\s*([^:<][^<]*?)\s*</td>\s*<td[^>]*>\s*([\s\S]*?)\s*</td>", re.I)
     _LINE_REGEX = re.compile(r"^\s*([^:]{1,64})\s*:\s*(.+)\s*$")
     def _strip_html(s: str) -> str:
@@ -97,19 +102,19 @@ if _message_extract_multiple_sources is None:
     def _extract_kv_from_any(raw_block) -> dict:
         if not raw_block: return {}
         if isinstance(raw_block, dict):
-            return { _norm_key(k): _strip_html(json.dumps(v, ensure_ascii=False) if isinstance(v,(dict,list)) else str(v))
-                     for k, v in raw_block.items() if isinstance(k, str) }
+            return { _norm_key(k): _strip_html(json.dumps(vv, ensure_ascii=False) if isinstance(vv,(dict,list)) else str(vv))
+                     for k, vv in raw_block.items() if isinstance(k, str) }
         s = str(raw_block)
         try:
             obj = json.loads(s)
             if isinstance(obj, dict):
-                return { _norm_key(k): _strip_html(json.dumps(v, ensure_ascii=False) if isinstance(v,(dict,list)) else str(v))
-                         for k, v in obj.items() if isinstance(k, str) }
+                return { _norm_key(k): _strip_html(json.dumps(vv, ensure_ascii=False) if isinstance(vv,(dict,list)) else str(vv))
+                         for k, vv in obj.items() if isinstance(k, str) }
         except Exception:
             pass
         pairs = {}
-        for k, v in _KEYVAL_ROW_REGEX.findall(s):
-            key = _norm_key(k); val = _strip_html(v)
+        for k, vv in _KEYVAL_ROW_REGEX.findall(s):
+            key = _norm_key(k); val = _strip_html(vv)
             if val or key not in pairs: pairs[key] = val
         if pairs: return pairs
         kv = {}
@@ -153,8 +158,7 @@ def _value_for_column_fallback(alarm: dict, column: str):
     if column == "eventtime":
         return _to_datetime_santiago(_get_value_case_insensitive(alarm, column))
     if column == "aotags":
-        s = _get_value_case_insensitive(alarm, column)
-        return s
+        return _get_value_case_insensitive(alarm, column)
     if column in ("msg_severity", "msg_device_name", "level", "log_description", "subtype"):
         extracted = _message_extract_multiple_sources(
             alarm, wanted=["Severity", "Device Name", "Device", "Level", "Log Description", "Subtype"]
@@ -173,11 +177,75 @@ def _value_for_column_fallback(alarm: dict, column: str):
 
 value_for_column = _value_for_column_from_views or _value_for_column_fallback
 
-# ---------- vistas ----------
+# ---------- normalización de AOTAGS ----------
+def _format_aotags(value) -> str:
+    """
+    Normaliza aotags a 'tag1, tag2'.
+    Acepta JSON (lista o string), texto con corchetes, o texto plano.
+    """
+    if not value:
+        return ""
+    if isinstance(value, str):
+        s = value.strip()
+        # Intentar JSON
+        try:
+            obj = json.loads(s)
+            value = obj
+        except json.JSONDecodeError:
+            cleaned = s.strip().strip('[]"')
+            return cleaned if cleaned else ""
+    if isinstance(value, list):
+        return ", ".join(str(t).strip() for t in value if isinstance(t, (str, int)) and str(t).strip())
+    return str(value)
 
+def _aotags_to_list(value) -> list[str]:
+    """
+    Devuelve lista de tags normalizados (lower/stripped) para comparación exacta.
+    """
+    s = _format_aotags(value)  # "tag1, tag2"
+    if not s:
+        return []
+    parts = [p.strip() for p in s.split(",")]
+    return [p.lower() for p in parts if p]
+
+def _filter_for_request_tenant(request, alarms: list[dict]) -> list[dict]:
+    """
+    Filtra las alarmas crudas (AlarmsOne API) por el tenant actual,
+    usando coincidencia exacta de AOTAGS con Tenant.alarms_one_id.
+    """
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        logger.warning("[Realtime] request sin tenant → 0 alarmas")
+        return []
+    aotag = (getattr(tenant, "alarms_one_id", "") or "").strip().lower()
+    if not aotag:
+        logger.warning("[Realtime] tenant '%s' sin alarms_one_id → 0 alarmas", getattr(tenant, "name", "?"))
+        return []
+
+    filtered = []
+    for a in (alarms or []):
+        tags_raw = _get_value_case_insensitive(a, "aotags")
+        taglist = _aotags_to_list(tags_raw)  # ['9956...', 'x', ...]
+        if aotag in taglist:
+            # opcional: sobrescribir aotags ya formateado para el render/API
+            a["aotags"] = _format_aotags(tags_raw)
+            filtered.append(a)
+    return filtered
+
+
+# ---------- vistas ----------
+@login_required
+@tenant_required
 def realtime_page(request):
     try:
+        # URL del panel histórico
+        try:
+            hist_url = reverse("dashboard_home")   # si tu nombre es otro, cámbialo aquí
+        except NoReverseMatch:
+            hist_url = "/dashboard/"
+
         _, _, alarms = _fetch_alarms_today_direct()
+        alarms = _filter_for_request_tenant(request, alarms)  # mantiene el filtro por tenant
         ctx = build_realtime_context(alarms, value_for_column, tzname="America/Santiago")
 
         kpi_total = sum(ctx.get("severity_counts", {}).values())
@@ -186,6 +254,8 @@ def realtime_page(request):
         kpi_dev   = len(ctx.get("device_counts", {}))
 
         page_ctx = {
+            "tenant": getattr(request, "tenant", None),
+            "hist_url": hist_url,                 # <<< AQUI
             "kpi_total": kpi_total,
             "kpi_high":  kpi_high,
             "kpi_dispositivos": kpi_dev,
@@ -198,10 +268,13 @@ def realtime_page(request):
         return HttpResponseBadRequest(f"realtime_page error: {type(e).__name__}: {e}")
 
 
+@login_required
+@tenant_required
 def realtime_data(request):
     try:
         _, _, alarms = _fetch_alarms_today_direct()
         ctx = build_realtime_context(alarms, value_for_column, tzname="America/Santiago")
+        # si quieres, también puedes incluir el nombre del tenant aquí
         return JsonResponse({"ok": True, "data": ctx}, json_dumps_params={"indent": 2})
     except httpx.HTTPStatusError as e:
         return HttpResponseBadRequest(f"realtime_data error: HTTP {e.response.status_code}: {e}")
@@ -226,17 +299,19 @@ def _presence_summary(alarms, columns):
     return {"total_rows": total, "columns": cols_out}
 
 
-def debug_whitelist_today_direct(request):
+@login_required
+@tenant_required
+def realtime_data(request):
     try:
         _, _, alarms = _fetch_alarms_today_direct()
-        cols = getattr(v, "_WHITELIST_ORDERED", [
-            "Action", "actions", "aotags", "severity",
-            "msg_severity", "msg_device_name", "level", "log_description", "subtype",
-            "eventtime", "alarmid",
-        ])
-        summary = _presence_summary(alarms, cols)
-        return JsonResponse({"ok": True, "summary": summary, "sample_rows": alarms[:3]}, json_dumps_params={"indent": 2})
+
+        # 👉 aplica el MISMO filtro aquí también
+        alarms = _filter_for_request_tenant(request, alarms)
+
+        ctx = build_realtime_context(alarms, value_for_column, tzname="America/Santiago")
+        return JsonResponse({"ok": True, "data": ctx}, json_dumps_params={"indent": 2})
+
     except httpx.HTTPStatusError as e:
-        return HttpResponseBadRequest(f"debug_whitelist_today_direct error: HTTP {e.response.status_code}: {e}")
+        return HttpResponseBadRequest(f"realtime_data error: HTTP {e.response.status_code}: {e}")
     except Exception as e:
-        return HttpResponseBadRequest(f"debug_whitelist_today_direct error: {type(e).__name__}: {e}")
+        return HttpResponseBadRequest(f"realtime_data error: {type(e).__name__}: {e}")

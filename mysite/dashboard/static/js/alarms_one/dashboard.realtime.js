@@ -1,4 +1,4 @@
-// dashboard.realtime.js (TIEMPO REAL) — sin trend
+// dashboard.realtime.js (Tiempo Real) — sin trend
 import { setupChartJSDefaults } from "./theme.js";
 import { $ } from "./utils.js";
 import { getState, onStateChange } from "./state.js";
@@ -9,13 +9,12 @@ import {
   calcKpis,
   actionDataForCurrentFilter,
   msgSeverityDataForCurrentFilter,
-  levelDataForCurrentFilter,          // lo mantenemos por coherencia de tipos/exports
+  levelDataForCurrentFilter,     // coherencia de exports
   subtypeDataForCurrentFilter,
   logDescriptionDataForCurrentFilter,
 } from "./selectors.js";
 
 import { renderDonut } from "./charts/donut.js";
-// ❌ NO importamos trend.js en realtime
 import { renderActionBar } from "./charts/actions.js";
 import { renderMsgSeverityBar } from "./charts/msgSeverity.js";
 import { renderHourly } from "./charts/hourly.js";
@@ -25,7 +24,15 @@ import { renderSubtypeBar } from "./charts/subtype.js";
 import { renderLogDescriptionBar } from "./charts/logDescription.js";
 
 // ======================================================
-// 1) Inicialización global
+// 0) Helper: ¿hay estado vacío?
+//    Si el template renderizó el "empty-state", no montamos gráficos.
+// ======================================================
+function isEmptyState() {
+  return !!document.querySelector(".empty-state");
+}
+
+// ======================================================
+// 1) Inicialización global (solo si no es empty-state)
 // ======================================================
 console.log("[realtime] Iniciando dashboard AlarmsOne (tiempo real)...");
 setupChartJSDefaults(window.Chart);
@@ -50,25 +57,17 @@ function updateAll() {
 
   renderKPIs();
 
-  // ❌ NO hay trend en tiempo real
-
-  // Donut de severidad (usa filtros activos)
+  // Donut de severidad
   renderDonut(st, getActiveCountsForDonut(st));
 
   // Tabla dispositivos
   renderDeviceTable(st);
 
-  // Barras de acciones
+  // Barras
   renderActionBar(actionDataForCurrentFilter(st));
-
-  // Barras msg_severity
   renderMsgSeverityBar(msgSeverityDataForCurrentFilter(st), st.msgSeverityFilter);
-
-  // Alarmas por hora
   renderHourly(st);
 
-  // Level está montado con subscripción (no re-render explícito aquí)
-  // Subtype y Log Description
   renderSubtypeBar(subtypeDataForCurrentFilter(st), st.subtypeFilter);
   renderLogDescriptionBar(logDescriptionDataForCurrentFilter(st), st.logDescriptionFilter);
 
@@ -108,11 +107,24 @@ function wireTableSort() {
 let unmountLevel = null;
 
 function boot() {
+  // Si hay empty-state, solo cableamos el botón OK y salimos
+  if (isEmptyState()) {
+    const btn = document.getElementById("btn-empty-ok");
+    if (btn) btn.addEventListener("click", () => {
+      window.location.href = document.getElementById("link-historico")?.getAttribute("href") || "/dashboard/";
+    });
+    console.log("[realtime] Empty-state: sin gráficos que montar.");
+    return;
+  }
+
   console.log("[realtime] DOM listo → inicializando...");
   wireTableSort();
 
-  // Monta Level UNA sola vez
-  unmountLevel = mountLevelBar("levelBar");
+  // Monta Level UNA sola vez (si está en el DOM)
+  const levelEl = document.getElementById("levelBar");
+  if (levelEl) {
+    unmountLevel = mountLevelBar("levelBar");
+  }
 
   // Render inicial del resto
   updateAll();
@@ -128,12 +140,13 @@ if (document.readyState === "loading") {
 // 5) Redibujo ante cambios de filtros
 // ======================================================
 onStateChange(() => {
+  if (isEmptyState()) return; // no hay nada que refrescar
   console.log("[realtime] Cambio detectado en filtros → refrescando...");
   updateAll();
 });
 
 // ======================================================
-// 6) Botón refresh (si lo tienes en la topbar)
+// 6) Botón refresh (topbar)
 // ======================================================
 (function () {
   const r = document.getElementById('btn-refresh');

@@ -127,3 +127,45 @@ body.dark-mode { background-color: var(--color-bg-dark); color: var(--color-text
   box-sizing: border-box; /* Asegura que el padding no afecte el ancho total */
   z-index: 10;
 }
+
+/* --- Estilo para el botón "Volver al login" --- */
+.back-to-login {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.back-to-login a {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.back-to-login a:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+}
+
+.dark-mode .back-to-login a {
+  color: #80bfff;
+}
+.dark-mode .back-to-login a:hover {
+  color: #cce5ff;
+}
+
+.back-to-login {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.back-to-login a {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.back-to-login a:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+}

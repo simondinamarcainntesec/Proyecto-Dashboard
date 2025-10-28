@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'integrations',
     'tenants',
 #    'csp',
+    'accounts',
 ]
 
 MIDDLEWARE = [
@@ -241,3 +242,11 @@ LOGGING = {
         # "": {"handlers": ["console"], "level": "INFO"},
     },
 }
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "sandbox.smtp.mailtrap.io"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "4b42117563a1fe"
+EMAIL_HOST_PASSWORD = "341855ffe86c3d"
+DEFAULT_FROM_EMAIL = "no-reply@inntesec.com"
