@@ -4,7 +4,7 @@ from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.shortcuts import render
-from integrations import views
+from tenants import views
 from tenants.views import tenant_login_view
 
 def home_view(request):
@@ -12,7 +12,7 @@ def home_view(request):
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('login/', tenant_login_view, name='tenant_login'),
-    path("logout/", auth_views.LogoutView.as_view(), name="logout"),
+    path('auth/login/', views.tenant_login_view, name='tenant_login'),
     path("", login_required(home_view), name="home"),
     path("inyeccion_api/", include(("inyeccion_api.urls", "inyeccion_api"), namespace="inyeccion_api")),
     path("dashboard/", include("dashboard.urls")),

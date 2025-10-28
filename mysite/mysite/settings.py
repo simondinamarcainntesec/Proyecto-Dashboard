@@ -92,7 +92,7 @@ DATABASES = {
         'NAME': 'portal_db',
         'USER': 'portal',
         'PASSWORD': 'admin',
-        'HOST': 'localhost', # O la IP de tu servidor PostgreSQL
+        'HOST': 'localhost', 
         'PORT': '5432',
     }
 }
