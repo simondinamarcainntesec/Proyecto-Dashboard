@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'dashboard',
     'integrations',
     'tenants',
+#    'csp',
 ]
 
 MIDDLEWARE = [
@@ -66,7 +67,52 @@ MIDDLEWARE = [
     'tenants.middleware.ActiveTenantMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+#    'csp.middleware.CSPMiddleware',
 ]
+
+# === Content Security Policy ===
+#CONTENT_SECURITY_POLICY = {
+#    "DIRECTIVES": {
+#        "default-src": ("'self'",),
+#        "font-src": ("'self'",),
+#        "img-src": ("'self'",),
+#        "object-src": ("'none'",),
+#        "script-src": ("'self'",),
+#        "style-src": ("'self'",),
+#        "frame-ancestors": ("'none'",),
+#        "connect-src": (
+#            "'self'",
+#            "https://iaproductivo.inntesec.cl",
+#            "https://alarmsone.manageengine.com",
+#        ),
+#    }
+#}
+
+# === Seguridad Django ===
+
+# Fuerza HTTPS
+#SECURE_SSL_REDIRECT = not DEBUG
+
+# HSTS - indica al navegador usar solo HTTPS
+#SECURE_HSTS_SECONDS = 31536000
+#SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+#SECURE_HSTS_PRELOAD = False
+
+# Evita que el navegador interprete tipos MIME incorrectos
+#SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# Bloquea iframes externos (clickjacking)
+#X_FRAME_OPTIONS = 'DENY'
+
+# Cookies seguras y con políticas de restricción
+#SESSION_COOKIE_SECURE = True
+#SESSION_COOKIE_HTTPONLY = True
+#SESSION_COOKIE_SAMESITE = 'Lax'
+
+#CSRF_COOKIE_SECURE = True
+#CSRF_COOKIE_HTTPONLY = True
+#CSRF_COOKIE_SAMESITE = 'Lax'
+
 
 ROOT_URLCONF = 'mysite.urls'
 
@@ -154,7 +200,7 @@ CACHES = {
 
 # Configuración de Celery
 # === Celery Config ===
-CELERY_BROKER_URL = "redis://localhost:6379/0"        # o el host que uses
+CELERY_BROKER_URL = "redis://localhost:6379/0"        
 CELERY_RESULT_BACKEND = "redis://localhost:6379/1"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"

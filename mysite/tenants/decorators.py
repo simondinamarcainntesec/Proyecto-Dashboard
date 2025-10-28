@@ -11,7 +11,7 @@ def tenant_required(view_func):
     """
     Exige usuario autenticado y tenant válido.
     NOTA: NO hacemos redirect por nombre de URL para no tocar rutas.
-    Renderizamos el login template directamente, como pediste.
+    Renderizamos el login template directamente.
     """
 
     @wraps(view_func)
