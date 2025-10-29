@@ -1,37 +1,27 @@
-// static/js/soar/utils.js
+export const $ = (sel) => document.querySelector(sel);
 
-export const norm = (s) => String(s ?? "").trim().toLowerCase();
-export const safe = (s) => (String(s ?? "").trim() || "N/A");
+export function readJSON(id) {
+  const el = document.getElementById(id);
+  try { return el ? JSON.parse(el.textContent) : null; }
+  catch(e){ console.error("JSON inválido en", id, e); return null; }
+}
 
-// Alias para acciones (normaliza 0/1, booleanos y textos comunes)
-export const ACTION_ALIASES = {
-  "0": "Open",
-  "1": "Blocked",
-  "false": "Open",
-  "true": "Blocked",
-  "allow": "Open",
-  "allowed": "Open",
-  "pass": "Open",
-  "open": "Open",
-
-  "deny": "Blocked",
-  "denied": "Blocked",
-  "block": "Blocked",
-  "blocked": "Blocked",
-  "drop": "Blocked",
-  "dropped": "Blocked",
-
-  "reset": "Reset",
-  "client-rst": "Reset",
-  "server-rst": "Reset",
-  "timeout": "Timeout",
-  "monitor": "Monitor",
-  "alert": "Alert",
+export const norm = (s) => String(s ?? "N/A").trim().toLowerCase();
+export const safeLabel = (s) => {
+  const t = (s ?? "").toString().trim();
+  return t ? t : "N/A";
 };
 
-export function prettyActionLabel(value) {
+export const ACTION_ALIASES = {
+  "0":"Open","1":"Blocked","false":"Open","true":"Blocked",
+  "allow":"Open","allowed":"Open","deny":"Blocked","denied":"Blocked",
+  "block":"Blocked","blocked":"Blocked","resolved":"Resolved","closed":"Closed","2":"Resolved",
+  "drop":"Blocked","timeout":"Blocked","reset":"Blocked"
+};
+
+export const prettyActionLabel = (value) => {
   const k = norm(value);
-  if (k in ACTION_ALIASES) return ACTION_ALIASES[k];
+  if (ACTION_ALIASES[k]) return ACTION_ALIASES[k];
   const raw = String(value ?? "").trim();
   return raw ? raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase() : "N/A";
-}
+};
