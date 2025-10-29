@@ -49,7 +49,7 @@ def _ensure_series24(nested_counter: dict[str, Counter]) -> dict[str, list[int]]
     out = {}
     for k, c in nested_counter.items():
         out[k] = _series24(c)
-    return out
+    return out  
 
 def _transpose(m: dict[str, Counter]) -> dict[str, dict]:
     """Convierte A->(B->n) en B->(A->n)"""
@@ -221,20 +221,18 @@ def build_realtime_context(alarms: list[dict], value_for_column, tzname="America
         for st, n in per.items():
             hour_series_by_subtype[st][h] += int(n)
 
-    # Orientaciones coherentes con el histórico
+
     severity_counts_by_msg_severity = _transpose(severity_by_msgseverity)   # msg -> sev
     msg_severity_by_subtype_out     = {st: dict(c) for st, c in subtype_by_msgseverity.items()}   # subtype -> msg
     subtype_by_msg_severity_out     = {msg: dict(c) for msg, c in msgseverity_by_subtype.items()} # msg -> subtype
 
-    # level/subtype -> {device: n} (para que la tabla filtre level/subtype)
+
     level_to_device   = _transpose(device_by_level)     # level -> device -> n
     subtype_to_device = _transpose(device_by_subtype)   # subtype -> device -> n
 
-    # 🚩 CORRECCIÓN CLAVE PARA "Subtype → Level":
-    # Debe ser subtype -> { level: n } (sin transpose)
+   
     level_counts_by_subtype = {st: dict(c) for st, c in level_by_subtype.items()}
 
-    # También conservamos level -> { subtype: n } por si lo usas en otro lado
     subtype_counts_by_level = _transpose(level_by_subtype)
 
     out = {
@@ -285,7 +283,7 @@ def build_realtime_context(alarms: list[dict], value_for_column, tzname="America
 
         # Ambos mapas disponibles:
         "subtype_counts_by_level": subtype_counts_by_level,     # level -> {subtype: n}
-        "level_counts_by_subtype": level_counts_by_subtype,     # subtype -> {level: n}  ✅
+        "level_counts_by_subtype": level_counts_by_subtype,     # subtype -> {level: n}  
 
         "msg_severity_by_level": {lvl: dict(c) for lvl, c in msgseverity_by_level.items()},
         "level_by_msg_severity": {msg: dict(c) for msg, c in level_by_msgseverity.items()},
@@ -339,8 +337,8 @@ def build_realtime_context(alarms: list[dict], value_for_column, tzname="America
         "severityByLevelRaw":             out.get("severity_counts_by_level", {}),
         "levelCountsByHourRaw":           {h: dict(c) for h, c in level_by_hour.items()},
 
-        # ⬇️ alias correcto para Subtype → Level
-        "levelBySubtypeRaw":              out.get("level_counts_by_subtype", {}),  # ✅ subtype -> {level: n}
+        # ⬇ alias correcto para Subtype → Level
+        "levelBySubtypeRaw":              out.get("level_counts_by_subtype", {}),  #  subtype -> {level: n}
 
         "subtypeCountsRaw":               dict(subtype_counts),
         "deviceBySubtypeRaw":             out.get("device_counts_by_subtype", {}),

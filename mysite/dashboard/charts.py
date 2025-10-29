@@ -146,40 +146,59 @@ def build_trend_data(dt_from=None, dt_to=None, qs_base=None):
 def build_trend_by_device(dt_from=None, dt_to=None, top_n=10, qs_base=None):
     qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
 
-    top = (
-        qs.values("device_name")
-        .annotate(total=Count("id"))
-        .order_by("-total")[:top_n]
+    # ---- 1) Conteo COMPLETO por dispositivo (para KPI) ----
+    full_rows = (
+        qs.exclude(device_name__isnull=True)
+          .exclude(device_name__exact="")
+          .values("device_name")
+          .annotate(total=Count("id"))
     )
-    top_raw = [r["device_name"] for r in top]
-    top_devices = [_norm_dev(r["device_name"]) for r in top]
 
+    device_counts = {}
+    for r in full_rows:
+        normed = _norm_dev(r["device_name"])
+        if normed and normed.upper() != "N/A":
+            device_counts[normed] = device_counts.get(normed, 0) + int(r["total"] or 0)
+
+    # ---- 2) Top-N para el trend (para no enviar 1000 series) ----
+    top_sorted = sorted(full_rows, key=lambda rr: rr["total"], reverse=True)[:top_n]
+    top_raw = [rr["device_name"] for rr in top_sorted]
+    top_devices = [_norm_dev(rr["device_name"]) for rr in top_sorted]
+
+    # ---- 3) Eje temporal (labels de días) ----
     daily = (
         qs.annotate(date=TruncDay("event_time", tzinfo=CL_TZ))
-        .values("date")
-        .annotate(total=Count("id"))
-        .order_by("date")
+          .values("date")
+          .annotate(total=Count("id"))
+          .order_by("date")
     )
     labels = [d["date"].strftime("%Y-%m-%d") for d in daily]
     idx = {d: i for i, d in enumerate(labels)}
 
+    # ---- 4) Series por dispositivo (sólo Top-N) ----
     device_rows = (
         qs.filter(device_name__in=[None] + top_raw)
-        .annotate(date=TruncDay("event_time", tzinfo=CL_TZ))
-        .values("date", "device_name")
-        .annotate(total=Count("id"))
-        .order_by("date")
+          .annotate(date=TruncDay("event_time", tzinfo=CL_TZ))
+          .values("date", "device_name")
+          .annotate(total=Count("id"))
+          .order_by("date")
     )
+
     trend_by_device = {dev: [0] * len(labels) for dev in top_devices}
     for r in device_rows:
         date_str = r["date"].strftime("%Y-%m-%d")
-        dev = _norm_dev(r["device_name"])
-        if dev in trend_by_device:
+        dev_norm = _norm_dev(r["device_name"])
+        if dev_norm in trend_by_device:
             i = idx.get(date_str)
             if i is not None:
-                trend_by_device[dev][i] = r["total"]
+                trend_by_device[dev_norm][i] = int(r["total"] or 0)
 
-    return {"trend_by_device": trend_by_device, "top_devices": top_devices}
+    return {
+        "trend_by_device": trend_by_device,  # series SOLO del top-N
+        "top_devices": top_devices,          # nombres normalizados del top-N
+        "device_counts": device_counts,      # <-- TODOS los dispositivos (para KPI)
+    }
+
 
 
 def build_trend_by_action(dt_from=None, dt_to=None, qs_base=None):

@@ -1,4 +1,3 @@
-# dashboard/realtime.py
 from __future__ import annotations
 import subprocess, httpx, pytz, json, re, logging
 from datetime import datetime, timezone as _pytimezone
@@ -238,11 +237,13 @@ def _filter_for_request_tenant(request, alarms: list[dict]) -> list[dict]:
 @tenant_required
 def realtime_page(request):
     try:
-        # URL del panel histórico
+        print(">>> Entrando a realtime_page")
         try:
-            hist_url = reverse("dashboard_home")   # si tu nombre es otro, cámbialo aquí
-        except NoReverseMatch:
-            hist_url = "/dashboard/"
+            hist_url = reverse("dashboard_alarmsone")
+            print(">>> hist_url resuelto:", hist_url)
+        except NoReverseMatch as e:
+            print(">>> Error en reverse:", e)
+            hist_url = "/dashboard/alarmsone/"
 
         _, _, alarms = _fetch_alarms_today_direct()
         alarms = _filter_for_request_tenant(request, alarms)  # mantiene el filtro por tenant

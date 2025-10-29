@@ -57,6 +57,8 @@ INSTALLED_APPS = [
     'tenants',
 #    'csp',
     'accounts',
+    'soar_dashboard',
+    'home',
 ]
 
 MIDDLEWARE = [
@@ -138,8 +140,8 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'portal_db',
-        'USER': 'portal',
-        'PASSWORD': 'admin',
+        'USER': 'inntesec_ai',
+        'PASSWORD': 'KDo9yOyPfhd$LjOguKi6Oq93PJNDAqm4',
         'HOST': 'localhost', 
         'PORT': '5432',
     }

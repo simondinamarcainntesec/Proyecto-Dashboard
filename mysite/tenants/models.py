@@ -25,7 +25,7 @@ class Client(models.Model):
     phone = models.CharField(max_length=50, null=True, blank=True, help_text="Teléfono del cliente (campo 'Telefono' de la API)")
     telegram_id = models.CharField(max_length=100, null=True, blank=True, help_text="ID de Telegram del cliente (campo 'Telegram' de la API)")
     user = models.OneToOneField(
-        settings.AUTH_USER_MODEL,  # ✅ corregido
+        settings.AUTH_USER_MODEL,  
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

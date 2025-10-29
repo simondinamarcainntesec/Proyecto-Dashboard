@@ -7,22 +7,25 @@ from django.shortcuts import render
 from tenants import views
 from tenants.views import tenant_login_view, logout_view
 from accounts.views import registro_cliente
-
+from home.views import home
 
 def home_view(request):
     return render(request, 'home/home.html')
+
 urlpatterns = [
-      path("admin/", admin.site.urls),
+    path("admin/", admin.site.urls),
 
-        # === LOGIN / LOGOUT ===
-        path("login/", tenant_login_view, name="login"),        # ← nombre oficial
-        path("auth/login/", tenant_login_view, name="auth_login"),  # ← alias opcional
-        path("logout/", logout_view, name="logout"),
-        path("auth/registro_cliente/", registro_cliente, name="auth/registro_cliente"),
+    # === LOGIN / LOGOUT ===
+    path("login/", tenant_login_view, name="login"),
+    path("auth/login/", tenant_login_view, name="auth_login"),
+    path("logout/", logout_view, name="logout"),
+    path("auth/registro_cliente/", registro_cliente, name="auth/registro_cliente"),
 
-        path("", login_required(home_view, login_url="login"), name="home"),
-        path("inyeccion_api/", include(("inyeccion_api.urls", "inyeccion_api"), namespace="inyeccion_api")),
-        path("dashboard/", include("dashboard.urls")),
-        path("integrations/", include("integrations.urls")),
-    
+    path('', home, name='home'),
+
+    # === APLICACIONES ===
+    path("inyeccion_api/", include(("inyeccion_api.urls", "inyeccion_api"), namespace="inyeccion_api")),
+    path('dashboard/', include('dashboard.urls')),   # 👈 agregué la coma
+    path("integrations/", include("integrations.urls")),
+    path("dashboard-soar/", include("soar_dashboard.urls")),
 ]

@@ -687,9 +687,7 @@ export function getActiveCountsForDonut(state) {
   return base;
 }
 
-// ✅ NUEVO helper para KPI "hora con más alarmas"
 // === Nuevo KPI: hora con más alarmas (base "global hoy", sin filtros) ===
-
 
 export function getPeakHour(/* state no usado por ahora */) {
   // Preferimos el total por hora ya calculado:

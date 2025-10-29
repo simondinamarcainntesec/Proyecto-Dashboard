@@ -5,6 +5,7 @@ import pytz
 from django.shortcuts import render
 from django.views.decorators.cache import never_cache
 from django.core.cache import cache
+from django.db.models import Count  
 from tenants.decorators import tenant_required
 
 from .charts import (
@@ -33,6 +34,8 @@ from .charts import (
     build_level_by_msg_severity,
     build_subtype_by_msg_severity,
     build_hour_series_by_subtype,
+    make_base_qs,
+    _norm_dev,
 )
 
 logger = logging.getLogger(__name__)
@@ -95,7 +98,7 @@ def dashboard_view(request):
     parsed_from_utc, kind_from = _parse_local_any(raw_from)
     parsed_to_utc,   kind_to   = _parse_local_any(raw_to)
 
-    # Rango base por defecto: últimos 30 días hasta ahora (to exclusivo)
+    
     dt_from_utc = now_utc - timedelta(days=7)
     dt_to_utc_exclusive = now_utc + timedelta(seconds=1)
 
@@ -115,7 +118,6 @@ def dashboard_view(request):
             )
             dt_from_utc = dt_to_utc_exclusive - timedelta(days=30)
 
-    # Sanidad: evitar rango vacío
     if dt_from_utc >= dt_to_utc_exclusive:
         dt_to_utc_exclusive = dt_from_utc + timedelta(days=1)
 
@@ -132,29 +134,33 @@ def dashboard_view(request):
         return f"dash:{tid}:{dt_from_utc.isoformat()}:{dt_to_utc_exclusive.isoformat()}:{suffix}"
 
     delta_days = (dt_to_utc_exclusive - dt_from_utc).days
-    is_heavy = delta_days >= 20     # 30 días / mes completo: pesado
-    ttl = 300 if is_heavy else 15   # 5 min vs 15 s
+    is_heavy = delta_days >= 20     
+    ttl = 300 if is_heavy else 15  
 
     context = cache.get(_key("ctx"))
     if context is None:
         # -------- 3) Cálculo de datasets --------
-        trend = build_trend_data(dt_from_utc, dt_to_utc_exclusive)
-        trend_dev = build_trend_by_device(dt_from_utc, dt_to_utc_exclusive, top_n=10)
-        trend_act = build_trend_by_action(dt_from_utc, dt_to_utc_exclusive)
-        severity_counts = build_donut_data(dt_from_utc, dt_to_utc_exclusive)
+        qs_base = make_base_qs(dt_from_utc, dt_to_utc_exclusive)
 
-        device_counts, device_by_sev, device_by_sev_full = build_device_bar_data(
-            dt_from_utc, dt_to_utc_exclusive, top_n=10
+        trend = build_trend_data(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
+        trend_dev = build_trend_by_device(dt_from_utc, dt_to_utc_exclusive, top_n=10, qs_base=qs_base)
+        trend_act = build_trend_by_action(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
+        severity_counts = build_donut_data(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
+
+        # Top 10 para barras
+        device_counts_top, device_by_sev, device_by_sev_full = build_device_bar_data(
+            dt_from_utc, dt_to_utc_exclusive, top_n=10, qs_base=qs_base
         )
         action_counts, action_by_sev, action_by_device = build_action_bar_data(
-            dt_from_utc, dt_to_utc_exclusive, top_n=10
+            dt_from_utc, dt_to_utc_exclusive, top_n=10, qs_base=qs_base
         )
         device_by_action = build_device_by_action(
-            dt_from_utc, dt_to_utc_exclusive, top_n=10
+            dt_from_utc, dt_to_utc_exclusive, top_n=10, qs_base=qs_base
         )
-        kpis = build_kpis(dt_from_utc, dt_to_utc_exclusive)
+
+        kpis = build_kpis(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
         hour_payload = build_hour_filter_payload(
-            dt_from_utc, dt_to_utc_exclusive, top_n=10
+            dt_from_utc, dt_to_utc_exclusive, top_n=10, qs_base=qs_base
         )
 
         (
@@ -163,48 +169,52 @@ def dashboard_view(request):
             action_counts_by_msg_severity,
             severity_counts_by_msg_severity,
             msg_severity_counts_by_hour,
-        ) = build_msg_severity_bar_data(dt_from_utc, dt_to_utc_exclusive, top_n=10)
-        trend_msgsev = build_trend_by_msg_severity(dt_from_utc, dt_to_utc_exclusive)
+        ) = build_msg_severity_bar_data(dt_from_utc, dt_to_utc_exclusive, top_n=10, qs_base=qs_base)
+        trend_msgsev = build_trend_by_msg_severity(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
 
         (
             level_counts,
             device_counts_by_level,
             action_counts_by_level,
             severity_counts_by_level,
-        ) = build_level_bar_data(dt_from_utc, dt_to_utc_exclusive, top_n=10)
+        ) = build_level_bar_data(dt_from_utc, dt_to_utc_exclusive, top_n=10, qs_base=qs_base)
 
         (
             subtype_counts,
             device_counts_by_subtype,
             action_counts_by_subtype,
             severity_counts_by_subtype,
-        ) = build_subtype_bar_data(dt_from_utc, dt_to_utc_exclusive, top_n=10)
+        ) = build_subtype_bar_data(dt_from_utc, dt_to_utc_exclusive, top_n=10, qs_base=qs_base)
 
         (
             logdesc_counts,
             device_counts_by_logdesc,
             action_counts_by_logdesc,
             severity_counts_by_logdesc,
-        ) = build_log_description_bar_data(dt_from_utc, dt_to_utc_exclusive, top_n=10)
+        ) = build_log_description_bar_data(dt_from_utc, dt_to_utc_exclusive, top_n=10, qs_base=qs_base)
 
-        msgsev_by_level = build_msg_severity_by_level(dt_from_utc, dt_to_utc_exclusive)
-        msgsev_by_subtype = build_msg_severity_by_subtype(dt_from_utc, dt_to_utc_exclusive)
+        msgsev_by_level = build_msg_severity_by_level(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
+        msgsev_by_subtype = build_msg_severity_by_subtype(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
 
-        trend_level = build_trend_by_level(dt_from_utc, dt_to_utc_exclusive)
-        level_by_hour = build_level_counts_by_hour(dt_from_utc, dt_to_utc_exclusive)
-        subtype_by_level = build_subtype_counts_by_level(dt_from_utc, dt_to_utc_exclusive)
+        trend_level = build_trend_by_level(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
+        level_by_hour = build_level_counts_by_hour(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
+        subtype_by_level = build_subtype_counts_by_level(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
 
-        trend_st = build_trend_by_subtype(dt_from_utc, dt_to_utc_exclusive)
-        subtype_counts_by_hour = build_subtype_counts_by_hour(dt_from_utc, dt_to_utc_exclusive)
+        trend_st = build_trend_by_subtype(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
+        subtype_counts_by_hour = build_subtype_counts_by_hour(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
 
         level_counts_by_subtype = build_level_counts_by_subtype(
-            dt_from_utc, dt_to_utc_exclusive, top_n=None
+            dt_from_utc, dt_to_utc_exclusive, top_n=None, qs_base=qs_base
         )
-        level_by_msgsev = build_level_by_msg_severity(dt_from_utc, dt_to_utc_exclusive)
-        subtype_by_msgsev = build_subtype_by_msg_severity(dt_from_utc, dt_to_utc_exclusive)
+        level_by_msgsev = build_level_by_msg_severity(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
+        subtype_by_msgsev = build_subtype_by_msg_severity(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
         hour_series_by_subtype = build_hour_series_by_subtype(
-            dt_from_utc, dt_to_utc_exclusive
+            dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base
         )
+
+     
+        rows_all_devices = qs_base.values("device_name").annotate(total=Count("id")).order_by()
+        device_counts_all = {_norm_dev(r["device_name"]): r["total"] for r in rows_all_devices}
 
         context = {
             "tenant": tenant,
@@ -219,7 +229,13 @@ def dashboard_view(request):
             "trend_by_level": trend_level["trend_by_level"],
 
             "severity_counts": severity_counts,
-            "device_counts": device_counts,
+
+          
+            "device_counts": device_counts_all,
+
+          
+            "device_counts_top": device_counts_top,
+
             "action_counts": action_counts,
 
             "device_counts_by_severity": device_by_sev,

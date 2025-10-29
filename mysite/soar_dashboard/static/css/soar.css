@@ -1,0 +1,176 @@
+/* ====== TOKENS (standalone) ====== */
+:root{
+  --bg: #0b1220;
+  --bg-soft:#0e172a;
+  --panel:#0f1b31;
+  --surface:#0f172a;
+  --card:#0f1d35;
+  --border:#1e293b;
+  --muted:#94a3b8;
+  --text:#e5e7eb;
+  --brand:#3b82f6;
+
+  --radius: 16px;
+  --shadow: 0 10px 28px rgba(2,6,23,.25);
+
+  --pill-bg:#eef2ff;
+  --pill-text:#3730a3;
+
+  --chip-bg:#0d1a36;
+  --chip-hover:#132449;
+  --chip-active:#19305f;
+  --chip-ring: rgba(59,130,246,.35);
+}
+
+/* ====== RESET ====== */
+*{ box-sizing:border-box }
+html,body{ height:100% }
+body{
+  margin:0;
+  font-family:'Inter',system-ui,Segoe UI,Roboto,Arial,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+/* ====== LAYOUT BASE ====== */
+.layout{
+  display:grid;
+  grid-template-columns:240px 1fr;
+  min-height:100vh;
+}
+.content{ display:flex; flex-direction:column; gap:16px; padding:16px }
+
+/* ====== SIDEBAR ====== */
+.sidebar{
+  background: linear-gradient(180deg, #0e1930 0%, #0a1224 100%);
+  border-right:1px solid var(--border);
+  padding:16px 12px;
+  position:sticky; top:0; height:100vh;
+}
+.brand{ display:flex; gap:10px; align-items:center; padding:8px 6px 18px 6px }
+.nav{ display:flex; flex-direction:column; gap:4px; margin-top:10px }
+.nav-item{
+  display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px;
+  color:#cbd5e1; text-decoration:none; font-weight:700;
+}
+.nav-item:hover{ background:#111b33 }
+.nav-item.is-active{ background:#142246; color:#fff }
+.nav-ico{ width:20px; text-align:center }
+
+/* ====== TOPBAR ====== */
+.topbar{
+  display:flex; align-items:center; justify-content:space-between;
+  background: linear-gradient(180deg, #0e1a33 0%, #0e172a 100%);
+  border:1px solid var(--border); border-radius:14px; padding:12px 14px;
+  box-shadow:var(--shadow)
+}
+.top-title{ margin:0; font-size:1rem; font-weight:800 }
+.top-tenant{ color:#c7d2fe }
+.top-right{ display:flex; align-items:center; gap:8px }
+.user{ display:flex; align-items:center; gap:8px; padding-left:8px; border-left:1px solid var(--border) }
+.user-avatar{ width:28px; height:28px; border-radius:50%; background:#1f2a44; display:grid; place-items:center; font-weight:800 }
+
+/* ====== BOTONES ====== */
+.btn{
+  border:1px solid var(--border); background:#0b1428; color:#dbeafe;
+  border-radius:10px; padding:.45rem .7rem; cursor:pointer;
+  transition:transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
+}
+.btn:hover{ transform: translateY(-1px); box-shadow: 0 6px 18px rgba(2,6,23,.35); background:#0e1a33 }
+.btn:active{ transform: translateY(0); box-shadow:none }
+.btn.ghost{ background:transparent }
+.btn.primary{ background:var(--brand); border-color:var(--brand); color:white }
+
+/* ====== GRID ====== */
+.grid{ display:grid; gap:16px }
+
+/* Panel SOAR (3 gráficos) */
+body.soar .grid-main{
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-areas:
+    "countries severity"
+    "secaction  secaction";
+  gap: 20px;
+}
+body.soar .grid-main .card.chart:nth-of-type(1){ grid-area: countries; }
+body.soar .grid-main .card.chart:nth-of-type(2){ grid-area: severity; }
+body.soar .grid-main .card.chart:nth-of-type(3){ grid-area: secaction; }
+
+@media (max-width: 1200px){
+  body.soar .grid-main{
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "countries"
+      "severity"
+      "secaction";
+  }
+}
+
+/* ====== CARDS Y CHARTS ====== */
+.card{
+  background: linear-gradient(180deg, #0e1930 0%, #0c162b 100%);
+  border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow);
+}
+.card-head{ padding:14px 16px; border-bottom:1px solid var(--border) }
+.card-head.between{ display:flex; align-items:center; justify-content:space-between }
+.card-body{ padding:16px }
+.card h3{ margin:0; font-weight:800; letter-spacing:.2px }
+
+.card.chart .card-body canvas{
+  width:100% !important;
+  height:320px !important;
+}
+@media (min-width: 1200px){
+  /* “Acción de seguridad” un poco más alta */
+  body.soar .grid-main .card.chart:nth-of-type(3) .card-body canvas{
+    height:360px !important;
+  }
+}
+
+/* ====== TABLAS MIN (por si agregas tabla luego) ====== */
+.table .table-wrap{
+  overflow:auto; max-height:300px; border-radius:12px; border:1px solid var(--border); margin:12px
+}
+.datatable{ width:100%; border-collapse:separate; border-spacing:0 }
+.datatable thead th{
+  position:sticky; top:0; z-index:1;
+  background:#0b1428; color:#e2e8f0; border-bottom:1px solid var(--border);
+  padding:12px 14px; text-align:left; font-weight:800; font-size:14px; cursor:pointer
+}
+.datatable tbody td{
+  padding:12px 14px; border-bottom:1px solid var(--border);
+  font-size:14px; vertical-align:middle
+}
+.datatable tbody tr:nth-child(odd){ background:#0b1428 }
+.datatable tbody tr:hover{ background:#0d1a36 }
+.is-right{ text-align:right }
+.pill{
+  display:inline-block; padding:4px 10px; border-radius:999px;
+  background:var(--pill-bg); color:var(--pill-text);
+  font-weight:800; min-width:2.4rem; text-align:center;
+  border:1px solid rgba(55,48,163,.18)
+}
+
+/* ====== FOOTER ====== */
+.footnote{ color:#9aa7bd; font-size:.85rem; padding:0 4px 10px 4px; opacity:.9 }
+
+/* ====== OVERLAY CARGA ====== */
+#loading-overlay{
+  position:fixed; inset:0; display:grid; place-items:center;
+  background:rgba(2,6,23,0.64); backdrop-filter:blur(2px);
+  z-index:9999; opacity:0; visibility:hidden;
+  transition:opacity .15s ease-out, visibility .15s ease-out;
+}
+#loading-overlay.is-active{ opacity:1; visibility:visible; }
+.loading-card{
+  display:flex; align-items:center; gap:14px; padding:14px 18px;
+  border-radius:14px; background:var(--surface);
+  box-shadow:var(--shadow); color:var(--text); font-weight:600;
+}
+.spinner{
+  width:22px; height:22px; border-radius:50%;
+  border:3px solid rgba(229,231,235,0.25);
+  border-top-color: rgba(229,231,235,0.95);
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{ to{ transform:rotate(360deg); } }
