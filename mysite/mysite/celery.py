@@ -26,7 +26,7 @@ app.conf.beat_schedule = {
     "ingesta-api-cada-65-min": {
         "task": "integrations.tasks.tarea_ingesta_api",
         "schedule": crontab(minute="5", hour="*/1"),  # cada hora, en el minuto 5
-},
+    },
 }
 #    "ingesta-mensual": {
 #        "task": "integrations.tasks.ingesta_mensual_ciclica",

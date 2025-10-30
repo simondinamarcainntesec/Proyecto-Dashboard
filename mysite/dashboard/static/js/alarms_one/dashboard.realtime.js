@@ -180,3 +180,34 @@ onStateChange(() => {
     window.location.search = params.toString();
   });
 })();
+
+// ======================================================
+// 8) EXPOSE & MIRROR STATE  ✅ (para que el modal siempre vea los filtros)
+// ======================================================
+(function exposeRealtimeState() {
+  // Exponer estado actual (para alarms-modal.js)
+  window.getState = () => {
+    try { return getState(); } catch { return {}; }
+  };
+
+  // Espejar a data-* del <body> como fallback robusto
+  function mirrorToBody(st) {
+    const b = document.body;
+    if (!b) return;
+    b.dataset.severityFilter        = st.severityFilter || "";
+    b.dataset.deviceFilter          = st.deviceFilter || "";
+    b.dataset.actionFilter          = st.actionFilter || "";
+    b.dataset.hourFilter            = st.hourFilter || "";
+    b.dataset.msgSeverityFilter     = st.msgSeverityFilter || "";
+    b.dataset.levelFilter           = st.levelFilter || "";
+    b.dataset.subtypeFilter         = st.subtypeFilter || "";
+    b.dataset.logDescriptionFilter  = st.logDescriptionFilter || "";
+  }
+
+  // Inicial + reactivo
+  try { mirrorToBody(getState()); } catch {}
+  onStateChange((st) => {
+    window.__APP_STATE = st;   // segundo canal global
+    mirrorToBody(st);
+  });
+})();

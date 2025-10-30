@@ -15,7 +15,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
 
     # === LOGIN / LOGOUT ===
-    path("login/", tenant_login_view, name="login"),
+    path("", tenant_login_view, name="login"),
     path("auth/login/", tenant_login_view, name="auth_login"),
     path("logout/", logout_view, name="logout"),
     path("auth/registro_cliente/", registro_cliente, name="auth/registro_cliente"),

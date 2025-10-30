@@ -35,7 +35,7 @@ USE_TZ = True
 ALLOWED_HOSTS = ["localhost", "127.0.0.0","ia.inntesec.com","ia-customer-portal.eastus2.cloudapp.azure.com","127.0.0.1"]
 CSRF_TRUSTED_ORIGINS = ["http://localhost", "http://127.0.0.0"]
 
-LOGIN_URL = "auth/login"
+LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard/"
 LOGOUT_REDIRECT_URL = "login"
 ALARMSONE_ACCESS_TOKEN = '1000.7e825b058846b3c4a526b131d516cb8b.cc3ebe0d9437edbca6d70a8efa7af8de' 

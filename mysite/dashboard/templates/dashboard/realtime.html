@@ -43,16 +43,10 @@
       </div>
       <div class="top-right userbox">
         <button class="btn ghost" title="Actualizar" id="btn-refresh">⟳</button>
-
         <div class="user">
-          <div class="user-avatar">
-            {{ request.user.username|default:"U"|slice:":1"|upper }}
-          </div>
-          <div class="user-name">
-            {{ request.user.get_full_name|default:request.user.username }}
-          </div>
+          <div class="user-avatar">{{ request.user.username|default:"U"|slice:":1"|upper }}</div>
+          <div class="user-name">{{ request.user.get_full_name|default:request.user.username }}</div>
         </div>
-
         <form action="{% url 'logout' %}" method="post">
           {% csrf_token %}
           <button class="btn ghost" title="Cerrar sesión">Salir</button>
@@ -74,34 +68,56 @@
       </section>
 
       <section class="grid grid-main" id="app">
+        <!-- Alarmas por hora -->
         <div class="card chart card--hourly">
-          <div class="card-head"><h3>Alarmas por hora</h3></div>
+          <div class="card-head between">
+            <h3>Alarmas por hora</h3>
+            <button id="btn-open-hourly-alarms" class="btn ghost-sm" title="Ver alarmas de estas horas">🗂 Ver alarmas</button>
+          </div>
           <div class="card-body"><canvas id="hourlyChart"></canvas></div>
         </div>
 
+        <!-- Severidad (donut) -->
         <div class="card chart card--donut">
-          <div class="card-head"><h3>Severidad</h3></div>
+          <div class="card-head between">
+            <h3>Severidad</h3>
+            <button id="btn-open-severity-alarms" class="btn ghost-sm" title="Ver alarmas de esta severidad">🗂 Ver alarmas</button>
+          </div>
           <div class="card-body"><canvas id="severityDonut"></canvas></div>
         </div>
 
+        <!-- Acciones -->
         <div class="card chart card--actions">
-          <div class="card-head"><h3>Acciones</h3></div>
+          <div class="card-head between">
+            <h3>Acciones</h3>
+            <button id="btn-open-action-alarms" class="btn ghost-sm" title="Ver alarmas de estas acciones">🗂 Ver alarmas</button>
+          </div>
           <div class="card-body"><canvas id="actionBar"></canvas></div>
         </div>
 
+        <!-- Level -->
         <div class="card chart card--level">
-          <div class="card-head"><h3>Level</h3></div>
+          <div class="card-head between">
+            <h3>Level</h3>
+            <button id="btn-open-level-alarms" class="btn ghost-sm" title="Ver alarmas de este level">🗂 Ver alarmas</button>
+          </div>
           <div class="card-body"><canvas id="levelBar"></canvas></div>
         </div>
 
+        <!-- Subtype -->
         <div class="card chart card--subtype">
-          <div class="card-head"><h3>Subtype</h3></div>
+          <div class="card-head between">
+            <h3>Subtype</h3>
+            <button id="btn-open-subtype-alarms" class="btn ghost-sm" title="Ver alarmas de este Subtype">🗂 Ver alarmas</button>
+          </div>
           <div class="card-body"><canvas id="subtypeBar"></canvas></div>
         </div>
 
+        <!-- Tabla Dispositivos -->
         <div class="card table card--table">
           <div class="card-head between">
             <h3>Dispositivos recientes</h3>
+            <!-- Si luego quieres botón aquí, se puede, por ahora lo dejamos sin botón -->
           </div>
           <div class="table-wrap">
             <table class="datatable" id="device-table">
@@ -117,8 +133,12 @@
           <div class="table-footnote">* Clic en los encabezados para ordenar</div>
         </div>
 
+        <!-- Msg Severity -->
         <div class="card chart card--msgsev">
-          <div class="card-head"><h3>Severidad Alarma</h3></div>
+          <div class="card-head between">
+            <h3>Severidad Alarma</h3>
+            <button id="btn-open-msgsev-alarms" class="btn ghost-sm" title="Ver alarmas de esta severidad (msg)">🗂 Ver alarmas</button>
+          </div>
           <div class="card-body"><canvas id="msgSeverityBar"></canvas></div>
         </div>
       </section>
@@ -195,11 +215,6 @@
   {{ action_counts_by_subtype|json_script:"action-counts-by-subtype" }}
   {{ severity_counts_by_subtype|json_script:"severity-counts-by-subtype" }}
 
-  {{ logdesc_counts|json_script:"logdesc-counts" }}
-  {{ device_counts_by_logdesc|json_script:"device-counts-by-logdesc" }}
-  {{ action_counts_by_logdesc|json_script:"action-counts-by-logdesc" }}
-  {{ severity_counts_by_logdesc|json_script:"severity-counts-by-logdesc" }}
-
   {{ level_by_msg_severity|json_script:"level-by-msg-severity" }}
   {{ subtype_by_msg_severity|json_script:"subtype-by-msg-severity" }}
   {{ hour_series_by_subtype|json_script:"hour-series-by-subtype" }}
@@ -208,5 +223,61 @@
   <script type="module" src="{% static 'js/alarms_one/page-loader.js' %}?v={% now 'U' %}"></script>
   <!-- App realtime -->
   <script type="module" src="{% static 'js/alarms_one/dashboard.realtime.js' %}?v={% now 'U' %}"></script>
+  <script>
+  window.RT_ENDPOINTS = {
+    alarms: "{% url 'realtime_alarms_by_subtype' %}",
+    log:    "{% url 'realtime_alarm_log_table' %}",
+  };
+  </script>
+
+  <!-- ========= MODAL: lista de alarmas ========= -->
+  <div id="alarmsModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="alarmsModalTitle">Alarmas</h3>
+        <button class="modal-close" data-close-alarms>&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-toolbar">
+          <input id="alarmsSearch" type="search" placeholder="Buscar en la tabla..." />
+        </div>
+        <div class="table-wrap">
+          <table class="tbl" id="alarmsTable">
+            <thead>
+              <tr>
+                <th>Hora</th>
+                <th>Severidad</th>
+                <th>Dispositivo</th>
+                <th>Level</th>
+                <th>Action</th>
+                <th>Subtype</th>
+                <th>Log Desc</th>
+              </tr>
+            </thead>
+            <tbody><!-- dinámico --></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========= MODAL: LOG ========= -->
+  <div id="logModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="logModalTitle">Detalle de Log</h3>
+        <button class="modal-close" data-close-log>&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="logMeta" class="meta"></div>
+        <div id="logHtml" class="log-html"><!-- tabla html aquí --></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts de los modales -->
+  <script type="module" src="{% static 'js/alarms_one/alarms-modal.js' %}?v={% now 'U' %}"></script>
 </body>
 </html>
