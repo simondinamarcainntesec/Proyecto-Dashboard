@@ -7,7 +7,6 @@ from django.shortcuts import render
 from tenants import views
 from tenants.views import tenant_login_view, logout_view
 from accounts.views import registro_cliente
-from home.views import home
 
 def home_view(request):
     return render(request, 'home/home.html')
@@ -20,8 +19,6 @@ urlpatterns = [
     path("auth/login/", tenant_login_view, name="auth_login"),
     path("logout/", logout_view, name="logout"),
     path("auth/registro_cliente/", registro_cliente, name="auth/registro_cliente"),
-
-    path('', home, name='home'),
 
     # === APLICACIONES ===
     path("inyeccion_api/", include(("inyeccion_api.urls", "inyeccion_api"), namespace="inyeccion_api")),

@@ -5,4 +5,5 @@ from . import realtime
 urlpatterns = [
     path('alarmsone/', dashboard_view, name='dashboard_alarmsone'),
     path('realtime/', realtime.realtime_page, name='dashboard_realtime'),
+    path('', dashboard_view, name='dashboard'),
 ]

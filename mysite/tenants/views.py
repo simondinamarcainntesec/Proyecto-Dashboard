@@ -113,7 +113,7 @@ def tenant_login_view(request):
                 },
             }
             # Redirige a home del dashboard; si aún no lo quieres, render del login con debug
-            return redirect("home")  # ← si prefieres no redirigir todavía, comenta esta línea y usa el render de abajo.
+            return redirect("dashboard")  # ← si prefieres no redirigir todavía, comenta esta línea y usa el render de abajo.
             # return render(request, "auth/login.html", ctx)
 
         messages.error(request, "Credenciales inválidas.")

@@ -27,11 +27,7 @@
 
     <nav class="nav">
       <a class="nav-item is-active" href="#"><span class="nav-ico">🏠</span>Panel</a>
-      <a class="nav-item" href="#"><span class="nav-ico">📈</span>Métricas</a>
-      <a class="nav-item" href="#"><span class="nav-ico">🔗</span>Conectores</a>
-      <a class="nav-item" href="#"><span class="nav-ico">🚨</span>Alertas</a>
-      <a class="nav-item" href="#"><span class="nav-ico">🧾</span>Auditoría</a>
-      <a class="nav-item" href="#"><span class="nav-ico">⚙️</span>Ajustes</a>
+      <a class="nav-item" href="{% url 'soar_dashboard:dashboard' %}"><span class="nav-ico">🚨</span>SOAR</a>
       <a class="nav-item" href="{% url 'dashboard_realtime' %}"><span class="nav-ico">⏱️</span>Tiempo Real</a>
     </nav>
   </aside>
