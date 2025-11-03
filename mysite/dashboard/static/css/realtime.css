@@ -269,3 +269,68 @@
 }
 #alarmsModal #alarmsSearch { width: 100%; max-width: 560px; }
 #alarmsModal #alarmsTable thead th { position: sticky; top: var(--toolbar-h, 48px); background: var(--card, #0f1d35); z-index: 3; }
+.tenant-dropdown {
+  display: inline-block;
+  position: relative;
+}
+
+.tenant-summary {
+  cursor: pointer;
+  background: #0f1b31;
+  color: #e5e7eb;
+  border: 1px solid #1e293b;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+
+.tenant-summary:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tenant-dropdown[open] .caret {
+  transform: rotate(180deg);
+}
+
+.tenant-list {
+  position: absolute;
+  top: 120%;
+  left: 0;
+  background: #0f1d35;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  padding: 6px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+}
+
+.tenant-option {
+  display: block;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  color: #e5e7eb;
+  text-align: left;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.tenant-option:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.tenant-option.is-active {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid #3b82f6;
+  color: #fff;
+}
+

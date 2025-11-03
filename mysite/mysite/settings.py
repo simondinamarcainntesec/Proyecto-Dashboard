@@ -58,6 +58,7 @@ INSTALLED_APPS = [
 #    'csp',
     'accounts',
     'soar_dashboard',
+    'soar_incidents',
 ]
 
 MIDDLEWARE = [

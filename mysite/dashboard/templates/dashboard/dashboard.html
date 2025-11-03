@@ -1,9 +1,10 @@
 {% load static cache %}
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Portal Clientes – Panel</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
@@ -26,9 +27,10 @@
     </div>
 
     <nav class="nav">
-      <a class="nav-item is-active" href="#"><span class="nav-ico">🏠</span>Panel</a>
-      <a class="nav-item" href="{% url 'soar_dashboard:dashboard' %}"><span class="nav-ico">🚨</span>SOAR</a>
+      <a class="nav-item is-active" href="{% url 'dashboard_alarmsone' %}"><span class="nav-ico">🏠</span>Alarmas</a>
       <a class="nav-item" href="{% url 'dashboard_realtime' %}"><span class="nav-ico">⏱️</span>Tiempo Real</a>
+      <a class="nav-item" href="{% url 'soar_dashboard:dashboard' %}"><span class="nav-ico">🚨</span>SOAR</a>
+      <a class="nav-item" href="{% url 'soar_incidents:list' %}"><span class="nav-ico">🤖</span>IA SOAR</a>
     </nav>
   </aside>
 
@@ -38,7 +40,28 @@
     <header class="topbar">
       <div class="top-left">
         <h1 class="top-title">
-          Tenant: <span class="top-tenant">{{ tenant.name }}</span>
+          Tenant:
+          {% if request.user.tenant.name|lower == "inntesec" %}
+          <details class="tenant-dropdown">
+            <summary class="tenant-summary">
+              {{ tenant.name }}
+              <span class="caret">▼</span>
+            </summary>
+            <div class="tenant-list">
+              {% for t in all_tenants %}
+              <form method="post" action="{% url 'switch_tenant' t.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit" class="tenant-option {% if tenant.id == t.id %}is-active{% endif %}">
+                  {{ t.name }}
+                </button>
+              </form>
+              {% endfor %}
+            </div>
+          </details>
+          {% else %}
+          <span class="top-tenant">{{ tenant.name }}</span>
+          {% endif %}
         </h1>
       </div>
 
@@ -92,41 +115,62 @@
         <div class="kpi-label">Hora con más alarmas</div>
         <div class="kpi-value" id="kpi-peak-hour">—</div>
       </div>
-      <div class="card kpi"><div class="kpi-label">Alta Severidad</div><div class="kpi-value" id="kpi-high">{{ kpi_high }}</div></div>
-      <div class="card kpi"><div class="kpi-label">Total Alarmas</div><div class="kpi-value" id="kpi-total">{{ kpi_total }}</div></div>
-      <div class="card kpi"><div class="kpi-label">Dispositivos Detectados</div><div class="kpi-value" id="kpi-devices">{{ kpi_dispositivos }}</div></div>
+      <div class="card kpi">
+        <div class="kpi-label">Alta Severidad</div>
+        <div class="kpi-value" id="kpi-high">{{ kpi_high }}</div>
+      </div>
+      <div class="card kpi">
+        <div class="kpi-label">Total Alarmas</div>
+        <div class="kpi-value" id="kpi-total">{{ kpi_total }}</div>
+      </div>
+      <div class="card kpi">
+        <div class="kpi-label">Dispositivos Detectados</div>
+        <div class="kpi-value" id="kpi-devices">{{ kpi_dispositivos }}</div>
+      </div>
     </section>
     {% endcache %}
 
     {% cache 300 "grid_hist" tenant.id from_date_str to_date_str %}
     <section class="grid grid-main">
       <div class="card chart card--trend">
-        <div class="card-head"><h3>Alarmas por día</h3></div>
+        <div class="card-head">
+          <h3>Alarmas por día</h3>
+        </div>
         <div class="card-body"><canvas id="trendChart"></canvas></div>
       </div>
 
       <div class="card chart card--hourly">
-        <div class="card-head"><h3>Alarmas por hora</h3></div>
+        <div class="card-head">
+          <h3>Alarmas por hora</h3>
+        </div>
         <div class="card-body"><canvas id="hourlyChart"></canvas></div>
       </div>
 
       <div class="card chart card--donut">
-        <div class="card-head"><h3>Severidad</h3></div>
+        <div class="card-head">
+          <h3>Severidad</h3>
+        </div>
         <div class="card-body"><canvas id="severityDonut"></canvas></div>
       </div>
 
       <div class="card chart card--actions">
-        <div class="card-head"><h3>Acciones</h3></div>
+        <div class="card-head">
+          <h3>Acciones</h3>
+        </div>
         <div class="card-body"><canvas id="actionBar"></canvas></div>
       </div>
 
       <div class="card chart card--level">
-        <div class="card-head"><h3>Level</h3></div>
+        <div class="card-head">
+          <h3>Level</h3>
+        </div>
         <div class="card-body"><canvas id="levelBar"></canvas></div>
       </div>
 
       <div class="card chart card--subtype">
-        <div class="card-head"><h3>Subtype</h3></div>
+        <div class="card-head">
+          <h3>Subtype</h3>
+        </div>
         <div class="card-body"><canvas id="subtypeBar"></canvas></div>
       </div>
 
@@ -156,7 +200,9 @@
       </div>
 
       <div class="card chart card--msgsev">
-        <div class="card-head"><h3>Severidad Alarma</h3></div>
+        <div class="card-head">
+          <h3>Severidad Alarma</h3>
+        </div>
         <div class="card-body"><canvas id="msgSeverityBar"></canvas></div>
       </div>
     </section>
@@ -170,25 +216,19 @@
   {{ trend_data|json_script:"trend-data" }}
   {{ severity_trends|json_script:"severity-trends" }}
   {{ severity_counts|json_script:"severity-counts" }}
-
   {{ device_counts|json_script:"device-counts" }}
   {{ action_counts|json_script:"action-counts" }}
-
   {{ device_counts_by_severity|json_script:"device-counts-by-severity" }}
   {{ device_counts_by_severity_full|json_script:"device-counts-by-severity-full" }}
-
   {{ trend_by_device|json_script:"trend-by-device" }}
   {{ top_devices|json_script:"top-devices" }}
-
   {{ trend_by_action|json_script:"trend-by-action" }}
   {{ device_counts_by_action|json_script:"device-counts-by-action" }}
   {{ action_counts_by_device|json_script:"action-counts-by-device" }}
   {{ action_counts_by_severity|json_script:"action-counts-by-severity" }}
-
   {{ trend_by_subtype|json_script:"trend-by-subtype" }}
   {{ subtype_counts_by_hour|json_script:"subtype-counts-by-hour" }}
   {{ level_counts_by_subtype|json_script:"level-counts-by-subtype" }}
-
   {{ hour_labels|json_script:"hour-labels" }}
   {{ hour_data|json_script:"hour-data" }}
   {{ severity_counts_by_hour|json_script:"severity-counts-by-hour" }}
@@ -197,14 +237,12 @@
   {{ action_counts_by_hour|json_script:"action-counts-by-hour" }}
   {{ trend_labels_hour|json_script:"trend-labels-hour" }}
   {{ trend_by_hour|json_script:"trend-by-hour" }}
-
   {{ msg_severity_counts|json_script:"msg-severity-counts" }}
   {{ device_counts_by_msg_severity|json_script:"device-counts-by-msg-severity" }}
   {{ action_counts_by_msg_severity|json_script:"action-counts-by-msg-severity" }}
   {{ severity_counts_by_msg_severity|json_script:"severity-counts-by-msg-severity" }}
   {{ msg_severity_counts_by_hour|json_script:"msg-severity-counts-by-hour" }}
   {{ trend_by_msg_severity|json_script:"trend-by-msg-severity" }}
-
   {{ level_counts|json_script:"level-counts" }}
   {{ device_counts_by_level|json_script:"device-counts-by-level" }}
   {{ action_counts_by_level|json_script:"action-counts-by-level" }}
@@ -214,12 +252,10 @@
   {{ subtype_counts_by_level|json_script:"subtype-counts-by-level" }}
   {{ msg_severity_by_level|json_script:"msg-severity-by-level" }}
   {{ msg_severity_by_subtype|json_script:"msg-severity-by-subtype" }}
-
   {{ subtype_counts|json_script:"subtype-counts" }}
   {{ device_counts_by_subtype|json_script:"device-counts-by-subtype" }}
   {{ action_counts_by_subtype|json_script:"action-counts-by-subtype" }}
   {{ severity_counts_by_subtype|json_script:"severity-counts-by-subtype" }}
-
   {{ logdesc_counts|json_script:"logdesc-counts" }}
   {{ device_counts_by_logdesc|json_script:"device-counts-by-logdesc" }}
   {{ action_counts_by_logdesc|json_script:"action-counts-by-logdesc" }}
@@ -239,4 +275,5 @@
   <script defer src="{% static 'js/alarms_one/date_filters.js' %}?v={% now 'U' %}"></script>
   <script type="module" src="{% static 'js/alarms_one/dashboard.js' %}?v={% now 'U' %}"></script>
 </body>
+
 </html>

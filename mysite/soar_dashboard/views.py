@@ -1,28 +1,23 @@
-# soar_dashboard/views.py
 from __future__ import annotations
-
 import logging
 from typing import Iterable
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import F, Value, TextField
 from django.db.models.functions import Lower, Replace, Trim, Cast
-from django.shortcuts import render
-from tenants.decorators import tenant_required
+from django.shortcuts import render, redirect
 
+from tenants.decorators import tenant_required
+from tenants.models import Tenant
 from .models import IaSoar
 
 logger = logging.getLogger(__name__)
 
-
-# ----------------------------
-# Helpers de normalización
-# ----------------------------
+# ============================================================
+# 🧩 Helpers de normalización
+# ============================================================
 def _normalize_string_local(s: str) -> str:
-    """
-    Limpia llaves/corchetes/comillas/espacios y pasa a lower.
-    Ej: '{9596000000007083}' -> '9596000000007083'
-    """
     if not s:
         return ""
     out = str(s).strip()
@@ -30,50 +25,27 @@ def _normalize_string_local(s: str) -> str:
         out = out.replace(ch, "")
     return out.lower()
 
-
 def _normalize_tenant_aotag(tenant) -> str:
-    """
-    Obtiene y normaliza tenant.alarms_one_id para comparación.
-    """
     raw = getattr(tenant, "alarms_one_id", "") or ""
     return _normalize_string_local(raw)
 
-
 def _annotate_norm_aotag(qs):
-    """
-    Anota norm_aotag a nivel BD con todos los Replace/Trim/Lower necesarios.
-    IMPORTANTE: en CADA paso seteamos output_field=TextField para evitar
-    el FieldError de tipos mezclados.
-    """
-    # Partimos casteando a TextField explícitamente
     cleaned = Cast(F("aotag"), TextField())
-
-    # Reemplazos en cadena, SIEMPRE con output_field=TextField()
-    cleaned = Replace(cleaned, Value("{"), Value(""), output_field=TextField())
-    cleaned = Replace(cleaned, Value("}"), Value(""), output_field=TextField())
-    cleaned = Replace(cleaned, Value("["), Value(""), output_field=TextField())
-    cleaned = Replace(cleaned, Value("]"), Value(""), output_field=TextField())
-    cleaned = Replace(cleaned, Value('"'), Value(""), output_field=TextField())
-    cleaned = Replace(cleaned, Value("'"), Value(""), output_field=TextField())
-    cleaned = Replace(cleaned, Value(" "), Value(""), output_field=TextField())
-
-    # Trim + lower (también con output_field)
+    for ch in ['{', '}', '[', ']', '"', "'", " "]:
+        cleaned = Replace(cleaned, Value(ch), Value(""), output_field=TextField())
     cleaned = Trim(cleaned, output_field=TextField())
     cleaned = Lower(cleaned, output_field=TextField())
-
     return qs.annotate(norm_aotag=cleaned)
 
-
-# ----------------------------
-# Vista principal del SOAR
-# ----------------------------
+# ============================================================
+# 🧩 Dashboard SOAR (principal)
+# ============================================================
 @login_required
 @tenant_required
 def dashboard_soar(request):
     """
-    Renderiza el panel SOAR con JSON embebido, filtrando por tenant:
-    - Compara IaSoar.aotag (normalizado) con tenant.alarms_one_id (normalizado).
-    - Si no hay tenant o no hay match, devuelve events=[].
+    Renderiza el panel SOAR filtrado por tenant.
+    Si el usuario pertenece a Inntesec, muestra el selector de tenants.
     """
     tenant = getattr(request, "tenant", None)
     norm_tid = _normalize_tenant_aotag(tenant) if tenant else ""
@@ -84,38 +56,99 @@ def dashboard_soar(request):
                 norm_tid)
 
     rows: Iterable[dict] = []
-
     try:
         qs = IaSoar.objects.all()
-
-        # Si hay tenant, aplicamos filtro por aotag normalizado
         if norm_tid:
             qs = _annotate_norm_aotag(qs).filter(norm_aotag=norm_tid)
         else:
-            # Sin tenant (o sin alarms_one_id) => sin datos
-            logger.warning("[SOAR] request sin tenant o sin alarms_one_id -> devolviendo 0 filas")
+            logger.warning("[SOAR] request sin tenant o sin alarms_one_id -> 0 filas")
             qs = qs.none()
 
-        # Trae solo los campos que usa el front (ajusta si agregas más charts)
-        rows = list(
-            qs.values(
-                "date", "time",
-                "device", "service", "proto",
-                "srccountry",
-                "severity",
-                "security_action",  # principal en este dashboard
-                "action",           # fallback si llega vacío
-            )[:20000]
-        )
+        rows = list(qs.values(
+            "date", "time",
+            "device", "service", "proto",
+            "srccountry",
+            "severity",
+            "security_action",
+            "action",
+        )[:20000])
 
     except Exception as e:
         logger.exception("[SOAR] Error consultando IaSoar: %s", e)
         rows = []
 
-    logger.info("[SOAR] Filas post-filtro=%d (tenant=%s)", len(rows), getattr(tenant, "name", None))
+    # --- Selector de tenants solo visible para Inntesec ---
+    tenants_list = []
+    user_tenant = getattr(request.user, "tenant", None)
+    if user_tenant and user_tenant.name.lower() == "inntesec":
+        tenants_list = Tenant.objects.all().order_by("name")
 
     ctx = {
         "tenant": tenant,
-        "events": rows,  # el front lo lee con json_script('soar-events')
+        "events": rows,
+        "all_tenants": tenants_list,
+        "request": request,
     }
     return render(request, "soar_dashboard/dashboardsoar.html", ctx)
+
+# ============================================================
+# 🧩 Cambio de Tenant universal (desde cualquier dashboard)
+# ============================================================
+@login_required
+def switch_tenant(request, tenant_id):
+    """
+    Permite a usuarios de Inntesec cambiar de tenant desde cualquier dashboard.
+    Redirige automáticamente al mismo módulo (SOAR, Realtime, Histórico).
+    """
+    user_tenant = getattr(request.user, "tenant", None)
+    if not user_tenant or user_tenant.name.lower() != "inntesec":
+        messages.error(request, "No tienes permiso para cambiar de empresa.")
+        return redirect("dashboard")
+
+    tenant = Tenant.objects.filter(id=tenant_id).first()
+    if not tenant:
+        messages.error(request, "El tenant seleccionado no existe.")
+        return redirect("dashboard")
+
+    # --- Guardar tenant seleccionado en la sesión ---
+    request.session["tenant_id"] = tenant.id
+    request.session["tenant_name"] = tenant.name
+    logger.info("[SwitchTenant] %s cambió a tenant %s", request.user.username, tenant.name)
+
+    # --- Detectar el origen real ---
+    next_url = (
+        request.POST.get("next")
+        or request.GET.get("next")
+        or request.META.get("HTTP_REFERER", "")
+    ).lower()
+
+    logger.debug("[SwitchTenant] next_url detectado: %s", next_url)
+
+    # --- Reglas inteligentes de redirección ---
+    # Orden de prioridad: SOAR → Realtime → Alarmas → Dashboard principal
+    if "dashboard-soar" in next_url:
+        logger.debug("[SwitchTenant] Redirigiendo al dashboard SOAR")
+        return redirect("soar_dashboard:dashboard")
+
+    if "dashboard/realtime" in next_url or "realtime" in next_url:
+        logger.debug("[SwitchTenant] Redirigiendo al dashboard Tiempo Real")
+        return redirect("dashboard_realtime")
+
+    if "dashboard/alarmsone" in next_url or "alarmsone" in next_url:
+        logger.debug("[SwitchTenant] Redirigiendo al dashboard Histórico de Alarmas")
+        return redirect("dashboard_alarmsone")
+
+    # --- Si no detecta origen, revisa el referer de nuevo ---
+    referer = (request.META.get("HTTP_REFERER") or "").lower()
+    logger.debug("[SwitchTenant] Referer=%s", referer)
+
+    if "dashboard-soar" in referer:
+        return redirect("soar_dashboard:dashboard")
+    if "dashboard/realtime" in referer or "realtime" in referer:
+        return redirect("dashboard_realtime")
+    if "dashboard/alarmsone" in referer or "alarmsone" in referer:
+        return redirect("dashboard_alarmsone")
+
+    # --- Fallback final ---
+    logger.debug("[SwitchTenant] No se detectó origen, redirigiendo al dashboard principal")
+    return redirect("dashboard")

@@ -19,10 +19,12 @@ urlpatterns = [
     path("auth/login/", tenant_login_view, name="auth_login"),
     path("logout/", logout_view, name="logout"),
     path("auth/registro_cliente/", registro_cliente, name="auth/registro_cliente"),
+    path("soar/incidentes/", include("soar_incidents.urls")),
 
     # === APLICACIONES ===
     path("inyeccion_api/", include(("inyeccion_api.urls", "inyeccion_api"), namespace="inyeccion_api")),
-    path('dashboard/', include('dashboard.urls')),   # 👈 agregué la coma
+    path("dashboard/", include("dashboard.urls")),   
     path("integrations/", include("integrations.urls")),
     path("dashboard-soar/", include("soar_dashboard.urls")),
+    path("soar/incidentes/", include("soar_incidents.urls", namespace="soar_incidents")),
 ]

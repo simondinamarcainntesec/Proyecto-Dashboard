@@ -66,28 +66,22 @@ def _base_qs(dt_from=None, dt_to=None):
         logger.warning("[Charts] _base_qs sin tenant → vacío")
         return base.none()
 
-    # 1) Si el modelo Alarm ya tiene FK tenant, úsalo
     if "tenant" in [f.name for f in Alarm._meta.get_fields()]:
         qs = base.filter(tenant=t)
     else:
-        # 2) Fallback: matchear AOTAGS (Tenant.alarms_one_id) dentro de Alarm.tags (campo CSV/coma)
+        
         aotag = (t.alarms_one_id or "").strip()
         if not aotag:
             logger.warning("[Charts] Tenant %s no tiene alarms_one_id → vacío", getattr(t, "name", "<sin nombre>"))
             return base.none()
 
-        # Evitar falsos positivos delimitando por comas o extremos de cadena:
-        #   (^|,)\s*<aotag>\s*(,|$)
-        # Usamos RawSQL PARAMETRIZADO (seguro). No se interpola el valor directamente.
+      
         pattern = rf"(^|,)\s*{re.escape(aotag)}\s*(,|$)"
         qs = base.annotate(_match=RawSQL("tags ~ %s", [pattern])).filter(_match=True)
 
     if dt_from and dt_to:
         qs = qs.filter(event_time__gte=dt_from, event_time__lt=dt_to)
 
-    # Si tienes columnas muy pesadas, puedes limitar:
-    # qs = qs.only("id","event_time","severity","actions","device_name",
-    #              "msg_severity","level","subtype","log_description","tags")
     return qs
 
 

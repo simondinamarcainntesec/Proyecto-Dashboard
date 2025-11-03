@@ -1,9 +1,10 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Portal Clientes – SOAR</title>
 
   <link rel="stylesheet" href="{% static 'css/soar.css' %}?v={% now 'U' %}">
@@ -11,6 +12,7 @@
 </head>
 
 <body class="layout soar">
+  <!-- Overlay de carga -->
   <div id="loading-overlay" role="status" aria-live="polite" aria-label="Cargando">
     <div class="loading-card">
       <div class="spinner" aria-hidden="true"></div>
@@ -18,33 +20,60 @@
     </div>
   </div>
 
+  <!-- Sidebar -->
   <aside class="sidebar">
     <div class="brand">
-      <img src="{% static 'img/inntesec CSS negro 1.avif' %}" alt="Logo Inntesec"/>
+      <img src="{% static 'img/inntesec CSS negro 1.avif' %}" alt="Logo Inntesec" />
     </div>
     <nav class="nav">
-      <a class="nav-item is-active" href="#"><span class="nav-ico">🏠</span>SOAR</a>
-      <a class="nav-item" href="#"><span class="nav-ico">📈</span>Métricas</a>
-      <a class="nav-item" href="#"><span class="nav-ico">🔗</span>Conectores</a>
-      <a class="nav-item" href="#"><span class="nav-ico">🚨</span>Alertas</a>
-      <a class="nav-item" href="#"><span class="nav-ico">🧾</span>Auditoría</a>
+      <a class="nav-item is-active" href="{% url 'soar_dashboard:dashboard' %}"><span class="nav-ico">🏠</span>SOAR</a>
+      <a class="nav-item" href="{% url 'dashboard_alarmsone' %}"><span class="nav-ico">🚨</span>Alarmas</a>
       <a class="nav-item" href="{% url 'dashboard_realtime' %}"><span class="nav-ico">⏱️</span>Tiempo Real</a>
+      <a class="nav-item" href="{% url 'soar_incidents:list' %}"><span class="nav-ico">🤖</span>IA SOAR</a>
     </nav>
   </aside>
 
+  <!-- Contenido principal -->
   <div class="content">
     <header class="topbar">
       <div class="top-left">
         <h1 class="top-title">
-          Tenant: <span class="top-tenant">{{ tenant.name|default:"—" }}</span>
+          Tenant:
+          {% if request.user.tenant.name|lower == "inntesec" %}
+          <details class="tenant-dropdown">
+            <summary class="tenant-summary">
+              {{ tenant.name }}
+              <span class="caret">▼</span>
+            </summary>
+            <div class="tenant-list">
+              {% for t in all_tenants %}
+              <form method="post" action="{% url 'switch_tenant' t.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit" class="tenant-option {% if tenant.id == t.id %}is-active{% endif %}">
+                  {{ t.name }}
+                </button>
+              </form>
+              {% endfor %}
+            </div>
+          </details>
+          {% else %}
+          <span class="top-tenant">{{ tenant.name }}</span>
+          {% endif %}
         </h1>
       </div>
+
       <div class="top-right">
-        <button class="btn ghost" title="Actualizar" id="btn-refresh">⟳</button>
+        <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
         <button class="btn ghost" title="Exportar">⬇︎</button>
+
         <div class="user" style="display:flex;align-items:center;gap:.5rem">
-          <div class="user-avatar">{{ request.user.username|default:"U"|slice:":1"|upper }}</div>
-          <div class="user-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+          <div class="user-avatar">
+            {{ request.user.username|default:"U"|slice:":1"|upper }}
+          </div>
+          <div class="user-name">
+            {{ request.user.get_full_name|default:request.user.username }}
+          </div>
           <form action="{% url 'logout' %}" method="post" style="margin-left:.25rem">
             {% csrf_token %}
             <button class="btn ghost" title="Cerrar sesión">Salir</button>
@@ -55,27 +84,48 @@
 
     <!-- KPIs -->
     <section class="grid grid-kpis">
-      <div class="card kpi"><div class="kpi-label">Total eventos</div><div class="kpi-value" id="kpi-total">—</div></div>
-      <div class="card kpi"><div class="kpi-label">% bloqueadas</div><div class="kpi-value" id="kpi-blocked">—</div></div>
-      <div class="card kpi"><div class="kpi-label">Top dispositivo</div><div class="kpi-value" id="kpi-top-device">—</div></div>
-      <div class="card kpi"><div class="kpi-label">Severidad dominante</div><div class="kpi-value" id="kpi-dom-sev">—</div></div>
-      <div class="card kpi"><div class="kpi-label">País Top (últ. día)</div><div class="kpi-value" id="kpi-top-country">—</div></div>
+      <div class="card kpi">
+        <div class="kpi-label">Total eventos</div>
+        <div class="kpi-value" id="kpi-total">—</div>
+      </div>
+      <div class="card kpi">
+        <div class="kpi-label">% bloqueadas</div>
+        <div class="kpi-value" id="kpi-blocked">—</div>
+      </div>
+      <div class="card kpi">
+        <div class="kpi-label">Top dispositivo</div>
+        <div class="kpi-value" id="kpi-top-device">—</div>
+      </div>
+      <div class="card kpi">
+        <div class="kpi-label">Severidad dominante</div>
+        <div class="kpi-value" id="kpi-dom-sev">—</div>
+      </div>
+      <div class="card kpi">
+        <div class="kpi-label">País Top (últ. día)</div>
+        <div class="kpi-value" id="kpi-top-country">—</div>
+      </div>
     </section>
 
     <!-- Grillas -->
     <section class="grid grid-main">
       <div class="card chart">
-        <div class="card-head"><h3>Top países origen (srccountry)</h3></div>
+        <div class="card-head">
+          <h3>Top países origen (srccountry)</h3>
+        </div>
         <div class="card-body"><canvas id="chartCountries"></canvas></div>
       </div>
 
       <div class="card chart">
-        <div class="card-head"><h3>Severidad</h3></div>
+        <div class="card-head">
+          <h3>Severidad</h3>
+        </div>
         <div class="card-body"><canvas id="chartSeverity"></canvas></div>
       </div>
 
       <div class="card chart">
-        <div class="card-head"><h3>Acción de seguridad</h3></div>
+        <div class="card-head">
+          <h3>Acción de seguridad</h3>
+        </div>
         <div class="card-body"><canvas id="chartSecAction"></canvas></div>
       </div>
 
@@ -99,12 +149,16 @@
       </div>
 
       <div class="card chart">
-        <div class="card-head"><h3>Top servicios</h3></div>
+        <div class="card-head">
+          <h3>Top servicios</h3>
+        </div>
         <div class="card-body"><canvas id="chartServices"></canvas></div>
       </div>
 
       <div class="card chart">
-        <div class="card-head"><h3>Top protocolos</h3></div>
+        <div class="card-head">
+          <h3>Top protocolos</h3>
+        </div>
         <div class="card-body"><canvas id="chartProto"></canvas></div>
       </div>
     </section>
@@ -115,4 +169,5 @@
   {{ events|json_script:"soar-events" }}
   <script type="module" src="{% static 'js/soar/dashboardsoar.js' %}?v={% now 'U' %}"></script>
 </body>
+
 </html>

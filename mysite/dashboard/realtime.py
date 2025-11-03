@@ -7,8 +7,10 @@ from tenants.decorators import tenant_required
 from django.urls import reverse, NoReverseMatch
 from django.views.decorators.http import require_GET
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse, HttpResponseBadRequest
+from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseRedirect
 from django.shortcuts import render
+
+from tenants.models import Tenant  # 👈 añadido para el selector de tenants
 
 from . import views as v
 from .realtime_transform import build_realtime_context
@@ -191,7 +193,7 @@ def _format_aotags(value) -> str:
             obj = json.loads(s)
             value = obj
         except json.JSONDecodeError:
-            cleaned = s.strip().strip('[]"')
+            cleaned = s.strip().strip('[]\"')
             return cleaned if cleaned else ""
     if isinstance(value, list):
         return ", ".join(str(t).strip() for t in value if isinstance(t, (str, int)) and str(t).strip())
@@ -241,12 +243,19 @@ def realtime_page(request):
                      ctx.get("severity_counts", {}).get("critical", 0))
         kpi_dev   = len(ctx.get("device_counts", {}))
 
+        # 👇 NUEVO: lista de tenants solo para usuarios de Inntesec
+        tenants_list = []
+        user_tenant = getattr(request.user, "tenant", None)
+        if user_tenant and user_tenant.name.lower() == "inntesec":
+            tenants_list = Tenant.objects.all().order_by("name")
+
         page_ctx = {
             "tenant": getattr(request, "tenant", None),
             "hist_url": hist_url,
             "kpi_total": kpi_total,
             "kpi_high":  kpi_high,
             "kpi_dispositivos": kpi_dev,
+            "all_tenants": tenants_list,  # 👈 para el selector en realtime.html
             **ctx
         }
         return render(request, "dashboard/realtime.html", page_ctx)
@@ -373,8 +382,10 @@ def realtime_alarms_by_subtype(request):
             })
 
         rows_out.sort(key=lambda r: r.get("eventtime",""), reverse=True)
-        return JsonResponse({"ok": True, "count": len(rows_out), "rows": rows_out[:1000]},
-                            json_dumps_params={"indent": 2})
+        return JsonResponse(
+            {"ok": True, "count": len(rows_out), "rows": rows_out[:1000]},
+            json_dumps_params={"indent": 2}
+        )
     except Exception as e:
         logger.exception("realtime_alarms_by_subtype error")
         return HttpResponseBadRequest(f"realtime_alarms_by_subtype error: {type(e).__name__}: {e}")
@@ -396,7 +407,8 @@ def realtime_alarm_log_table(request):
         for a in alarms:
             aid = _get_value_case_insensitive(a, "alarmid")
             if str(aid) == str(alarmid):
-                found = a; break
+                found = a
+                break
 
         if not found:
             return JsonResponse({"ok": False, "html": "<em>Alarma no encontrada</em>"})
@@ -410,7 +422,8 @@ def realtime_alarm_log_table(request):
             kv = _message_extract_multiple_sources(found, wanted=wanted)
             rows = []
             for k, v in kv.items():
-                ks = escape(str(k)); vs = escape(str(v))
+                ks = escape(str(k))
+                vs = escape(str(v))
                 rows.append(
                     "<tr>"
                     f"<th style='text-align:left;padding:6px 10px;border-bottom:1px solid #1e293b'>{ks}</th>"
@@ -443,3 +456,18 @@ def realtime_alarm_log_table(request):
     except Exception as e:
         logger.exception("realtime_alarm_log_table failed")
         return HttpResponseBadRequest(f"realtime_alarm_log_table error: {type(e).__name__}: {e}")
+
+@login_required
+def switch_tenant(request, tenant_id: int):
+    """Permite cambiar el tenant y redirigir al dashboard realtime."""
+    tenant = Tenant.objects.filter(id=tenant_id).first()
+    if not tenant:
+        return HttpResponseBadRequest("Tenant no encontrado")
+
+    request.session["tenant_id"] = tenant.id
+    request.session.modified = True
+
+    try:
+        return HttpResponseRedirect(reverse("dashboard_realtime"))
+    except:
+        return HttpResponseRedirect("/dashboard/realtime/")

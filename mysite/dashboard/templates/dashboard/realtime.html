@@ -1,9 +1,10 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Portal Clientes Tiempo Real</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
@@ -27,8 +28,10 @@
     </div>
 
     <nav class="nav">
-      <a class="nav-item js-nav" href="{% url 'dashboard_alarmsone' %}" id="link-historico">Panel Histórico</a>
-      <a class="nav-item is-active" href="#" aria-current="page">Tiempo Real</a>
+      <a class="nav-item" href="{% url 'dashboard_realtime' %}"><span class="nav-ico">⏱️</span>Tiempo Real</a>
+      <a class="nav-item is-active" href="{% url 'dashboard_alarmsone' %}"><span class="nav-ico">🏠</span>Alarmas</a>
+      <a class="nav-item" href="{% url 'soar_dashboard:dashboard' %}"><span class="nav-ico">🚨</span>SOAR</a>
+      <a class="nav-item" href="{% url 'soar_incidents:list' %}"><span class="nav-ico">🤖</span>IA SOAR</a>
     </nav>
   </aside>
 
@@ -38,122 +41,166 @@
     <header class="topbar">
       <div class="top-left">
         <h1 class="top-title">
-          Tenant: <span class="top-tenant">{{ tenant.name|default:"—" }}</span>
+          Tenant:
+          {% if request.user.tenant.name|lower == "inntesec" %}
+          <details class="tenant-dropdown">
+            <summary class="tenant-summary">
+              {{ tenant.name }}
+              <span class="caret">▼</span>
+            </summary>
+            <div class="tenant-list">
+              {% for t in all_tenants %}
+              <form method="post" action="{% url 'switch_tenant' t.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit" class="tenant-option {% if tenant.id == t.id %}is-active{% endif %}">
+                  {{ t.name }}
+                </button>
+              </form>
+              {% endfor %}
+            </div>
+          </details>
+          {% else %}
+          <span class="top-tenant">{{ tenant.name }}</span>
+          {% endif %}
         </h1>
       </div>
-      <div class="top-right userbox">
-        <button class="btn ghost" title="Actualizar" id="btn-refresh">⟳</button>
-        <div class="user">
-          <div class="user-avatar">{{ request.user.username|default:"U"|slice:":1"|upper }}</div>
-          <div class="user-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+
+      <div class="top-right">
+        <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
+        <button class="btn ghost" title="Exportar">⬇︎</button>
+
+        <div class="user" style="display:flex;align-items:center;gap:.5rem">
+          <div class="user-avatar">
+            {{ request.user.username|default:"U"|slice:":1"|upper }}
+          </div>
+          <div class="user-name">
+            {{ request.user.get_full_name|default:request.user.username }}
+          </div>
+          <form action="{% url 'logout' %}" method="post" style="margin-left:.25rem">
+            {% csrf_token %}
+            <button class="btn ghost" title="Cerrar sesión">Salir</button>
+          </form>
         </div>
-        <form action="{% url 'logout' %}" method="post">
-          {% csrf_token %}
-          <button class="btn ghost" title="Cerrar sesión">Salir</button>
-        </form>
       </div>
     </header>
 
+
     {% if kpi_total|default:0 > 0 %}
-      <!-- ======= APP (con datos) ======= -->
-      <section class="grid grid-kpis">
-        <div class="card kpi">
-          <div class="kpi-label">Hora con más alarmas</div>
-          <div class="kpi-value" id="kpi-peak-hour">—</div>
+    <!-- ======= APP (con datos) ======= -->
+    <section class="grid grid-kpis">
+      <div class="card kpi">
+        <div class="kpi-label">Hora con más alarmas</div>
+        <div class="kpi-value" id="kpi-peak-hour">—</div>
+      </div>
+
+      <div class="card kpi">
+        <div class="kpi-label">Alta Severidad</div>
+        <div class="kpi-value" id="kpi-high">{{ kpi_high }}</div>
+      </div>
+      <div class="card kpi">
+        <div class="kpi-label">Total Alarmas</div>
+        <div class="kpi-value" id="kpi-total">{{ kpi_total }}</div>
+      </div>
+      <div class="card kpi">
+        <div class="kpi-label">Dispositivos Detectados</div>
+        <div class="kpi-value" id="kpi-devices">{{ kpi_dispositivos }}</div>
+      </div>
+    </section>
+
+    <section class="grid grid-main" id="app">
+      <!-- Alarmas por hora -->
+      <div class="card chart card--hourly">
+        <div class="card-head between">
+          <h3>Alarmas por hora</h3>
+          <button id="btn-open-hourly-alarms" class="btn ghost-sm" title="Ver alarmas de estas horas">🗂 Ver
+            alarmas</button>
         </div>
+        <div class="card-body"><canvas id="hourlyChart"></canvas></div>
+      </div>
 
-        <div class="card kpi"><div class="kpi-label">Alta Severidad</div><div class="kpi-value" id="kpi-high">{{ kpi_high }}</div></div>
-        <div class="card kpi"><div class="kpi-label">Total Alarmas</div><div class="kpi-value" id="kpi-total">{{ kpi_total }}</div></div>
-        <div class="card kpi"><div class="kpi-label">Dispositivos Detectados</div><div class="kpi-value" id="kpi-devices">{{ kpi_dispositivos }}</div></div>
-      </section>
-
-      <section class="grid grid-main" id="app">
-        <!-- Alarmas por hora -->
-        <div class="card chart card--hourly">
-          <div class="card-head between">
-            <h3>Alarmas por hora</h3>
-            <button id="btn-open-hourly-alarms" class="btn ghost-sm" title="Ver alarmas de estas horas">🗂 Ver alarmas</button>
-          </div>
-          <div class="card-body"><canvas id="hourlyChart"></canvas></div>
+      <!-- Severidad (donut) -->
+      <div class="card chart card--donut">
+        <div class="card-head between">
+          <h3>Severidad</h3>
+          <button id="btn-open-severity-alarms" class="btn ghost-sm" title="Ver alarmas de esta severidad">🗂 Ver
+            alarmas</button>
         </div>
+        <div class="card-body"><canvas id="severityDonut"></canvas></div>
+      </div>
 
-        <!-- Severidad (donut) -->
-        <div class="card chart card--donut">
-          <div class="card-head between">
-            <h3>Severidad</h3>
-            <button id="btn-open-severity-alarms" class="btn ghost-sm" title="Ver alarmas de esta severidad">🗂 Ver alarmas</button>
-          </div>
-          <div class="card-body"><canvas id="severityDonut"></canvas></div>
+      <!-- Acciones -->
+      <div class="card chart card--actions">
+        <div class="card-head between">
+          <h3>Acciones</h3>
+          <button id="btn-open-action-alarms" class="btn ghost-sm" title="Ver alarmas de estas acciones">🗂 Ver
+            alarmas</button>
         </div>
+        <div class="card-body"><canvas id="actionBar"></canvas></div>
+      </div>
 
-        <!-- Acciones -->
-        <div class="card chart card--actions">
-          <div class="card-head between">
-            <h3>Acciones</h3>
-            <button id="btn-open-action-alarms" class="btn ghost-sm" title="Ver alarmas de estas acciones">🗂 Ver alarmas</button>
-          </div>
-          <div class="card-body"><canvas id="actionBar"></canvas></div>
+      <!-- Level -->
+      <div class="card chart card--level">
+        <div class="card-head between">
+          <h3>Level</h3>
+          <button id="btn-open-level-alarms" class="btn ghost-sm" title="Ver alarmas de este level">🗂 Ver
+            alarmas</button>
         </div>
+        <div class="card-body"><canvas id="levelBar"></canvas></div>
+      </div>
 
-        <!-- Level -->
-        <div class="card chart card--level">
-          <div class="card-head between">
-            <h3>Level</h3>
-            <button id="btn-open-level-alarms" class="btn ghost-sm" title="Ver alarmas de este level">🗂 Ver alarmas</button>
-          </div>
-          <div class="card-body"><canvas id="levelBar"></canvas></div>
+      <!-- Subtype -->
+      <div class="card chart card--subtype">
+        <div class="card-head between">
+          <h3>Subtype</h3>
+          <button id="btn-open-subtype-alarms" class="btn ghost-sm" title="Ver alarmas de este Subtype">🗂 Ver
+            alarmas</button>
         </div>
+        <div class="card-body"><canvas id="subtypeBar"></canvas></div>
+      </div>
 
-        <!-- Subtype -->
-        <div class="card chart card--subtype">
-          <div class="card-head between">
-            <h3>Subtype</h3>
-            <button id="btn-open-subtype-alarms" class="btn ghost-sm" title="Ver alarmas de este Subtype">🗂 Ver alarmas</button>
-          </div>
-          <div class="card-body"><canvas id="subtypeBar"></canvas></div>
+      <!-- Tabla Dispositivos -->
+      <div class="card table card--table">
+        <div class="card-head between">
+          <h3>Dispositivos recientes</h3>
+          <!-- Si luego quieres botón aquí, se puede, por ahora lo dejamos sin botón -->
         </div>
-
-        <!-- Tabla Dispositivos -->
-        <div class="card table card--table">
-          <div class="card-head between">
-            <h3>Dispositivos recientes</h3>
-            <!-- Si luego quieres botón aquí, se puede, por ahora lo dejamos sin botón -->
-          </div>
-          <div class="table-wrap">
-            <table class="datatable" id="device-table">
-              <thead>
-                <tr>
-                  <th data-sort="text">Dispositivo</th>
-                  <th data-sort="number" class="is-right">Cantidad</th>
-                </tr>
-              </thead>
-              <tbody id="device-table-body"></tbody>
-            </table>
-          </div>
-          <div class="table-footnote">* Clic en los encabezados para ordenar</div>
+        <div class="table-wrap">
+          <table class="datatable" id="device-table">
+            <thead>
+              <tr>
+                <th data-sort="text">Dispositivo</th>
+                <th data-sort="number" class="is-right">Cantidad</th>
+              </tr>
+            </thead>
+            <tbody id="device-table-body"></tbody>
+          </table>
         </div>
+        <div class="table-footnote">* Clic en los encabezados para ordenar</div>
+      </div>
 
-        <!-- Msg Severity -->
-        <div class="card chart card--msgsev">
-          <div class="card-head between">
-            <h3>Severidad Alarma</h3>
-            <button id="btn-open-msgsev-alarms" class="btn ghost-sm" title="Ver alarmas de esta severidad (msg)">🗂 Ver alarmas</button>
-          </div>
-          <div class="card-body"><canvas id="msgSeverityBar"></canvas></div>
+      <!-- Msg Severity -->
+      <div class="card chart card--msgsev">
+        <div class="card-head between">
+          <h3>Severidad Alarma</h3>
+          <button id="btn-open-msgsev-alarms" class="btn ghost-sm" title="Ver alarmas de esta severidad (msg)">🗂 Ver
+            alarmas</button>
         </div>
-      </section>
+        <div class="card-body"><canvas id="msgSeverityBar"></canvas></div>
+      </div>
+    </section>
 
-      <footer class="footnote">Tiempo real (hoy 00:00 → ahora)</footer>
+    <footer class="footnote">Tiempo real (hoy 00:00 → ahora)</footer>
 
     {% else %}
-      <!-- ======= EMPTY STATE (sin datos) ======= -->
-      <section class="empty-state">
-        <div class="empty-card">
-          <h2>Sin alarmas disponibles</h2>
-          <p>No se encontraron alarmas para <strong>{{ tenant.name|default:"—" }}</strong> hoy.</p>
-          <button id="btn-empty-ok" class="btn primary">OK</button>
-        </div>
-      </section>
+    <!-- ======= EMPTY STATE (sin datos) ======= -->
+    <section class="empty-state">
+      <div class="empty-card">
+        <h2>Sin alarmas disponibles</h2>
+        <p>No se encontraron alarmas para <strong>{{ tenant.name|default:"—" }}</strong> hoy.</p>
+        <button id="btn-empty-ok" class="btn primary">OK</button>
+      </div>
+    </section>
     {% endif %}
   </div>
 
@@ -224,10 +271,10 @@
   <!-- App realtime -->
   <script type="module" src="{% static 'js/alarms_one/dashboard.realtime.js' %}?v={% now 'U' %}"></script>
   <script>
-  window.RT_ENDPOINTS = {
-    alarms: "{% url 'realtime_alarms_by_subtype' %}",
-    log:    "{% url 'realtime_alarm_log_table' %}",
-  };
+    window.RT_ENDPOINTS = {
+      alarms: "{% url 'realtime_alarms_by_subtype' %}",
+      log: "{% url 'realtime_alarm_log_table' %}",
+    };
   </script>
 
   <!-- ========= MODAL: lista de alarmas ========= -->
@@ -280,4 +327,5 @@
   <!-- Scripts de los modales -->
   <script type="module" src="{% static 'js/alarms_one/alarms-modal.js' %}?v={% now 'U' %}"></script>
 </body>
+
 </html>

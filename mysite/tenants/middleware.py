@@ -55,3 +55,18 @@ class ActiveTenantMiddleware(MiddlewareMixin):
     def process_response(self, request, response):
         # Limpieza opcional (no estricta, el contextvar es por-request)
         return response
+class TenantMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        tenant_id = request.session.get("current_tenant_id")
+        if tenant_id:
+            try:
+                tenant = Client.objects.get(id=tenant_id)
+                connection.set_tenant(tenant)  # ⬅️ esto cambia el schema activo
+                request.tenant = tenant
+            except Client.DoesNotExist:
+                pass
+        response = self.get_response(request)
+        return response
