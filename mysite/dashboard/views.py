@@ -310,14 +310,15 @@ def switch_tenant(request, tenant_id):
         return redirect("dashboard_alarmsone")
 
     # --- Respaldo con HTTP_REFERER si el 'next' venía vacío ---
-    referer = (request.META.get("HTTP_REFERER") or "").lower()
     if "/dashboard-soar/" in referer or "soar_dashboard" in referer:
         return redirect("soar_dashboard:dashboard")
-    if "/dashboard/realtime" in referer or "realtime" in referer:
-        return redirect("dashboard_realtime")
-    if "/dashboard/alarmsone" in referer or "alarmsone" in referer:
-        return redirect("dashboard_alarmsone")
 
-    # --- Fallback final ---
-    logger.debug("[SwitchTenant] Sin origen detectado, redirigiendo al dashboard principal")
-    return redirect("dashboard")
+    if "/soar/incidentes/" in referer or "/soar/incidentes" in referer or "soar_incidents" in referer:
+        return redirect("soar_incidents:list")
+
+    if "/dashboard/realtime" in referer or "realtime" in referer:
+        return redirect("dashboard:dashboard_realtime")
+    if "/dashboard/alarmsone" in referer or "alarmsone" in referer:
+        return redirect("dashboard:dashboard_alarmsone")
+
+    return redirect("dashboard:dashboard")

@@ -3,7 +3,6 @@ let EVENTS = [];
 
 /**
  * Carga y normaliza (mínimo) los eventos desde el <script id="soar-events"> embebido.
- * La dejo async para que puedas usar `await preloadEvents()` sin problema.
  */
 export async function preloadEvents() {
   const el = document.getElementById("soar-events");
@@ -14,7 +13,6 @@ export async function preloadEvents() {
   }
   try {
     const raw = JSON.parse(el.textContent || "[]") || [];
-    // Normalización ligera: solo aseguramos strings y trim.
     EVENTS = raw.map((r) => ({
       severity:        safeStr(r.severity),
       srccountry:      safeStr(r.srccountry),
@@ -25,6 +23,13 @@ export async function preloadEvents() {
       proto:           safeStr(r.proto),
       date:            safeStr(r.date),
       time:            safeStr(r.time),
+      // NUEVOS:
+      aotag:           safeStr(r.aotag),
+      srcip:           safeStr(r.srcip),
+      dstip:           safeStr(r.dstip),
+      // application/displayname podrían añadirse si luego los serializas
+      application:     safeStr(r.application),
+      displayname:     safeStr(r.displayname),
     }));
   } catch (e) {
     console.error("[data] JSON inválido en #soar-events:", e);

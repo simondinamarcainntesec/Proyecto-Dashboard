@@ -1,9 +1,10 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SOAR – Incidentes</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
@@ -15,11 +16,11 @@
   <!-- Sidebar -->
   <aside class="sidebar">
     <div class="brand">
-      <img src="{% static 'img/inntesec CSS negro 1.avif' %}" alt="Logo Inntesec"/>
+      <img src="{% static 'img/inntesec CSS negro 1.avif' %}" alt="Logo Inntesec" />
     </div>
     <nav class="nav">
       <a class="nav-item" href="{% url 'soar_incidents:list' %}"><span class="nav-ico">🤖</span>IA SOAR</a>
-      <a class="nav-item" href="{% url 'dashboard_alarmsone' %}"><span class="nav-ico">🚨</span>Alarmas</a>
+      <a class="nav-item" href="{% url 'dashboard:dashboard_alarmsone' %}"><span class="nav-ico">🚨</span>Alarmas</a>
       <a class="nav-item" href="{% url 'dashboard_realtime' %}"><span class="nav-ico">⏱️</span>Tiempo Real</a>
       <a class="nav-item" href="{% url 'soar_dashboard:dashboard' %}"><span class="nav-ico">🚨</span>SOAR</a>
     </nav>
@@ -40,9 +41,10 @@
             </summary>
             <div class="tenant-list">
               {% for t in all_tenants %}
-              <form method="post" action="{% url 'switch_tenant' t.id %}">
+              <form method="post" action="{% url 'dashboard:switch_tenant' t.id %}"
+                onsubmit="this.querySelector('[name=next]').value = window.location.pathname;">
                 {% csrf_token %}
-                <input type="hidden" name="next" value="{{ request.path }}">
+                <input type="hidden" name="next" value="">
                 <button type="submit" class="tenant-option {% if tenant.id == t.id %}is-active{% endif %}">
                   {{ t.name }}
                 </button>
@@ -75,13 +77,12 @@
       </div>
     </header>
 
+
     <!-- Toolbar (buscador a la izquierda / fechas a la derecha) -->
     <section class="toolbar">
       <form id="filters-form" method="get" class="toolbar-row" role="search">
         <div class="tb-left">
-          <input type="search" name="q" id="q"
-                 value="{{ q|default:'' }}"
-                 placeholder="Buscar (cualquier campo)…" />
+          <input type="search" name="q" id="q" value="{{ q|default:'' }}" placeholder="Buscar (cualquier campo)…" />
           <button class="btn ghost-sm" type="submit">Buscar</button>
         </div>
 
@@ -124,10 +125,8 @@
                 </tr>
               </thead>
               <tbody>
-              {% for it in page_obj %}
-                <tr
-                  data-id="{{ it.alarmd_id|escape }}"
-                  data-dispositivo="{{ it.dispositivo|default:''|escape }}"
+                {% for it in page_obj %}
+                <tr data-id="{{ it.alarmd_id|escape }}" data-dispositivo="{{ it.dispositivo|default:''|escape }}"
                   data-tipo="{{ it.tipo_de_amenaza|default:''|escape }}"
                   data-sev="{{ it.nivel_de_severidad|default:''|escape }}"
                   data-date="{% if it.date %}{{ it.date|date:'Y-m-d' }}{% endif %}"
@@ -137,50 +136,51 @@
                   data-acciones="{{ it.medidas_correctivas|default:''|escape }}"
                   data-resumen="{{ it.resumen_humano|default:''|escape }}"
                   data-riesgo="{{ it.riego_detectado|default:''|escape }}"
-                  data-app="{{ it.application|default:''|escape }}"
-                >
+                  data-app="{{ it.application|default:''|escape }}">
                   <td class="mono nowrap">{{ it.alarmd_id }}</td>
                   <td class="w-240" title="{{ it.dispositivo }}">{{ it.dispositivo|default:"—" }}</td>
                   <td class="w-320" title="{{ it.tipo_de_amenaza }}">{{ it.tipo_de_amenaza|default:"—" }}</td>
                   <td class="nowrap">
                     {% with sev=it.nivel_de_severidad|default:"n/a"|lower %}
-                      <span class="pill
+                    <span class="pill
                         {% if sev == 'critical' %}sev-critical
                         {% elif sev == 'high' %}sev-high
                         {% elif sev == 'medium' %}sev-medium
                         {% elif sev == 'low' %}sev-low
                         {% elif sev == 'info' %}sev-info
                         {% else %}sev-na{% endif %}">
-                        {{ it.nivel_de_severidad|default:"N/A" }}
-                      </span>
+                      {{ it.nivel_de_severidad|default:"N/A" }}
+                    </span>
                     {% endwith %}
                   </td>
                   {% with d=it.date|date:"Y-m-d" t=it.time|time:"H:i:s" %}
-                    <td class="mono nowrap">{% if d %}{{ d }}{% else %}—{% endif %}</td>
-                    <td class="mono nowrap">{% if t %}{{ t }}{% else %}—{% endif %}</td>
+                  <td class="mono nowrap">{% if d %}{{ d }}{% else %}—{% endif %}</td>
+                  <td class="mono nowrap">{% if t %}{{ t }}{% else %}—{% endif %}</td>
                   {% endwith %}
                 </tr>
-              {% empty %}
-                <tr><td colspan="6" class="meta" style="text-align:center">Sin registros</td></tr>
-              {% endfor %}
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="meta" style="text-align:center">Sin registros</td>
+                </tr>
+                {% endfor %}
               </tbody>
             </table>
           </div>
 
           {% if page_obj %}
-            <div class="paginate" id="paginate">
-              {% if page_obj.has_previous %}
-                <a href="?page={{ page_obj.previous_page_number }}">&laquo; Anterior</a>
-              {% else %}
-                <span class="meta">&laquo; Anterior</span>
-              {% endif %}
-              <span class="current">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
-              {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}">Siguiente &raquo;</a>
-              {% else %}
-                <span class="meta">Siguiente &raquo;</span>
-              {% endif %}
-            </div>
+          <div class="paginate" id="paginate">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}">&laquo; Anterior</a>
+            {% else %}
+            <span class="meta">&laquo; Anterior</span>
+            {% endif %}
+            <span class="current">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}">Siguiente &raquo;</a>
+            {% else %}
+            <span class="meta">Siguiente &raquo;</span>
+            {% endif %}
+          </div>
           {% endif %}
         </div>
       </div>
@@ -228,4 +228,5 @@
   <script src="{% static 'js/date_filters.js' %}?v={% now 'U' %}" defer></script>
   <script src="{% static 'js/list.js' %}?v={% now 'U' %}" defer></script>
 </body>
+
 </html>

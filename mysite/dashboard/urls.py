@@ -7,7 +7,7 @@ from .realtime import (
     realtime_alarms_by_subtype,
     realtime_alarm_log_table,
 )
-
+app_name = "dashboard"
 urlpatterns = [
     # Dashboard principal (histórico)
     path("alarmsone/", dashboard_view, name="dashboard_alarmsone"),
@@ -17,7 +17,7 @@ urlpatterns = [
     path("dashboard/realtime/alarm-log", realtime.realtime_alarm_log_table, name="realtime_alarm_log_table"),
 
     # --- Cambio de tenant ---
-    path("switch-tenant/<int:tenant_id>/", switch_tenant, name="switch_tenant"),
+    path("switch-tenant/<int:tenant_id>/", views.switch_tenant, name="switch_tenant"),
     path("dashboard/switch-tenant/<int:tenant_id>/", views.switch_tenant, name="switch_tenant"),
 
 

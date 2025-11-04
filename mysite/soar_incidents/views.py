@@ -12,6 +12,7 @@ from django.shortcuts import render, redirect
 from django.http import HttpResponseRedirect 
 from tenants.decorators import tenant_required
 from tenants.models import Tenant
+from urllib.parse import urlparse
 
 from .models import IncidenteSOAR
 
@@ -122,76 +123,72 @@ def incidents_list(request):
 @login_required
 def switch_tenant(request, tenant_id):
     """
-    Permite a usuarios de Inntesec cambiar de tenant desde cualquier módulo (SOAR, Realtime, Histórico).
-    Usa la misma lógica que en realtime.py, garantizando la redirección correcta al origen.
+    Permite a usuarios de Inntesec cambiar de tenant desde cualquier dashboard.
+    Mantiene al usuario en el mismo módulo (SOAR, Realtime, Alarmas, etc.)
+    tras el cambio, y limpia la caché para evitar datos inconsistentes.
     """
+    from tenants.models import Tenant
+    from django.contrib import messages
+    from django.core.cache import cache
+
+    logger = logging.getLogger(__name__)
+
     user_tenant = getattr(request.user, "tenant", None)
     if not user_tenant or user_tenant.name.lower() != "inntesec":
         messages.error(request, "No tienes permiso para cambiar de empresa.")
         return redirect("dashboard")
 
+    # Buscar tenant destino
     tenant = Tenant.objects.filter(id=tenant_id).first()
     if not tenant:
         messages.error(request, "El tenant seleccionado no existe.")
         return redirect("dashboard")
 
-    # Guardar el tenant en la sesión
+    # Actualizar tenant activo en sesión
     request.session["tenant_id"] = tenant.id
     request.session["tenant_name"] = tenant.name
     logger.info("[SwitchTenant] %s cambió a tenant %s", request.user.username, tenant.name)
 
-    # Detectar desde dónde se hizo el cambio
-    next_url = (
-        request.POST.get("next")
-        or request.GET.get("next")
-        or request.META.get("HTTP_REFERER", "")
-        or ""
-    ).lower()
+    # Limpiar caché para evitar datos antiguos
+    cache.clear()
+    logger.debug("[SwitchTenant] Caché limpiada tras cambio de tenant")
+
+    # --- Detectar de dónde vino el cambio ---
+    next_url = request.POST.get("next") or request.GET.get("next") or request.META.get("HTTP_REFERER", "")
     logger.debug("[SwitchTenant] next_url detectado: %s", next_url)
 
-    # ==========================================================
-    # 🔍 Redirección según origen (mismo patrón que realtime)
-    # ==========================================================
-
-    if "dashboard-soar" in next_url or "/dashboard-soar/" in next_url:
-        logger.debug("[SwitchTenant] Redirigiendo al dashboard SOAR principal")
-        return redirect("soar_dashboard:dashboard")
-
-    if "/soar/incidentes/" in next_url or "/soar/incidentes" in next_url or "/soar_incidents" in next_url:
-        logger.debug("[SwitchTenant] Redirigiendo a lista de incidentes SOAR")
-        return redirect("soar_incidents:list")
-
-    if "/dashboard/realtime" in next_url or "realtime" in next_url:
-        logger.debug("[SwitchTenant] Redirigiendo al dashboard Tiempo Real")
-        return redirect("dashboard_realtime")
-
-    if "/dashboard/alarmsone" in next_url or "alarmsone" in next_url or "/dashboard/" in next_url:
-        logger.debug("[SwitchTenant] Redirigiendo al dashboard Histórico de Alarmas")
-        return redirect("dashboard_alarmsone")
-
-    # ==========================================================
-    # 🔄 Fallback inteligente (usa referer si el next_url no sirve)
-    # ==========================================================
+    parsed = urlparse(next_url or "")
     referer = (request.META.get("HTTP_REFERER") or "").lower()
-    logger.debug("[SwitchTenant] Referer=%s", referer)
 
-    if "dashboard-soar" in referer or "/dashboard-soar/" in referer:
-        return redirect("soar_dashboard:dashboard")
-    if "/soar/incidentes/" in referer or "/soar/incidentes" in referer or "/soar_incidents" in referer:
+    # --- Si la URL es interna, redirigir directamente ---
+    if parsed.path and parsed.path.startswith("/"):
+        logger.debug(f"[SwitchTenant] Redirigiendo a ruta interna: {parsed.path}")
+        return HttpResponseRedirect(parsed.path)
+
+    # --- Redirecciones por patrón de origen ---
+    if "/soar/incidentes" in referer:
+        logger.debug("[SwitchTenant] Manteniendo en lista de incidentes SOAR")
         return redirect("soar_incidents:list")
+
+    if "/dashboard-soar" in referer or "soar_dashboard" in referer:
+        logger.debug("[SwitchTenant] Manteniendo en dashboard SOAR")
+        return redirect("soar_dashboard:dashboard")
+
     if "/dashboard/realtime" in referer or "realtime" in referer:
+        logger.debug("[SwitchTenant] Manteniendo en dashboard Realtime")
         return redirect("dashboard_realtime")
+
     if "/dashboard/alarmsone" in referer or "alarmsone" in referer:
+        logger.debug("[SwitchTenant] Manteniendo en dashboard AlarmasOne")
         return redirect("dashboard_alarmsone")
 
-    # ==========================================================
-    # 🚪 Fallback inteligente adicional (igual que realtime)
-    # ==========================================================
-    # Si no se detecta origen, intenta quedarse en la misma página actual
+    # --- Fallback final ---
     try:
-        logger.debug("[SwitchTenant] Redirigiendo a la misma ruta actual (path_info)")
-        return HttpResponseRedirect(request.path_info)
+        current_path = request.META.get("PATH_INFO", "")
+        origin = request.META.get("HTTP_ORIGIN") or request.build_absolute_uri("/")
+        full_path = f"{origin}{current_path}" if current_path else request.build_absolute_uri("/")
+        logger.debug(f"[SwitchTenant] Fallback: redirigiendo a la misma ruta ({full_path})")
+        return HttpResponseRedirect(full_path)
     except Exception as e:
-        logger.warning("[SwitchTenant] Fallback al dashboard: %s", e)
+        logger.warning(f"[SwitchTenant] Fallback al dashboard por error ({e})")
         return redirect("dashboard")
-

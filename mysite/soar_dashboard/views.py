@@ -64,10 +64,15 @@ def dashboard_soar(request):
             logger.warning("[SOAR] request sin tenant o sin alarms_one_id -> 0 filas")
             qs = qs.none()
 
+        # 🔴 Importante: añadimos campos para nuevos gráficos/filtros
         rows = list(qs.values(
             "date", "time",
             "device", "service", "proto",
             "srccountry",
+            "srcip", "dstip",        # ← NUEVO
+            "aotag",                 # ← NUEVO (para 'fuente')
+            # si tu modelo tiene 'application' o 'displayname' puedes añadirlo:
+            # "application", "displayname",
             "severity",
             "security_action",
             "action",
@@ -96,10 +101,6 @@ def dashboard_soar(request):
 # ============================================================
 @login_required
 def switch_tenant(request, tenant_id):
-    """
-    Permite a usuarios de Inntesec cambiar de tenant desde cualquier dashboard.
-    Redirige automáticamente al mismo módulo (SOAR, Realtime, Histórico).
-    """
     user_tenant = getattr(request.user, "tenant", None)
     if not user_tenant or user_tenant.name.lower() != "inntesec":
         messages.error(request, "No tienes permiso para cambiar de empresa.")
@@ -110,12 +111,10 @@ def switch_tenant(request, tenant_id):
         messages.error(request, "El tenant seleccionado no existe.")
         return redirect("dashboard")
 
-    # --- Guardar tenant seleccionado en la sesión ---
     request.session["tenant_id"] = tenant.id
     request.session["tenant_name"] = tenant.name
     logger.info("[SwitchTenant] %s cambió a tenant %s", request.user.username, tenant.name)
 
-    # --- Detectar el origen real ---
     next_url = (
         request.POST.get("next")
         or request.GET.get("next")
@@ -124,8 +123,6 @@ def switch_tenant(request, tenant_id):
 
     logger.debug("[SwitchTenant] next_url detectado: %s", next_url)
 
-    # --- Reglas inteligentes de redirección ---
-    # Orden de prioridad: SOAR → Realtime → Alarmas → Dashboard principal
     if "dashboard-soar" in next_url:
         logger.debug("[SwitchTenant] Redirigiendo al dashboard SOAR")
         return redirect("soar_dashboard:dashboard")
@@ -138,7 +135,6 @@ def switch_tenant(request, tenant_id):
         logger.debug("[SwitchTenant] Redirigiendo al dashboard Histórico de Alarmas")
         return redirect("dashboard_alarmsone")
 
-    # --- Si no detecta origen, revisa el referer de nuevo ---
     referer = (request.META.get("HTTP_REFERER") or "").lower()
     logger.debug("[SwitchTenant] Referer=%s", referer)
 
@@ -149,6 +145,5 @@ def switch_tenant(request, tenant_id):
     if "dashboard/alarmsone" in referer or "alarmsone" in referer:
         return redirect("dashboard_alarmsone")
 
-    # --- Fallback final ---
     logger.debug("[SwitchTenant] No se detectó origen, redirigiendo al dashboard principal")
     return redirect("dashboard")

@@ -6697,3 +6697,102 @@ RuntimeError: No se pudo obtener el token desde obtener_token.py
 [2025-11-03 18:05:02,985: INFO/ForkPoolWorker-1] 📊 Total alarmas recibidas hoy: 354
 [2025-11-03 18:05:03,320: INFO/ForkPoolWorker-1] ✅ Ingesta diaria completada. Nuevas filas insertadas: 10
 [2025-11-03 18:05:03,322: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_ingesta_api[0b5f44c4-5cd5-4f51-b660-a8bcfbfa1d62] succeeded in 3.317807926039677s: None
+[2025-11-03 19:00:00,000: INFO/MainProcess] Scheduler: Sending due task obtener-token-cada-hora (integrations.tasks.tarea_obtener_token)
+[2025-11-03 19:00:00,004: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[c77d36c0-9275-42c4-bd74-c4ae63f815fe] received
+[2025-11-03 19:00:00,005: INFO/ForkPoolWorker-1] 🔑 Solicitando nuevo token desde la API...
+[2025-11-03 19:00:00,855: WARNING/ForkPoolWorker-1] ✅ Token obtenido correctamente: 1000.de8ad...
+[2025-11-03 19:00:00,855: INFO/ForkPoolWorker-1] ✅ Token guardado correctamente.
+[2025-11-03 19:00:00,856: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_obtener_token[c77d36c0-9275-42c4-bd74-c4ae63f815fe] succeeded in 0.850645071011968s: '1000.de8ad39dc38829b5eb19967ec00d8e9c.44ea1061a153d5fc3346103601d185a9'
+[2025-11-03 19:05:00,000: INFO/MainProcess] Scheduler: Sending due task ingesta-api-cada-65-min (integrations.tasks.tarea_ingesta_api)
+[2025-11-03 19:05:00,003: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[cc342a76-54fd-4263-b8c0-18a6775dca12] received
+[2025-11-03 19:05:00,003: INFO/ForkPoolWorker-1] 🚀 Inicio de ingesta diaria de API
+[2025-11-03 19:05:00,028: INFO/ForkPoolWorker-1] 🧹 Alarmas antiguas eliminadas: 10
+[2025-11-03 19:05:00,028: INFO/ForkPoolWorker-1] 📅 Trayendo alarmas desde 2025-11-03 00:00:00-03:00 hasta 2025-11-03 16:05:00.004130-03:00 (ms: 1762138800000 → 1762196700004)
+[2025-11-03 19:05:01,009: WARNING/ForkPoolWorker-1] ✅ Token obtenido correctamente: 1000.3e5f1...
+[2025-11-03 19:05:01,404: INFO/ForkPoolWorker-1] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1762138800000&toDate=1762196700004&filter=all&size=200&from=0 "HTTP/1.1 200 "
+[2025-11-03 19:05:01,548: INFO/ForkPoolWorker-1] 📦 Página 1, 200 alarmas cargadas (total: 200)
+[2025-11-03 19:05:01,862: INFO/ForkPoolWorker-1] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1762138800000&toDate=1762196700004&filter=all&size=200&from=200 "HTTP/1.1 200 "
+[2025-11-03 19:05:01,935: INFO/ForkPoolWorker-1] 📦 Página 1, 161 alarmas cargadas (total: 361)
+[2025-11-03 19:05:01,935: INFO/ForkPoolWorker-1] 📊 Total alarmas recibidas hoy: 361
+[2025-11-03 19:05:02,263: INFO/ForkPoolWorker-1] ✅ Ingesta diaria completada. Nuevas filas insertadas: 7
+[2025-11-03 19:05:02,265: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_ingesta_api[cc342a76-54fd-4263-b8c0-18a6775dca12] succeeded in 2.2613664160016924s: None
+[2025-11-03 20:00:25,882: INFO/MainProcess] Scheduler: Sending due task obtener-token-cada-hora (integrations.tasks.tarea_obtener_token)
+[2025-11-03 20:02:41,532: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[8a229bc9-d11a-4eb2-87c8-c10ac1922f5f] received
+[2025-11-03 20:03:06,931: INFO/ForkPoolWorker-1] 🔑 Solicitando nuevo token desde la API...
+[2025-11-03 20:03:41,981: WARNING/ForkPoolWorker-1] ❌ Excepción ejecutando obtener_token.py: Command '['python3', '/home/inntesec-ia/Proyecto-Dashboard/obtener_token.py']' timed out after 25 seconds
+[2025-11-03 20:03:44,669: ERROR/ForkPoolWorker-1] ❌ Error al obtener token: No se recibió token desde la API
+[2025-11-03 20:05:10,820: INFO/MainProcess] Scheduler: Sending due task ingesta-api-cada-65-min (integrations.tasks.tarea_ingesta_api)
+[2025-11-03 20:05:55,018: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_obtener_token[8a229bc9-d11a-4eb2-87c8-c10ac1922f5f] retry: Retry in 10s: ValueError('No se recibió token desde la API')
+[2025-11-03 20:09:55,368: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[8a229bc9-d11a-4eb2-87c8-c10ac1922f5f] received
+[2025-11-03 20:10:45,724: INFO/ForkPoolWorker-1] 🔑 Solicitando nuevo token desde la API...
+[2025-11-03 20:11:15,319: WARNING/ForkPoolWorker-1] ❌ Excepción ejecutando obtener_token.py: Command '['python3', '/home/inntesec-ia/Proyecto-Dashboard/obtener_token.py']' timed out after 25 seconds
+[2025-11-03 20:11:16,981: ERROR/ForkPoolWorker-1] ❌ Error al obtener token: No se recibió token desde la API
+[2025-11-03 20:14:44,021: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_obtener_token[8a229bc9-d11a-4eb2-87c8-c10ac1922f5f] retry: Retry in 10s: ValueError('No se recibió token desde la API')
+[2025-11-03 20:16:29,616: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[62c1a91e-f525-40b5-b557-ffaa5ccb02af] received
+[2025-11-03 20:17:46,574: INFO/ForkPoolWorker-1] 🚀 Inicio de ingesta diaria de API
+[2025-11-03 20:20:10,270: ERROR/ForkPoolWorker-1] ❌ Error inesperado durante la ingesta diaria: connection timeout expired
+Traceback (most recent call last):
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/db/backends/postgresql/base.py", line 332, in get_new_connection
+    connection = self.Database.connect(**conn_params)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/psycopg/connection.py", line 120, in connect
+    raise last_ex.with_traceback(None)
+psycopg.errors.ConnectionTimeout: connection timeout expired
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/inntesec-ia/Proyecto-Dashboard/mysite/integrations/tasks.py", line 54, in tarea_ingesta_api
+    eliminadas, _ = Alarm.objects.filter(event_time__lt=limite).delete()
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/db/models/query.py", line 1199, in delete
+    num_deleted, num_deleted_per_model = collector.delete()
+                                         ^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/db/models/deletion.py", line 454, in delete
+    with transaction.atomic(using=self.using, savepoint=False):
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/db/transaction.py", line 198, in __enter__
+    if not connection.get_autocommit():
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/db/backends/base/base.py", line 454, in get_autocommit
+    self.ensure_connection()
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/db/backends/base/base.py", line 278, in ensure_connection
+    with self.wrap_database_errors:
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/django/db/backends/postgresql/base.py", line 332, in get_new_connection
+    connection = self.Database.connect(**conn_params)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inntesec-ia/Proyecto-Dashboard/venv/lib/python3.12/site-packages/psycopg/connection.py", line 120, in connect
+    raise last_ex.with_traceback(None)
+django.db.utils.OperationalError: connection timeout expired
+[2025-11-03 20:21:20,873: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_ingesta_api[62c1a91e-f525-40b5-b557-ffaa5ccb02af] succeeded in 216.59201857401058s: None
+[2025-11-03 20:29:20,668: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[8a229bc9-d11a-4eb2-87c8-c10ac1922f5f] received
+[2025-11-03 20:36:40,764: INFO/ForkPoolWorker-1] 🔑 Solicitando nuevo token desde la API...
+[2025-11-03 20:37:44,462: WARNING/ForkPoolWorker-1] ❌ Excepción ejecutando obtener_token.py: Command '['python3', '/home/inntesec-ia/Proyecto-Dashboard/obtener_token.py']' timed out after 25 seconds
+[2025-11-03 20:38:02,614: ERROR/ForkPoolWorker-1] ❌ Error al obtener token: No se recibió token desde la API
+[2025-11-03 20:41:56,854: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_obtener_token[8a229bc9-d11a-4eb2-87c8-c10ac1922f5f] retry: Retry in 10s: ValueError('No se recibió token desde la API')

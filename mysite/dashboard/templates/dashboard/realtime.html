@@ -29,7 +29,7 @@
 
     <nav class="nav">
       <a class="nav-item" href="{% url 'dashboard_realtime' %}"><span class="nav-ico">⏱️</span>Tiempo Real</a>
-      <a class="nav-item is-active" href="{% url 'dashboard_alarmsone' %}"><span class="nav-ico">🏠</span>Alarmas</a>
+      <a class="nav-item is-active" href="{% url 'dashboard:dashboard_alarmsone' %}"><span class="nav-ico">🏠</span>Alarmas</a>
       <a class="nav-item" href="{% url 'soar_dashboard:dashboard' %}"><span class="nav-ico">🚨</span>SOAR</a>
       <a class="nav-item" href="{% url 'soar_incidents:list' %}"><span class="nav-ico">🤖</span>IA SOAR</a>
     </nav>

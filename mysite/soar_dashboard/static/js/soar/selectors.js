@@ -9,6 +9,31 @@ const homog = (v) => {
   return t ? t : "n/a";
 };
 
+// IP helpers
+const isPrivateIP = (ip) => {
+  const m = String(ip||"").match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (!m) return false;
+  const [a,b] = [parseInt(m[1],10), parseInt(m[2],10)];
+  if (a===10) return true;
+  if (a===172 && b>=16 && b<=31) return true;
+  if (a===192 && b===168) return true;
+  return false;
+};
+
+// Fuente heurística
+function deriveSource(row){
+  const aot = String(row?.aotag || "").trim();
+  if (aot) return aot.toLowerCase();
+  const dev = String(row?.device || "").trim();
+  if (dev) return dev.toLowerCase();
+  const app = String(row?.application || "").trim();
+  if (app) return app.toLowerCase();
+  const dn  = String(row?.displayname || "").trim();
+  if (/\blog360\b/i.test(dn)) return "log360";
+  if (/\bforti(analyzer|gate)\b/i.test(dn)) return "fortinet";
+  return "otros";
+}
+
 function passesFilters(row, st, ignore = {}){
   const sev   = norm(homog(row?.severity));
   const ctry  = norm(homog(row?.srccountry));
@@ -17,6 +42,8 @@ function passesFilters(row, st, ignore = {}){
   const dev   = norm(homog(row?.device));
   const svc   = norm(homog(row?.service));
   const proto = norm(homog(row?.proto));
+  const src   = norm(deriveSource(row));
+  const ip    = norm(String(row?.srcip || row?.dstip || ""));
 
   if (!ignore.severity && st.severityFilter && sev   !== norm(st.severityFilter)) return false;
   if (!ignore.country  && st.countryFilter  && ctry  !== norm(st.countryFilter))  return false;
@@ -24,6 +51,8 @@ function passesFilters(row, st, ignore = {}){
   if (!ignore.device   && st.deviceFilter   && dev   !== norm(st.deviceFilter))   return false;
   if (!ignore.service  && st.serviceFilter  && svc   !== norm(st.serviceFilter))  return false;
   if (!ignore.proto    && st.protoFilter    && proto !== norm(st.protoFilter))    return false;
+  if (!ignore.source   && st.sourceFilter   && src   !== norm(st.sourceFilter))   return false;
+  if (!ignore.ip       && st.ipFilter       && ip    !== norm(st.ipFilter))       return false;
   return true;
 }
 
@@ -132,7 +161,7 @@ export function selectTrendByHourPayload(){
   return { labels, data: buckets };
 }
 
-/* === KPI corregido: ignora fecha 'N/A' y elige último día válido === */
+/* === KPI corregido (arregla la autorreferencia de `c`) === */
 export function computeKPIs(){
   const st = getState();
   const all = getEvents().filter(r => passesFilters(r, st, {}));
@@ -155,25 +184,24 @@ export function computeKPIs(){
   const smap = {}; for (const r of all){ const k = norm(homog(r?.severity)); smap[k]=(smap[k]||0)+1; }
   const domSeverity = Object.entries(smap).sort((a,b)=>b[1]-a[1])[0]?.[0] || "n/a";
 
-  // País top del último día válido (ignorar 'N/A' en fecha y país)
+  // País top del último día válido (ignorar 'N/A')
   const validDated = all
     .map(r => ({ d: String(r?.date ?? "").trim(), c: String(r?.srccountry ?? "").trim() }))
-    .filter(x => x.d && norm(x.d) !== "n/a"); // fecha válida
+    .filter(x => x.d && norm(x.d) !== "n/a");
 
   let topCountryToday = "N/A";
   if (validDated.length){
-    const lastDay = validDated.map(x => x.d).sort().at(-1); // YYYY-MM-DD sortable
+    const lastDay = validDated.map(x => x.d).sort().at(-1);
     const cmap = {};
     for (const r of validDated){
       if (r.d !== lastDay) continue;
-      const c = r.c && norm(r.c) !== "n/a" ? r.c : ""; // descarta país N/A
+      const c = r.c && norm(r.c) !== "n/a" ? r.c : ""; // ← aquí estaba el bug: antes decía norm(c)
       if (!c) continue;
       cmap[c] = (cmap[c] || 0) + 1;
     }
     if (Object.keys(cmap).length){
       topCountryToday = Object.entries(cmap).sort((a,b)=>b[1]-a[1])[0][0];
     } else {
-      // si el último día no tiene países válidos, cae al más frecuente global con fecha válida
       const gmap = {};
       for (const r of validDated){
         const c = r.c && norm(r.c) !== "n/a" ? r.c : "";
@@ -185,4 +213,64 @@ export function computeKPIs(){
   }
 
   return { total, pctBlocked, topDevice, domSeverity, topCountryToday };
+}
+
+/* === NUEVOS SELECTORES === */
+export function selectSourcesPayload(topN=10, selfIgnore=false){
+  const st = getState(); const events = getEvents(); const map = {};
+  for (const r of events){
+    if (!passesFilters(r, st, { source: selfIgnore })) continue;
+    const key = safe(deriveSource(r));
+    map[key]=(map[key]||0)+1;
+  }
+  const sorted = Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0, topN);
+  return { labels: sorted.map(([k])=>k), data: sorted.map(([,v])=>v), keys: sorted.map(([k])=>k) };
+}
+
+export function selectTopIPsPayload(which="src", topN=10, selfIgnore=false){
+  const st = getState(); const events = getEvents(); const map = {};
+  const field = which === "dst" ? "dstip" : "srcip";
+  const ignoreKey = "ip";
+  for (const r of events){
+    const ignores = { }; if (selfIgnore) ignores[ignoreKey] = true;
+    if (!passesFilters(r, st, ignores)) continue;
+    const ip = safe(r?.[field]);
+    if (!ip || ip.toLowerCase()==="n/a") continue;
+    map[ip]=(map[ip]||0)+1;
+  }
+  const sorted = Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0, topN);
+  return { labels: sorted.map(([k])=>k), data: sorted.map(([,v])=>v) };
+}
+
+export function selectServiceProtoStackPayload(topServices=8){
+  const st = getState(); const events = getEvents();
+  const serviceCount = {};
+  for (const r of events){ if (!passesFilters(r, st, {})) continue;
+    const s = safe(homog(r?.service)); serviceCount[s]=(serviceCount[s]||0)+1; }
+  const top = new Set(Object.entries(serviceCount).sort((a,b)=>b[1]-a[1]).slice(0, topServices).map(([k])=>k));
+  const matrix = {}; const protos = new Set();
+  for (const r of events){ if (!passesFilters(r, st, {})) continue;
+    const s = safe(homog(r?.service)); if (!top.has(s)) continue;
+    const p = safe(homog(r?.proto)); protos.add(p);
+    matrix[s] = matrix[s] || {}; matrix[s][p] = (matrix[s][p]||0)+1;
+  }
+  const labels = Array.from(top);
+  const protoKeys = Array.from(protos);
+  const datasets = protoKeys.map(pk => ({
+    label: pk, data: labels.map(s => matrix[s]?.[pk] || 0)
+  }));
+  return { labels, datasets };
+}
+
+export function selectInternalExternalPayload(){
+  const st = getState(); const events = getEvents();
+  let internas = 0, externas = 0;
+  for (const r of events){
+    if (!passesFilters(r, st, {})) continue;
+    const ip = String(r?.srcip || "");
+    const country = String(r?.srccountry || "");
+    const internal = isPrivateIP(ip) || country.toLowerCase()==="reserved";
+    if (internal) internas += 1; else externas += 1;
+  }
+  return { labels:["Internas","Externas"], data:[internas, externas] };
 }

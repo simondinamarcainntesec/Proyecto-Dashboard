@@ -5,6 +5,9 @@ const state = {
   deviceFilter: "",
   serviceFilter: "",
   protoFilter: "",
+  // NUEVOS
+  sourceFilter: "",
+  ipFilter: "",
 };
 
 const listeners = new Set();
@@ -17,6 +20,7 @@ function only(patch){
   setState({
     severityFilter:"", countryFilter:"", actionFilter:"",
     deviceFilter:"", serviceFilter:"", protoFilter:"",
+    sourceFilter:"", ipFilter:"",
     ...patch
   });
 }
@@ -34,7 +38,6 @@ export const actions = {
     const s = String(act ?? "").trim();
     only({ actionFilter: (state.actionFilter.toLowerCase() === s.toLowerCase()) ? "" : s });
   },
-  // NUEVOS
   toggleDevice(dev){
     const s = String(dev ?? "").trim();
     only({ deviceFilter: (state.deviceFilter.toLowerCase() === s.toLowerCase()) ? "" : s });
@@ -46,5 +49,14 @@ export const actions = {
   toggleProto(proto){
     const s = String(proto ?? "").trim();
     only({ protoFilter: (state.protoFilter.toLowerCase() === s.toLowerCase()) ? "" : s });
+  },
+  // NUEVOS
+  toggleSource(src){
+    const s = String(src ?? "").trim();
+    only({ sourceFilter: (state.sourceFilter.toLowerCase() === s.toLowerCase()) ? "" : s });
+  },
+  toggleIP(ip){
+    const s = String(ip ?? "").trim();
+    only({ ipFilter: (state.ipFilter.toLowerCase() === s.toLowerCase()) ? "" : s });
   },
 };

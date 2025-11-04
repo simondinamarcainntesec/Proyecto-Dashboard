@@ -1,7 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -27,7 +26,7 @@
     </div>
     <nav class="nav">
       <a class="nav-item is-active" href="{% url 'soar_dashboard:dashboard' %}"><span class="nav-ico">🏠</span>SOAR</a>
-      <a class="nav-item" href="{% url 'dashboard_alarmsone' %}"><span class="nav-ico">🚨</span>Alarmas</a>
+      <a class="nav-item" href="{% url 'dashboard:dashboard_alarmsone' %}"><span class="nav-ico">🚨</span>Alarmas</a>
       <a class="nav-item" href="{% url 'dashboard_realtime' %}"><span class="nav-ico">⏱️</span>Tiempo Real</a>
       <a class="nav-item" href="{% url 'soar_incidents:list' %}"><span class="nav-ico">🤖</span>IA SOAR</a>
     </nav>
@@ -65,7 +64,7 @@
 
       <div class="top-right">
         <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
-        <button class="btn ghost" title="Exportar">⬇︎</button>
+        <button class="btn ghost" title="Exportar" id="btn-export">⬇︎</button>
 
         <div class="user" style="display:flex;align-items:center;gap:.5rem">
           <div class="user-avatar">
@@ -106,60 +105,106 @@
       </div>
     </section>
 
-    <!-- Grillas -->
-    <section class="grid grid-main">
-      <div class="card chart">
-        <div class="card-head">
-          <h3>Top países origen (srccountry)</h3>
-        </div>
-        <div class="card-body"><canvas id="chartCountries"></canvas></div>
-      </div>
+    <!-- Chips de secciones -->
+    <div class="section-chips">
+      <button class="chip active" data-sec="all">Todos</button>
+      <button class="chip" data-sec="incidentes">Incidentes</button>
+      <button class="chip" data-sec="origen">Origen/Destino</button>
+      <button class="chip" data-sec="politicas">Políticas/Acciones</button>
+      <button class="chip" data-sec="operativa">Operativa</button>
+    </div>
 
-      <div class="card chart">
-        <div class="card-head">
-          <h3>Severidad</h3>
+    <!-- ÚNICA GRID de tarjetas (sin duplicar IDs); se filtra por data-groups -->
+    <section class="sec visible">
+      <div class="grid grid-main">
+        <!-- Origen/Destino -->
+        <div class="card chart" data-groups="all,origen">
+          <div class="card-head"><h3>Top países origen (srccountry)</h3></div>
+          <div class="card-body"><canvas id="chartCountries"></canvas></div>
         </div>
-        <div class="card-body"><canvas id="chartSeverity"></canvas></div>
-      </div>
 
-      <div class="card chart">
-        <div class="card-head">
-          <h3>Acción de seguridad</h3>
+        <!-- Incidentes -->
+        <div class="card chart" data-groups="all,incidentes">
+          <div class="card-head"><h3>Severidad</h3></div>
+          <div class="card-body"><canvas id="chartSeverity"></canvas></div>
         </div>
-        <div class="card-body"><canvas id="chartSecAction"></canvas></div>
-      </div>
 
-      <!-- Tabla de dispositivos (clickeable) -->
-      <div class="card table card--table">
-        <div class="card-head between">
-          <h3>Top dispositivos</h3>
+        <!-- Políticas/Acciones -->
+        <div class="card chart" data-groups="all,politicas">
+          <div class="card-head"><h3>Acción de seguridad</h3></div>
+          <div class="card-body"><canvas id="chartSecAction"></canvas></div>
         </div>
-        <div class="table-wrap">
-          <table class="datatable" id="device-table">
-            <thead>
-              <tr>
-                <th data-sort="text">Dispositivo</th>
-                <th data-sort="number" class="is-right">Cantidad</th>
-              </tr>
-            </thead>
-            <tbody id="device-table-body"></tbody>
-          </table>
-        </div>
-        <div class="table-footnote">* Clic en una fila para filtrar</div>
-      </div>
 
-      <div class="card chart">
-        <div class="card-head">
-          <h3>Top servicios</h3>
+        <!-- Incidentes -->
+        <div class="card chart" data-groups="all,incidentes">
+          <div class="card-head"><h3>Tendencia diaria</h3></div>
+          <div class="card-body"><canvas id="chartTrendDaily"></canvas></div>
         </div>
-        <div class="card-body"><canvas id="chartServices"></canvas></div>
-      </div>
 
-      <div class="card chart">
-        <div class="card-head">
-          <h3>Top protocolos</h3>
+        <!-- Incidentes -->
+        <div class="card chart" data-groups="all,incidentes">
+          <div class="card-head"><h3>Tendencia por hora</h3></div>
+          <div class="card-body"><canvas id="chartTrendHourly"></canvas></div>
         </div>
-        <div class="card-body"><canvas id="chartProto"></canvas></div>
+
+        <!-- Operativa -->
+        <div class="card table card--table" data-groups="all,operativa">
+          <div class="card-head between"><h3>Top dispositivos</h3></div>
+          <div class="table-wrap">
+            <table class="datatable" id="device-table">
+              <thead>
+                <tr>
+                  <th data-sort="text">Dispositivo</th>
+                  <th data-sort="number" class="is-right">Cantidad</th>
+                </tr>
+              </thead>
+              <tbody id="device-table-body"></tbody>
+            </table>
+          </div>
+          <div class="table-footnote">* Clic en una fila para filtrar</div>
+        </div>
+
+        <!-- Operativa -->
+        <div class="card chart" data-groups="all,operativa">
+          <div class="card-head"><h3>Top servicios</h3></div>
+          <div class="card-body"><canvas id="chartServices"></canvas></div>
+        </div>
+
+        <!-- Operativa -->
+        <div class="card chart" data-groups="all,operativa">
+          <div class="card-head"><h3>Top protocolos</h3></div>
+          <div class="card-body"><canvas id="chartProto"></canvas></div>
+        </div>
+
+        <!-- Incidentes -->
+        <div class="card chart" data-groups="all,incidentes">
+          <div class="card-head"><h3>Fuentes de alarmas</h3></div>
+          <div class="card-body"><canvas id="chartSources"></canvas></div>
+        </div>
+
+        <!-- Origen/Destino -->
+        <div class="card chart" data-groups="all,origen">
+          <div class="card-head"><h3>Service × Proto (Stacked)</h3></div>
+          <div class="card-body"><canvas id="chartServiceProto"></canvas></div>
+        </div>
+
+        <!-- Origen/Destino -->
+        <div class="card chart" data-groups="all,origen">
+          <div class="card-head"><h3>Internas vs Externas</h3></div>
+          <div class="card-body"><canvas id="chartInternalExternal"></canvas></div>
+        </div>
+
+        <!-- Origen/Destino -->
+        <div class="card chart" data-groups="all,origen">
+          <div class="card-head"><h3>Top IP Origen</h3></div>
+          <div class="card-body"><canvas id="chartTopSrcIP"></canvas></div>
+        </div>
+
+        <!-- Origen/Destino -->
+        <div class="card chart" data-groups="all,origen">
+          <div class="card-head"><h3>Top IP Destino</h3></div>
+          <div class="card-body"><canvas id="chartTopDstIP"></canvas></div>
+        </div>
       </div>
     </section>
 
@@ -169,5 +214,4 @@
   {{ events|json_script:"soar-events" }}
   <script type="module" src="{% static 'js/soar/dashboardsoar.js' %}?v={% now 'U' %}"></script>
 </body>
-
 </html>
