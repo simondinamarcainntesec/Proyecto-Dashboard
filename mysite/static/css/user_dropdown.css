@@ -1,0 +1,269 @@
+/* static/css/user_dropdown.css */
+
+/* === Contenedor principal === */
+.user-menu {
+  position: relative;
+  display: inline-block;
+  font-family: inherit;
+}
+
+/* === Botón superior (avatar + nombre) === */
+.user-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  color: var(--color-text, #e0e0e0);
+  cursor: pointer;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.user-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.user-avatar {
+  background-color: var(--color-primary, #007bff);
+  color: white;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.95rem;
+}
+
+.user-name {
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.chevron {
+  transition: transform 0.3s;
+}
+
+.dropdown-open .chevron {
+  transform: rotate(180deg);
+}
+
+/* === Menú desplegable === */
+.dropdown-menu {
+  position: absolute;
+  top: 110%;
+  right: 0;
+  background-color: var(--color-surface, #1e1e1e);
+  border: 1px solid var(--color-border, #444);
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+  display: none;
+  flex-direction: column;
+  min-width: 180px;
+  z-index: 999;
+  overflow: hidden;
+}
+
+.dropdown-open .dropdown-menu {
+  display: flex;
+  animation: fadeIn 0.15s ease-in-out;
+}
+
+/* === Opciones del menú === */
+.dropdown-menu a,
+.dropdown-menu button {
+  all: unset;
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.8rem 1rem;
+  color: var(--color-text, #e0e0e0);
+  font-size: 0.9rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.dropdown-menu a:hover,
+.dropdown-menu button:hover {
+  background-color: var(--color-primary, #007bff);
+  color: white;
+}
+
+
+/* === Animación suave === */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* === Dropdowns unificados con estilo Inntesec === */
+
+/* === Paleta Inntesec unificada === */
+:root {
+  --inntesec-bg: #0b1222;          /* Fondo general del dashboard */
+  --inntesec-bg-hover: rgb(18, 27, 51);
+  --inntesec-blue: rgb(18, 27, 51);        /* Azul corporativo (para botón cerrado) */
+  --inntesec-blue-hover: rgb(18, 27, 51);
+  --inntesec-text: #ffffff;
+  --inntesec-border: rgba(255, 255, 255, 0.08);
+}
+
+/* === Botón principal del tenant (summary) === */
+.tenant-summary {
+  background-color: var(--inntesec-blue);
+  color: var(--inntesec-text);
+  border: 1px solid var(--inntesec-blue-hover);
+  border-radius: 6px;
+  padding: 0.45rem 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.tenant-summary:hover {
+  background-color: var(--inntesec-blue-hover);
+}
+
+.tenant-summary .caret {
+  font-size: 0.8rem;
+  opacity: 0.8;
+  transition: transform 0.2s ease;
+}
+
+/* Flecha rota cuando está abierto */
+.tenant-dropdown[open] .caret {
+  transform: rotate(180deg);
+}
+
+/* === Lista del tenant === */
+.tenant-list {
+  background-color: var(--inntesec-bg);
+  border: 1px solid var(--inntesec-border);
+  border-radius: 8px;
+  margin-top: 0.25rem;
+  padding: 0.25rem 0;
+  color: var(--inntesec-text);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+  animation: fadeSlideIn 0.25s ease forwards;
+}
+
+.tenant-option {
+  all: unset;
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.6rem 1rem;
+  font-size: 0.9rem;
+  color: var(--inntesec-text);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.tenant-option:hover {
+  background-color: var(--inntesec-bg-hover);
+}
+
+.tenant-option.is-active {
+  background-color: var(--inntesec-blue);
+  font-weight: 600;
+}
+
+/* === Menú del usuario (arriba derecha) === */
+.user-menu {
+  position: relative;
+  display: inline-block;
+}
+
+.user-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  color: var(--inntesec-text);
+  cursor: pointer;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.user-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.user-avatar {
+  background-color: var(--inntesec-blue);
+  color: white;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+}
+
+/* Dropdown del usuario */
+.dropdown-menu {
+  position: absolute;
+  top: 110%;
+  right: 0;
+  background-color: var(--inntesec-bg);
+  border: 1px solid var(--inntesec-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  display: none;
+  flex-direction: column;
+  min-width: 180px;
+  z-index: 100;
+  animation: fadeSlideIn 0.25s ease forwards;
+}
+
+.dropdown-open .dropdown-menu {
+  display: flex;
+}
+
+/* Opciones del menú usuario */
+.dropdown-menu a,
+.dropdown-menu button {
+  all: unset;
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.8rem 1rem;
+  color: var(--inntesec-text);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.dropdown-menu a:hover,
+.dropdown-menu button:hover {
+  background-color: var(--inntesec-bg-hover);
+}
+
+/* Animación */
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

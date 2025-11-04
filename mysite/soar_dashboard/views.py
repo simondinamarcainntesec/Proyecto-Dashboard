@@ -1,18 +1,22 @@
 from __future__ import annotations
 import logging
-from typing import Iterable
+from typing import Iterable, Tuple, Optional
+from datetime import datetime, timedelta, time as dtime
 
+import pytz
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import F, Value, TextField
 from django.db.models.functions import Lower, Replace, Trim, Cast
 from django.shortcuts import render, redirect
+from django.utils.timezone import make_aware, is_aware
 
 from tenants.decorators import tenant_required
 from tenants.models import Tenant
 from .models import IaSoar
 
 logger = logging.getLogger(__name__)
+CL_TZ = pytz.timezone("America/Santiago")
 
 # ============================================================
 # 🧩 Helpers de normalización
@@ -37,6 +41,59 @@ def _annotate_norm_aotag(qs):
     cleaned = Lower(cleaned, output_field=TextField())
     return qs.annotate(norm_aotag=cleaned)
 
+# ============
+# Fechas
+# ============
+def _parse_iso_dt_local(s: str) -> Optional[datetime]:
+    """
+    Acepta 'YYYY-MM-DD' o 'YYYY-MM-DDTHH:MM:SS'. Devuelve datetime AWARE en America/Santiago.
+    """
+    if not s:
+        return None
+    s = s.strip().replace(" ", "T")
+    try:
+        # Soporta ambos formatos
+        if "T" in s:
+            dt = datetime.fromisoformat(s)
+        else:
+            # sólo fecha
+            dt = datetime.fromisoformat(s + "T00:00:00")
+    except ValueError:
+        return None
+
+    if not is_aware(dt):
+        dt = make_aware(dt, CL_TZ)
+    else:
+        dt = dt.astimezone(CL_TZ)
+    return dt
+
+def _default_range_now_30d() -> Tuple[datetime, datetime]:
+    now = datetime.now(CL_TZ)
+    start = (now - timedelta(days=30)).replace(hour=0, minute=0, second=0, microsecond=0)
+    end = now
+    return start, end
+
+def _normalize_range(from_qs: Optional[str], to_qs: Optional[str]) -> Tuple[datetime, datetime, str, str]:
+    """
+    Resuelve el rango efectivo y strings para inputs <input type=date>.
+    - Si no vienen params, últimos 30 días.
+    - 'from' se lleva al inicio del día local, 'to' al final del día local.
+    """
+    if not from_qs and not to_qs:
+        f, t = _default_range_now_30d()
+    else:
+        f = _parse_iso_dt_local(from_qs) or _default_range_now_30d()[0]
+        t = _parse_iso_dt_local(to_qs) or _default_range_now_30d()[1]
+
+    # normalizamos a [00:00:00, 23:59:59]
+    f = f.replace(hour=0, minute=0, second=0, microsecond=0)
+    t = t.replace(hour=23, minute=59, second=59, microsecond=0)
+
+    # para inputs date (YYYY-MM-DD)
+    from_date_str = f.strftime("%Y-%m-%d")
+    to_date_str = t.strftime("%Y-%m-%d")
+    return f, t, from_date_str, to_date_str
+
 # ============================================================
 # 🧩 Dashboard SOAR (principal)
 # ============================================================
@@ -44,39 +101,65 @@ def _annotate_norm_aotag(qs):
 @tenant_required
 def dashboard_soar(request):
     """
-    Renderiza el panel SOAR filtrado por tenant.
+    Renderiza el panel SOAR filtrado por tenant y rango de fechas (?from=&to=).
     Si el usuario pertenece a Inntesec, muestra el selector de tenants.
     """
     tenant = getattr(request, "tenant", None)
     norm_tid = _normalize_tenant_aotag(tenant) if tenant else ""
 
-    logger.info("[SOAR] Entrando a dashboard_soar | tenant=%s | alarms_one_id(raw)=%s | alarms_one_id(norm)=%s",
-                getattr(tenant, "name", None),
-                getattr(tenant, "alarms_one_id", None),
-                norm_tid)
+    # === Rango de fechas desde la query ===
+    q_from = request.GET.get("from")  # 'YYYY-MM-DD' o 'YYYY-MM-DDTHH:MM:SS'
+    q_to = request.GET.get("to")
+    f_dt, t_dt, from_date_str, to_date_str = _normalize_range(q_from, q_to)
+
+    logger.info(
+        "[SOAR] dashboard_soar | tenant=%s | aoid(raw)=%s norm=%s | from=%s to=%s",
+        getattr(tenant, "name", None),
+        getattr(tenant, "alarms_one_id", None),
+        norm_tid,
+        f_dt.isoformat(),
+        t_dt.isoformat(),
+    )
 
     rows: Iterable[dict] = []
     try:
         qs = IaSoar.objects.all()
+
+        # Tenant
         if norm_tid:
             qs = _annotate_norm_aotag(qs).filter(norm_aotag=norm_tid)
         else:
             logger.warning("[SOAR] request sin tenant o sin alarms_one_id -> 0 filas")
             qs = qs.none()
 
-        # 🔴 Importante: añadimos campos para nuevos gráficos/filtros
-        rows = list(qs.values(
-            "date", "time",
-            "device", "service", "proto",
-            "srccountry",
-            "srcip", "dstip",        # ← NUEVO
-            "aotag",                 # ← NUEVO (para 'fuente')
-            # si tu modelo tiene 'application' o 'displayname' puedes añadirlo:
-            # "application", "displayname",
-            "severity",
-            "security_action",
-            "action",
-        )[:20000])
+        # === Filtro por fechas ===
+        # Preferencia 1: si tienes un DateTimeField 'timestamp' en IaSoar
+        # Preferencia 2: si 'date' es DateField (o string ISO YYYY-MM-DD), filtramos por 'date'
+        # Preferencia 3: si tienes 'date' y 'time' separados, filtramos sólo por 'date' (rango de días)
+        has_timestamp = hasattr(IaSoar, "timestamp")
+        if has_timestamp:
+            qs = qs.filter(timestamp__gte=f_dt, timestamp__lte=t_dt)
+        else:
+            # Usamos sólo 'date' (asumiendo ISO) – si es TextField en ISO también sirve por orden lexicográfico
+            qs = qs.filter(date__gte=f_dt.date(), date__lte=t_dt.date())
+
+        # Limitar (ajusta a tus necesidades)
+        qs = qs.order_by("-date")[:20000]
+
+        # 🔴 IMPORTANTE: incluimos "Application" para el gráfico de aplicaciones
+        rows = list(
+            qs.values(
+                "date", "time",
+                "device", "service", "proto",
+                "srccountry",
+                "srcip", "dstip",
+                "aotag",
+                "severity",
+                "security_action",
+                "action",
+                "Application",   # <- campo nuevo
+            )
+        )
 
     except Exception as e:
         logger.exception("[SOAR] Error consultando IaSoar: %s", e)
@@ -92,12 +175,15 @@ def dashboard_soar(request):
         "tenant": tenant,
         "events": rows,
         "all_tenants": tenants_list,
+        # Para la barra de fechas (como en el histórico)
+        "from_date_str": from_date_str,
+        "to_date_str": to_date_str,
         "request": request,
     }
     return render(request, "soar_dashboard/dashboardsoar.html", ctx)
 
 # ============================================================
-# 🧩 Cambio de Tenant universal (desde cualquier dashboard)
+# 🧩 Cambio de Tenant universal
 # ============================================================
 @login_required
 def switch_tenant(request, tenant_id):

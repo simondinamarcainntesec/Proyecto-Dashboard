@@ -1,3 +1,4 @@
+// static/js/soar/state.js
 const state = {
   severityFilter: "",
   countryFilter: "",
@@ -5,9 +6,13 @@ const state = {
   deviceFilter: "",
   serviceFilter: "",
   protoFilter: "",
-  // NUEVOS
-  sourceFilter: "",
-  ipFilter: "",
+  applicationFilter: "",   // ← NUEVO
+  // filtros de IP/hora/fecha si ya los tienes
+  srcIPFilter: "",
+  dstIPFilter: "",
+  hourFilter: "",
+  dateFrom: "",
+  dateTo: "",
 };
 
 const listeners = new Set();
@@ -15,12 +20,13 @@ export function getState(){ return { ...state }; }
 export function setState(patch){ Object.assign(state, patch); listeners.forEach(l=>l(getState())); }
 export function onStateChange(fn){ listeners.add(fn); return () => listeners.delete(fn); }
 
-// un solo filtro activo a la vez
+// un solo filtro activo a la vez (de lo principal)
 function only(patch){
   setState({
     severityFilter:"", countryFilter:"", actionFilter:"",
     deviceFilter:"", serviceFilter:"", protoFilter:"",
-    sourceFilter:"", ipFilter:"",
+    applicationFilter:"", srcIPFilter:"", dstIPFilter:"",
+    // no tocamos hour/date aquí
     ...patch
   });
 }
@@ -50,13 +56,25 @@ export const actions = {
     const s = String(proto ?? "").trim();
     only({ protoFilter: (state.protoFilter.toLowerCase() === s.toLowerCase()) ? "" : s });
   },
-  // NUEVOS
-  toggleSource(src){
-    const s = String(src ?? "").trim();
-    only({ sourceFilter: (state.sourceFilter.toLowerCase() === s.toLowerCase()) ? "" : s });
+  // ← NUEVO
+  toggleApplication(app){
+    const s = String(app ?? "").trim();
+    only({ applicationFilter: (state.applicationFilter.toLowerCase() === s.toLowerCase()) ? "" : s });
   },
-  toggleIP(ip){
+
+  // IPs / hora / fechas (si ya los usas)
+  toggleSrcIP(ip){
     const s = String(ip ?? "").trim();
-    only({ ipFilter: (state.ipFilter.toLowerCase() === s.toLowerCase()) ? "" : s });
+    only({ srcIPFilter: (state.srcIPFilter.toLowerCase() === s.toLowerCase()) ? "" : s });
   },
+  toggleDstIP(ip){
+    const s = String(ip ?? "").trim();
+    only({ dstIPFilter: (state.dstIPFilter.toLowerCase() === s.toLowerCase()) ? "" : s });
+  },
+  toggleHour(hh){
+    const s = String(hh ?? "").trim().slice(0,2).padStart(2,"0");
+    setState({ hourFilter: (state.hourFilter === s) ? "" : s });
+  },
+  clearDateRange(){ setState({ dateFrom:"", dateTo:"" }); },
+  setExactDay(day){ setState({ dateFrom:day, dateTo:day }); },
 };

@@ -1,4 +1,4 @@
-// list.js — SOAR Incidentes: modal + live search + modal-open en <body>
+// list.js — SOAR Incidentes: modal + live search + Enter/botón = búsqueda global
 (function () {
   const Q  = (sel) => document.querySelector(sel);
   const QA = (sel) => Array.from(document.querySelectorAll(sel));
@@ -17,13 +17,11 @@
     const date = tr.dataset.date || '—';
     const time = tr.dataset.time || '—';
 
-    // título
     const title = Q('#inc-title');
     if (title) {
       title.innerHTML = `🚨 <strong>${sev || 'N/A'}</strong> — <span class="muted">${dev}</span>`;
     }
 
-    // encabezado (lista vertical)
     if (metaList) {
       metaList.innerHTML = [
         `<li><span class="mono">ID:</span> ${id}</li>`,
@@ -33,7 +31,6 @@
       ].join('');
     }
 
-    // bloques
     const riesgo   = tr.dataset.descripcion || tr.dataset.riesgo || '—';
     const clasif   = tr.dataset.analisis || '—';
     const acciones = tr.dataset.acciones || '—';
@@ -57,7 +54,7 @@
       }
     }
 
-    document.body.classList.add('modal-open');  // <-- clave para overlay correcto
+    document.body.classList.add('modal-open');
     modal.classList.remove('hidden');
     modal.setAttribute('aria-hidden', 'false');
   }
@@ -66,18 +63,14 @@
     if (!modal) return;
     modal.classList.add('hidden');
     modal.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('modal-open'); // <-- quita bloqueo de scroll
+    document.body.classList.remove('modal-open');
   }
 
-  // Cerrar por backdrop, botón ✕ y tecla ESC
   Q('.modal-backdrop')?.addEventListener('click', closeModal);
   Q('[data-close]')?.addEventListener('click', closeModal);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
-
-  // Evita que clicks dentro de la tarjeta cierren la modal por accidente
   Q('.modal-card')?.addEventListener('click', (e) => e.stopPropagation());
 
-  // Click en filas -> abrir modal
   const tbody = Q('#tbl-incidentes tbody');
   if (tbody) {
     tbody.addEventListener('click', (ev) => {
@@ -86,8 +79,32 @@
     });
   }
 
-  // ====== BUSCADOR EN TIEMPO REAL ======
-  const input = Q('#q');
+  // ====== BUSCADOR: live (local) + global (Enter / botón) ======
+  const input   = Q('#q');
+  const btnLive = Q('#btn-search-live'); // type="button" en tu HTML
+
+  // --- util para GLOBAL (backend): recarga con ?q= y preserva from/to ---
+  function submitGlobalSearch() {
+    const q   = (input?.value || '').trim();
+    const from = Q('#inp-from')?.value?.trim();
+    const to   = Q('#inp-to')?.value?.trim();
+
+    const params = new URLSearchParams(window.location.search);
+
+    // limpiar paginación
+    params.delete('page');
+
+    // setear q (o sacarlo si está vacío)
+    if (q) params.set('q', q); else params.delete('q');
+
+    // preservar fechas si existen en UI
+    if (from) params.set('from', from); else params.delete('from');
+    if (to)   params.set('to', to);     else params.delete('to');
+
+    // navegar (backend filtrará TODO el dataset)
+    window.location.search = params.toString();
+  }
+
   if (input && tbody) {
     const rows = Array.from(tbody.querySelectorAll('tr'));
 
@@ -105,14 +122,12 @@
         tr.dataset.resumen,
         tr.dataset.riesgo,
         tr.dataset.app
-      ]
-        .join(' | ')
-        .toLowerCase();
+      ].join(' | ').toLowerCase();
     }
 
     const caches = new Map(rows.map((r) => [r, haystack(r)]));
 
-    function applyFilter(q) {
+    function applyFilterLocal(q) {
       const needle = (q || '').trim().toLowerCase();
       rows.forEach((r) => {
         const match = !needle || caches.get(r).includes(needle);
@@ -120,10 +135,27 @@
       });
     }
 
-    // Aplica filtro inicial si viene q pre-cargado
-    applyFilter(input.value);
+    // Filtro inicial local si llegó con valor (sin recarga)
+    applyFilterLocal(input.value);
 
-    // Live search
-    input.addEventListener('input', () => applyFilter(input.value));
+    // Live search (local)
+    input.addEventListener('input', () => applyFilterLocal(input.value));
+
+    // ENTER => búsqueda GLOBAL (backend) para filtrar TODAS las alarmas
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();    // evita submit del form
+        submitGlobalSearch();  // recarga con ?q= y from/to
+      }
+    });
+
+    // Botón "Buscar" => también GLOBAL
+    if (btnLive) {
+      btnLive.addEventListener('click', (e) => {
+        e.preventDefault();
+        submitGlobalSearch();
+      });
+    }
   }
 })();
+

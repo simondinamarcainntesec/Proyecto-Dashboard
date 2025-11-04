@@ -133,39 +133,39 @@ def switch_tenant(request, tenant_id):
 
     logger = logging.getLogger(__name__)
 
+    # --- Validar permisos ---
     user_tenant = getattr(request.user, "tenant", None)
     if not user_tenant or user_tenant.name.lower() != "inntesec":
         messages.error(request, "No tienes permiso para cambiar de empresa.")
-        return redirect("dashboard")
+        return redirect("dashboard:dashboard")
 
-    # Buscar tenant destino
+    # --- Buscar tenant destino ---
     tenant = Tenant.objects.filter(id=tenant_id).first()
     if not tenant:
         messages.error(request, "El tenant seleccionado no existe.")
-        return redirect("dashboard")
+        return redirect("dashboard:dashboard")
 
-    # Actualizar tenant activo en sesión
+    # --- Actualizar tenant activo en sesión ---
     request.session["tenant_id"] = tenant.id
     request.session["tenant_name"] = tenant.name
     logger.info("[SwitchTenant] %s cambió a tenant %s", request.user.username, tenant.name)
 
-    # Limpiar caché para evitar datos antiguos
+    # --- Limpiar caché ---
     cache.clear()
     logger.debug("[SwitchTenant] Caché limpiada tras cambio de tenant")
 
-    # --- Detectar de dónde vino el cambio ---
-    next_url = request.POST.get("next") or request.GET.get("next") or request.META.get("HTTP_REFERER", "")
-    logger.debug("[SwitchTenant] next_url detectado: %s", next_url)
-
+    # --- Detectar URL de origen ---
+    next_url = (request.POST.get("next") or request.META.get("HTTP_REFERER") or "").strip()
     parsed = urlparse(next_url or "")
     referer = (request.META.get("HTTP_REFERER") or "").lower()
+    logger.debug("[SwitchTenant] next_url: %s | referer: %s", next_url, referer)
 
-    # --- Si la URL es interna, redirigir directamente ---
+    # --- Si la URL es interna válida, mantener la ruta actual ---
     if parsed.path and parsed.path.startswith("/"):
         logger.debug(f"[SwitchTenant] Redirigiendo a ruta interna: {parsed.path}")
         return HttpResponseRedirect(parsed.path)
 
-    # --- Redirecciones por patrón de origen ---
+    # --- Redirecciones según el origen ---
     if "/soar/incidentes" in referer:
         logger.debug("[SwitchTenant] Manteniendo en lista de incidentes SOAR")
         return redirect("soar_incidents:list")
@@ -176,13 +176,13 @@ def switch_tenant(request, tenant_id):
 
     if "/dashboard/realtime" in referer or "realtime" in referer:
         logger.debug("[SwitchTenant] Manteniendo en dashboard Realtime")
-        return redirect("dashboard_realtime")
+        return redirect("dashboard:dashboard_realtime")
 
     if "/dashboard/alarmsone" in referer or "alarmsone" in referer:
         logger.debug("[SwitchTenant] Manteniendo en dashboard AlarmasOne")
-        return redirect("dashboard_alarmsone")
+        return redirect("dashboard:dashboard_alarmsone")
 
-    # --- Fallback final ---
+    # --- Fallback final: dashboard principal ---
     try:
         current_path = request.META.get("PATH_INFO", "")
         origin = request.META.get("HTTP_ORIGIN") or request.build_absolute_uri("/")
@@ -191,4 +191,4 @@ def switch_tenant(request, tenant_id):
         return HttpResponseRedirect(full_path)
     except Exception as e:
         logger.warning(f"[SwitchTenant] Fallback al dashboard por error ({e})")
-        return redirect("dashboard")
+        return redirect("dashboard:dashboard")

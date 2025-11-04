@@ -23,7 +23,6 @@ function currentFilters() {
     msg_severity:    st.msgSeverityFilter     ?? ds.msgSeverityFilter     ?? "",
     level:           st.levelFilter           ?? ds.levelFilter           ?? "",
     subtype:         st.subtypeFilter         ?? ds.subtypeFilter         ?? "",
-    // log_description se mantiene por compat (aunque el gráfico fue retirado)
     log_description: st.logDescriptionFilter  ?? ds.logDescriptionFilter  ?? "",
   };
 }
@@ -63,6 +62,7 @@ function ensureSpinnerStyles() {
   .ao-loading { display:flex; align-items:center; justify-content:center; gap:.6rem; padding:14px 8px; }
   .ao-spinner { width:22px; height:22px; border-radius:50%; border:3px solid rgba(255,255,255,.25); border-top-color:#fff; animation: ao-spin .8s linear infinite; }
   .ao-loading span { font-family: Inter, system-ui, Segoe UI, Arial, sans-serif; font-size: .95rem; opacity:.9; }
+  #logLoadingOverlay { display:flex; align-items:center; justify-content:center; padding:24px 0; min-height: 200px; }
   @media (prefers-color-scheme: light){
     .ao-spinner { border:3px solid rgba(30,41,59,.25); border-top-color:#0f172a; }
     .ao-loading span { color:#0f172a; }
@@ -108,7 +108,6 @@ function setRowsCache(rows) {
 function passFilter(row, q) {
   if (!q) return true;
   const needle = q.toLowerCase();
-  // concatenamos todos los campos renderizados
   const haystack = [
     fmtTime(row.eventtime),
     (row.msg_severity || row.severity || "").toString(),
@@ -144,7 +143,6 @@ function renderRowsFromCache(query) {
     tbody.appendChild(tr);
   });
 
-  // actualizar el contador con la cantidad filtrada
   renderCount(filtered.length);
 }
 
@@ -152,7 +150,6 @@ function wireSearch() {
   const input = Q("#alarmsSearch");
   if (!input) return;
 
-  // limpiar valor al abrir si venimos de otro modal
   if (input.dataset.wired !== "1") {
     input.addEventListener("input", () => {
       const q = (input.value || "").trim();
@@ -160,8 +157,61 @@ function wireSearch() {
     });
     input.dataset.wired = "1";
   }
-  // reseteamos a la última query recordada (útil si reabrimos)
   input.value = _lastQuery || "";
+}
+
+/* =========================
+ * LOG modal — loader “tarjeta vacía”
+ * ========================= */
+function showLogLoadingCard() {
+  ensureSpinnerStyles();
+
+  const modal = document.getElementById("logModal");
+  const body  = modal?.querySelector(".modal-body");
+  const meta  = document.getElementById("logMeta");
+  const html  = document.getElementById("logHtml");
+
+  if (!modal || !body) return;
+
+  // Ocultamos secciones reales
+  if (meta) meta.style.display = "none";
+  if (html) { html.style.display = "none"; html.innerHTML = ""; }
+
+  // Overlay de carga centrado dentro del body
+  let overlay = document.getElementById("logLoadingOverlay");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "logLoadingOverlay";
+    overlay.innerHTML = `
+      <div class="ao-loading">
+        <div class="ao-spinner" aria-hidden="true"></div>
+        <span>Cargando datos…</span>
+      </div>
+    `;
+    body.appendChild(overlay);
+  } else {
+    overlay.style.display = "";
+  }
+
+  // Mostrar modal al instante
+  modal.classList.remove("hidden");
+}
+
+function hideLogLoadingCard() {
+  const overlay = document.getElementById("logLoadingOverlay");
+  const meta    = document.getElementById("logMeta");
+  const html    = document.getElementById("logHtml");
+  if (overlay) overlay.remove();
+  if (meta) meta.style.display = "";
+  if (html) html.style.display = "";
+}
+
+function renderLogError(msg) {
+  const htmlEl = document.getElementById("logHtml");
+  hideLogLoadingCard();
+  if (htmlEl) {
+    htmlEl.innerHTML = `<div style="padding:12px;color:#fca5a5;"><strong>Error:</strong> ${msg || "No se pudo cargar"}</div>`;
+  }
 }
 
 /* =========================
@@ -169,6 +219,9 @@ function wireSearch() {
  * ========================= */
 async function openLog(alarmid) {
   try {
+    // Mostrar SOLO la tarjeta vacía con spinner
+    showLogLoadingCard();
+
     const u = new URL(EP.log, window.location.origin);
     u.searchParams.set("alarmid", alarmid);
     u.searchParams.set("_ts", Date.now().toString());
@@ -176,6 +229,7 @@ async function openLog(alarmid) {
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || "No se pudo cargar");
 
+    // Poblar contenido real
     const metaEl = document.getElementById("logMeta");
     if (metaEl) {
       const m = j.meta || {};
@@ -191,15 +245,20 @@ async function openLog(alarmid) {
     }
     const htmlEl = document.getElementById("logHtml");
     if (htmlEl) htmlEl.innerHTML = j.html || "<em>Sin detalles</em>";
-    document.getElementById("logModal")?.classList.remove("hidden");
+
+    // Ahora sí mostramos las secciones y quitamos el overlay
+    hideLogLoadingCard();
+
+    // Cierres
     document.querySelector("#logModal [data-close-log]")?.addEventListener("click", () => {
       document.getElementById("logModal")?.classList.add("hidden");
-    });
+    }, { once: true });
     document.querySelector("#logModal .modal-backdrop")?.addEventListener("click", () => {
       document.getElementById("logModal")?.classList.add("hidden");
-    });
+    }, { once: true });
+
   } catch (e) {
-    alert("No se pudo abrir el log: " + e.message);
+    renderLogError(e.message);
   }
 }
 
@@ -267,12 +326,12 @@ async function openFromSubtype() {
     if (labels.length) params.subtypes = labels;
   }
   showModal(); clearRows(); renderLoading();
-  wireSearch(); // preparar buscador
+  wireSearch();
   try {
     const j = await fetchRowsAbortable(params);
     if (!j) return;
     setRowsCache(j.rows || []);
-    renderRowsFromCache(""); // sin query inicial
+    renderRowsFromCache("");
   } catch { setRowsCache([]); renderRowsFromCache(""); }
 }
 

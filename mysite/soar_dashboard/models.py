@@ -45,6 +45,7 @@ class IaSoar(models.Model):
     time            = models.TextField(blank=True, null=True)            # "time"
     displayname     = models.TextField(blank=True, null=True)
     aotag           = models.TextField(blank=True, null=True)
+    Application     = models.TextField(blank=True, null=True)
 
     class Meta:
         managed = False

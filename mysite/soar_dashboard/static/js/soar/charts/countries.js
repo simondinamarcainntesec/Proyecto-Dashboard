@@ -20,7 +20,7 @@ export function renderCountries(){
     return active && norm(lbl)!==active ? "rgba(255,255,255,0.18)" : withAlpha(base,"FF");
   });
 
-  const titleText = active ? `País: ${labels.find(l=>norm(l)===active)??active}` : "Top países de origen (srccountry)";
+  const titleText = active ? `País: ${labels.find(l=>norm(l)===active)??active}` : "Top países de origen";
 
   const conf = {
     type:"doughnut",

@@ -9,6 +9,7 @@
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/user_dropdown.css' %}?v={% now 'U' %}">
 </head>
 
 <body class="layout">
@@ -27,10 +28,18 @@
     </div>
 
     <nav class="nav">
-      <a class="nav-item is-active" href="{% url 'dashboard:dashboard_alarmsone' %}"><span class="nav-ico">🏠</span>Alarmas</a>
-      <a class="nav-item" href="{% url 'dashboard_realtime' %}"><span class="nav-ico">⏱️</span>Tiempo Real</a>
-      <a class="nav-item" href="{% url 'soar_dashboard:dashboard' %}"><span class="nav-ico">🚨</span>SOAR</a>
-      <a class="nav-item" href="{% url 'soar_incidents:list' %}"><span class="nav-ico">🤖</span>IA SOAR</a>
+      <a class="nav-item is-active" href="{% url 'dashboard:dashboard_alarmsone' %}">
+        <span class="nav-ico">🏠</span>Alarmas
+      </a>
+      <a class="nav-item" href="{% url 'dashboard:dashboard_realtime' %}">
+        <span class="nav-ico">⏱️</span>Tiempo Real
+      </a>
+      <a class="nav-item" href="{% url 'soar_dashboard:dashboard' %}">
+        <span class="nav-ico">🚨</span>SOAR
+      </a>
+      <a class="nav-item" href="{% url 'soar_incidents:list' %}">
+        <span class="nav-ico">🤖</span>IA SOAR
+      </a>
     </nav>
   </aside>
 
@@ -49,7 +58,7 @@
             </summary>
             <div class="tenant-list">
               {% for t in all_tenants %}
-              <form method="post" action="{% url 'switch_tenant' t.id %}">
+              <form method="post" action="{% url 'dashboard:switch_tenant' t.id %}">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="{{ request.path }}">
                 <button type="submit" class="tenant-option {% if tenant.id == t.id %}is-active{% endif %}">
@@ -69,17 +78,27 @@
         <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
         <button class="btn ghost" title="Exportar">⬇︎</button>
 
-        <div class="user" style="display:flex;align-items:center;gap:.5rem">
-          <div class="user-avatar">
-            {{ request.user.username|default:"U"|slice:":1"|upper }}
+        <!-- 🔽 Panel desplegable del usuario -->
+        <div class="user-menu" id="userMenu">
+          <button type="button" id="userButton" class="user-button">
+            <div class="user-avatar">
+              {{ request.user.username|default:"U"|slice:":1"|upper }}
+            </div>
+            <div class="user-name">
+              {{ request.user.get_full_name|default:request.user.username }}
+            </div>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
+          </button>
+
+          <div class="dropdown-menu">
+            <a href="{% url 'cambiar_contraseña' %}">🔒 Cambiar contraseña</a>
+            <form action="{% url 'logout' %}" method="post">
+              {% csrf_token %}
+              <button type="submit">🚪 Cerrar sesión</button>
+            </form>
           </div>
-          <div class="user-name">
-            {{ request.user.get_full_name|default:request.user.username }}
-          </div>
-          <form action="{% url 'logout' %}" method="post" style="margin-left:.25rem">
-            {% csrf_token %}
-            <button class="btn ghost" title="Cerrar sesión">Salir</button>
-          </form>
         </div>
       </div>
     </header>
@@ -108,107 +127,120 @@
       </form>
     </section>
 
-    {# ⬇️ cache por-tenant #}
-    {% cache 300 "kpis_hist" tenant.id from_date_str to_date_str %}
-    <section class="grid grid-kpis">
-      <div class="card kpi">
-        <div class="kpi-label">Hora con más alarmas</div>
-        <div class="kpi-value" id="kpi-peak-hour">—</div>
-      </div>
-      <div class="card kpi">
-        <div class="kpi-label">Alta Severidad</div>
-        <div class="kpi-value" id="kpi-high">{{ kpi_high }}</div>
-      </div>
-      <div class="card kpi">
-        <div class="kpi-label">Total Alarmas</div>
-        <div class="kpi-value" id="kpi-total">{{ kpi_total }}</div>
-      </div>
-      <div class="card kpi">
-        <div class="kpi-label">Dispositivos Detectados</div>
-        <div class="kpi-value" id="kpi-devices">{{ kpi_dispositivos }}</div>
-      </div>
-    </section>
-    {% endcache %}
-
-    {% cache 300 "grid_hist" tenant.id from_date_str to_date_str %}
-    <section class="grid grid-main">
-      <div class="card chart card--trend">
-        <div class="card-head">
-          <h3>Alarmas por día</h3>
+    {# ===================================================== #}
+    {# IF: mostrar dashboard o estado vacío según KPI total  #}
+    {# ===================================================== #}
+    {% if kpi_total|default:0 > 0 %}
+      {% cache 300 "kpis_hist" tenant.id from_date_str to_date_str %}
+      <section class="grid grid-kpis">
+        <div class="card kpi">
+          <div class="kpi-label">Hora con más alarmas</div>
+          <div class="kpi-value" id="kpi-peak-hour">—</div>
         </div>
-        <div class="card-body"><canvas id="trendChart"></canvas></div>
-      </div>
-
-      <div class="card chart card--hourly">
-        <div class="card-head">
-          <h3>Alarmas por hora</h3>
+        <div class="card kpi">
+          <div class="kpi-label">Alta Severidad</div>
+          <div class="kpi-value" id="kpi-high">{{ kpi_high }}</div>
         </div>
-        <div class="card-body"><canvas id="hourlyChart"></canvas></div>
-      </div>
-
-      <div class="card chart card--donut">
-        <div class="card-head">
-          <h3>Severidad</h3>
+        <div class="card kpi">
+          <div class="kpi-label">Total Alarmas</div>
+          <div class="kpi-value" id="kpi-total">{{ kpi_total }}</div>
         </div>
-        <div class="card-body"><canvas id="severityDonut"></canvas></div>
-      </div>
-
-      <div class="card chart card--actions">
-        <div class="card-head">
-          <h3>Acciones</h3>
+        <div class="card kpi">
+          <div class="kpi-label">Dispositivos Detectados</div>
+          <div class="kpi-value" id="kpi-devices">{{ kpi_dispositivos }}</div>
         </div>
-        <div class="card-body"><canvas id="actionBar"></canvas></div>
-      </div>
+      </section>
+      {% endcache %}
 
-      <div class="card chart card--level">
-        <div class="card-head">
-          <h3>Level</h3>
+      {% cache 300 "grid_hist" tenant.id from_date_str to_date_str %}
+      <section class="grid grid-main">
+        <div class="card chart card--trend">
+          <div class="card-head">
+            <h3>Alarmas por día</h3>
+          </div>
+          <div class="card-body"><canvas id="trendChart"></canvas></div>
         </div>
-        <div class="card-body"><canvas id="levelBar"></canvas></div>
-      </div>
 
-      <div class="card chart card--subtype">
-        <div class="card-head">
-          <h3>Subtype</h3>
+        <div class="card chart card--hourly">
+          <div class="card-head">
+            <h3>Alarmas por hora</h3>
+          </div>
+          <div class="card-body"><canvas id="hourlyChart"></canvas></div>
         </div>
-        <div class="card-body"><canvas id="subtypeBar"></canvas></div>
-      </div>
 
-      <div class="card table card--table">
-        <div class="card-head between">
-          <h3>Dispositivos recientes</h3>
+        <div class="card chart card--donut">
+          <div class="card-head">
+            <h3>Severidad</h3>
+          </div>
+          <div class="card-body"><canvas id="severityDonut"></canvas></div>
         </div>
-        <div class="table-wrap">
-          <table class="datatable" id="device-table">
-            <thead>
-              <tr>
-                <th data-sort="text">Dispositivo</th>
-                <th data-sort="number" class="is-right">Cantidad</th>
-              </tr>
-            </thead>
-            <tbody id="device-table-body">
-              {% for device, count in device_counts.items %}
-              <tr>
-                <td><span class="cell-device">{{ device }}</span></td>
-                <td class="is-right"><span class="pill pill-count">{{ count }}</span></td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        <div class="table-footnote">* Clic en los encabezados para ordenar</div>
-      </div>
 
-      <div class="card chart card--msgsev">
-        <div class="card-head">
-          <h3>Severidad Alarma</h3>
+        <div class="card chart card--actions">
+          <div class="card-head">
+            <h3>Acciones</h3>
+          </div>
+          <div class="card-body"><canvas id="actionBar"></canvas></div>
         </div>
-        <div class="card-body"><canvas id="msgSeverityBar"></canvas></div>
-      </div>
-    </section>
-    {% endcache %}
 
-    <footer class="footnote">Última actualización: hace 7 min</footer>
+        <div class="card chart card--level">
+          <div class="card-head">
+            <h3>Level</h3>
+          </div>
+          <div class="card-body"><canvas id="levelBar"></canvas></div>
+        </div>
+
+        <div class="card chart card--subtype">
+          <div class="card-head">
+            <h3>Subtype</h3>
+          </div>
+          <div class="card-body"><canvas id="subtypeBar"></canvas></div>
+        </div>
+
+        <div class="card table card--table">
+          <div class="card-head between">
+            <h3>Dispositivos recientes</h3>
+          </div>
+          <div class="table-wrap">
+            <table class="datatable" id="device-table">
+              <thead>
+                <tr>
+                  <th data-sort="text">Dispositivo</th>
+                  <th data-sort="number" class="is-right">Cantidad</th>
+                </tr>
+              </thead>
+              <tbody id="device-table-body">
+                {% for device, count in device_counts.items %}
+                <tr>
+                  <td><span class="cell-device">{{ device }}</span></td>
+                  <td class="is-right"><span class="pill pill-count">{{ count }}</span></td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div class="table-footnote">* Clic en los encabezados para ordenar</div>
+        </div>
+
+        <div class="card chart card--msgsev">
+          <div class="card-head">
+            <h3>Severidad Alarma</h3>
+          </div>
+          <div class="card-body"><canvas id="msgSeverityBar"></canvas></div>
+        </div>
+      </section>
+      {% endcache %}
+
+      <footer class="footnote">Última actualización: hace 7 min</footer>
+
+    {% else %}
+      <!-- ======= EMPTY STATE (sin datos) ======= -->
+      <section class="empty-state">
+        <div class="empty-card">
+          <h2>Sin alarmas disponibles</h2>
+          <p>No se encontraron alarmas para <strong>{{ tenant.name|default:"—" }}</strong> en el rango seleccionado.</p>
+        </div>
+      </section>
+    {% endif %}
   </div>
 
   {% cache 300 "payload_hist" tenant.id from_date_str to_date_str %}
@@ -269,11 +301,14 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Controlador del overlay -->
-  <script defer src="{% static 'js/alarms_one/page_loading.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/alarms_one/page-loader-universal.js' %}?v={% now 'U' %}"></script>
+  
+
 
   <!-- App principal -->
   <script defer src="{% static 'js/alarms_one/date_filters.js' %}?v={% now 'U' %}"></script>
   <script type="module" src="{% static 'js/alarms_one/dashboard.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
 </body>
 
 </html>

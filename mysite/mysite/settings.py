@@ -28,7 +28,12 @@ SECRET_KEY = 'django-insecure-#z3!m0#s)!q+13psr_)l=o2)g*y@jh(p%#=n3lahw+^8h#^gt4
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-PASSWORD_HASHERS = ["django.contrib.auth.hashers.Argon2PasswordHasher"]
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+]
 TIME_ZONE = "America/Santiago"
 USE_TZ = True
 
@@ -252,3 +257,5 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = "4b42117563a1fe"
 EMAIL_HOST_PASSWORD = "341855ffe86c3d"
 DEFAULT_FROM_EMAIL = "no-reply@inntesec.com"
+
+CSRF_FAILURE_VIEW = "tenants.views.csrf_failure_view"

@@ -11,7 +11,7 @@
 
   <div class="main-container">
 
-    <img src="{% static 'img/inntesec CSS negro 1.avif' %}" alt="Logo Inntesec" class="intesec-logo">
+    <img src="{% static 'img/inntesec_logo_negro.avif' %}" alt="Inntesec" class="intesec-logo">
 
     <div class="login-container">
       <button id="theme-switcher"></button>
@@ -40,7 +40,7 @@
 
       <!-- 🔹 Nuevo enlace de registro -->
       <div class="back-to-login">
-        <a href="{% url 'auth/registro_cliente' %}">¿No tienes cuenta? Actívala aquí</a>
+        <a href="{% url 'auth_registro_cliente' %}">¿No tienes cuenta? Actívala aquí</a>
       </div>
 
       <p class="footer-note">Inntesec © {{ now|date:"Y" }}</p>

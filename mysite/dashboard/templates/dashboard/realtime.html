@@ -6,15 +6,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Portal Clientes Tiempo Real</title>
-
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/realtime.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/user_dropdown.css' %}?v={% now 'U' %}">
 </head>
 
 <body class="layout">
   <!-- Overlay de carga -->
-  <div id="loading-overlay" role="status" aria-live="polite" hidden>
+  <div id="loading-overlay" role="status" aria-live="polite" aria-label="Cargando">
     <div class="loading-card">
       <div class="spinner" aria-hidden="true"></div>
       <div class="loading-text">Cargando datos…</div>
@@ -28,10 +28,22 @@
     </div>
 
     <nav class="nav">
-      <a class="nav-item" href="{% url 'dashboard_realtime' %}"><span class="nav-ico">⏱️</span>Tiempo Real</a>
-      <a class="nav-item is-active" href="{% url 'dashboard:dashboard_alarmsone' %}"><span class="nav-ico">🏠</span>Alarmas</a>
-      <a class="nav-item" href="{% url 'soar_dashboard:dashboard' %}"><span class="nav-ico">🚨</span>SOAR</a>
-      <a class="nav-item" href="{% url 'soar_incidents:list' %}"><span class="nav-ico">🤖</span>IA SOAR</a>
+      <a class="nav-item {% if request.resolver_match.url_name == 'dashboard_alarmsone' %}is-active{% endif %}"
+        href="{% url 'dashboard:dashboard_alarmsone' %}">
+        <span class="nav-ico">🏠</span>Alarmas
+      </a>
+      <a class="nav-item {% if request.resolver_match.url_name == 'dashboard_realtime' %}is-active{% endif %}"
+        href="{% url 'dashboard:dashboard_realtime' %}">
+        <span class="nav-ico">⏱️</span>Tiempo Real
+      </a>
+      <a class="nav-item {% if request.resolver_match.app_name == 'soar_dashboard' %}is-active{% endif %}"
+        href="{% url 'soar_dashboard:dashboard' %}">
+        <span class="nav-ico">🚨</span>SOAR
+      </a>
+      <a class="nav-item {% if request.resolver_match.app_name == 'soar_incidents' %}is-active{% endif %}"
+        href="{% url 'soar_incidents:list' %}">
+        <span class="nav-ico">🤖</span>IA SOAR
+      </a>
     </nav>
   </aside>
 
@@ -50,7 +62,7 @@
             </summary>
             <div class="tenant-list">
               {% for t in all_tenants %}
-              <form method="post" action="{% url 'switch_tenant' t.id %}">
+              <form method="post" action="{% url 'dashboard:switch_tenant' t.id %}">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="{{ request.path }}">
                 <button type="submit" class="tenant-option {% if tenant.id == t.id %}is-active{% endif %}">
@@ -70,17 +82,27 @@
         <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
         <button class="btn ghost" title="Exportar">⬇︎</button>
 
-        <div class="user" style="display:flex;align-items:center;gap:.5rem">
-          <div class="user-avatar">
-            {{ request.user.username|default:"U"|slice:":1"|upper }}
+        <!-- 🔽 Panel desplegable del usuario -->
+        <div class="user-menu" id="userMenu">
+          <button type="button" id="userButton" class="user-button">
+            <div class="user-avatar">
+              {{ request.user.username|default:"U"|slice:":1"|upper }}
+            </div>
+            <div class="user-name">
+              {{ request.user.get_full_name|default:request.user.username }}
+            </div>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
+          </button>
+
+          <div class="dropdown-menu">
+            <a href="{% url 'cambiar_contraseña' %}">🔒 Cambiar contraseña</a>
+            <form action="{% url 'logout' %}" method="post">
+              {% csrf_token %}
+              <button type="submit">🚪 Cerrar sesión</button>
+            </form>
           </div>
-          <div class="user-name">
-            {{ request.user.get_full_name|default:request.user.username }}
-          </div>
-          <form action="{% url 'logout' %}" method="post" style="margin-left:.25rem">
-            {% csrf_token %}
-            <button class="btn ghost" title="Cerrar sesión">Salir</button>
-          </form>
         </div>
       </div>
     </header>
@@ -267,13 +289,15 @@
   {{ hour_series_by_subtype|json_script:"hour-series-by-subtype" }}
 
   <!-- Loader navegación -->
-  <script type="module" src="{% static 'js/alarms_one/page-loader.js' %}?v={% now 'U' %}"></script>
+  <!-- <script defer src="{% static 'js/alarms_one/page-loader.js' %}?v={% now 'U' %}"></script> -->
+
+
   <!-- App realtime -->
   <script type="module" src="{% static 'js/alarms_one/dashboard.realtime.js' %}?v={% now 'U' %}"></script>
   <script>
     window.RT_ENDPOINTS = {
-      alarms: "{% url 'realtime_alarms_by_subtype' %}",
-      log: "{% url 'realtime_alarm_log_table' %}",
+      alarms: "{% url 'dashboard:realtime_alarms_by_subtype' %}",
+      log: "{% url 'dashboard:realtime_alarm_log_table' %}",
     };
   </script>
 
@@ -326,6 +350,8 @@
 
   <!-- Scripts de los modales -->
   <script type="module" src="{% static 'js/alarms_one/alarms-modal.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/alarms_one/page-loader-universal.js' %}?v={% now 'U' %}"></script>
 </body>
 
 </html>

@@ -1,78 +1,124 @@
 import { AXIS, GRID } from "/static/js/soar/theme.js";
-import { actions } from "/static/js/soar/state.js";
+import { actions, getState } from "/static/js/soar/state.js";
 import { selectTopIPsPayload } from "/static/js/soar/selectors.js";
 
 let chartSrc, chartDst;
 
-export function renderTopIPs(){
-  // SRC
-  {
-    const payload = selectTopIPsPayload("src", 10, true);
-    const el = document.getElementById("chartTopSrcIP"); if(el){
-      const ctx = el.getContext("2d");
-      const labels = payload.labels||[], data = payload.data||[];
-      const conf = {
-        type:"bar",
-        data:{ labels, datasets:[{ label:"Eventos (src)", data,
-          backgroundColor:"#22C55E",
-          borderColor:"#e5e7eb", hoverBorderColor:"#e5e7eb",
-          borderWidth:2, hoverBorderWidth:2, borderSkipped:false, borderRadius:6 }]},
-        options:{
-          animation:{ duration:600, easing:"easeOutQuart" },
-          plugins:{ legend:{ display:false } }, elements:{ bar:{ borderSkipped:false } },
-          scales:{
-            y:{ beginAtZero:true, ticks:{ color:AXIS }, grid:{ color:GRID } },
-            x:{ type:"category", ticks:{ color:AXIS, callback:(_v,i)=>labels[i]??_v, autoSkip:true, maxRotation:30, minRotation:0 }, grid:{ color:GRID } }
-          }
-        }
-      };
-      if(!chartSrc){
-        chartSrc = new Chart(ctx, conf);
-        ctx.canvas.onclick=(evt)=>{
-          const els = chartSrc.getElementsAtEventForMode(evt,"nearest",{intersect:true},true);
-          if(!els.length) return; const idx=els[0].index;
-          actions.toggleIP?.(labels[idx]);
-        };
-      } else {
-        chartSrc.data.labels = labels; chartSrc.data.datasets[0].data = data;
-        chartSrc.options.scales.x.ticks.callback = (_v,i)=>labels[i]??_v;
-        chartSrc.update("none");
-      }
-    }
+function buildConf(rawLabels, data, title, activeKey, onCanvasClick) {
+  const labels = (rawLabels || []).map(String); // asegurar strings
+
+  const base = "#22C55E";
+  const bg = labels.map(lbl =>
+    !activeKey ? base : (lbl.toLowerCase() === activeKey ? base : "rgba(255,255,255,0.18)")
+  );
+  const border = labels.map(lbl =>
+    !activeKey ? "#e5e7eb" : (lbl.toLowerCase() === activeKey ? "#e5e7eb" : "rgba(229,231,235,0.85)")
+  );
+
+  return {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{
+        label: "Eventos",
+        data,
+        backgroundColor: bg,
+        borderColor: border,
+        hoverBorderColor: border,
+        borderWidth: 2,
+        hoverBorderWidth: 2,
+        borderSkipped: false,
+        borderRadius: 6,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 600, easing: "easeOutQuart" }, // ← igual que acciones
+      plugins: {
+        legend: { display: false },
+        title: { display: true, text: title, color: "#E5E7EB", font: { size: 16, weight: "700" } },
+        tooltip: { enabled: true },
+      },
+      elements: { bar: { borderSkipped: false } },
+      scales: {
+        x: {
+          type: "category",
+          ticks: {
+            color: AXIS, autoSkip: false, maxRotation: 0, minRotation: 0,
+            callback: (val, i) => labels[i] ?? val,
+          },
+          grid: { color: GRID },
+        },
+        y: { beginAtZero: true, ticks: { color: AXIS }, grid: { color: GRID } },
+      },
+      // mismo “grosor” que acciones
+      datasets: {
+        bar: { barThickness: "flex", categoryPercentage: 0.8, barPercentage: 0.7 },
+      },
+      onClick: onCanvasClick,
+    },
+  };
+}
+
+export function renderTopSrcIP(){
+  const payload = selectTopIPsPayload("src", 10, true);
+  const el = document.getElementById("chartTopSrcIP"); if (!el) return;
+  const ctx = el.getContext("2d");
+
+  const labels = payload.labels || [];
+  const data   = payload.data   || [];
+  const active = (getState().srcIPFilter || "").toLowerCase();
+
+  const conf = buildConf(labels, data, "Top IP Origen", active, (evt) => {
+    const pts = chartSrc.getElementsAtEventForMode(evt, "nearest", { intersect: true }, true);
+    if (!pts.length) return;
+    const idx = pts[0].index;
+    actions.toggleSrcIP?.(labels[idx]);
+  });
+
+  if (!chartSrc) {
+    chartSrc = new Chart(ctx, conf);
+    ctx.canvas.style.cursor = "pointer";
+  } else {
+    chartSrc.data.labels = conf.data.labels;
+    chartSrc.data.datasets[0].data = conf.data.datasets[0].data;
+    chartSrc.data.datasets[0].backgroundColor = conf.data.datasets[0].backgroundColor;
+    chartSrc.data.datasets[0].borderColor = conf.data.datasets[0].borderColor;
+    chartSrc.update(); // ← anima como acciones
   }
-  // DST
-  {
-    const payload = selectTopIPsPayload("dst", 10, true);
-    const el = document.getElementById("chartTopDstIP"); if(el){
-      const ctx = el.getContext("2d");
-      const labels = payload.labels||[], data = payload.data||[];
-      const conf = {
-        type:"bar",
-        data:{ labels, datasets:[{ label:"Eventos (dst)", data,
-          backgroundColor:"#F97316",
-          borderColor:"#e5e7eb", hoverBorderColor:"#e5e7eb",
-          borderWidth:2, hoverBorderWidth:2, borderSkipped:false, borderRadius:6 }]},
-        options:{
-          animation:{ duration:600, easing:"easeOutQuart" },
-          plugins:{ legend:{ display:false } }, elements:{ bar:{ borderSkipped:false } },
-          scales:{
-            y:{ beginAtZero:true, ticks:{ color:AXIS }, grid:{ color:GRID } },
-            x:{ type:"category", ticks:{ color:AXIS, callback:(_v,i)=>labels[i]??_v, autoSkip:true, maxRotation:30, minRotation:0 }, grid:{ color:GRID } }
-          }
-        }
-      };
-      if(!chartDst){
-        chartDst = new Chart(ctx, conf);
-        ctx.canvas.onclick=(evt)=>{
-          const els = chartDst.getElementsAtEventForMode(evt,"nearest",{intersect:true},true);
-          if(!els.length) return; const idx=els[0].index;
-          actions.toggleIP?.(labels[idx]);
-        };
-      } else {
-        chartDst.data.labels = labels; chartDst.data.datasets[0].data = data;
-        chartDst.options.scales.x.ticks.callback = (_v,i)=>labels[i]??_v;
-        chartDst.update("none");
-      }
-    }
+}
+
+export function renderTopDstIP(){
+  const payload = selectTopIPsPayload("dst", 10, true);
+  const el = document.getElementById("chartTopDstIP"); if (!el) return;
+  const ctx = el.getContext("2d");
+
+  const labels = payload.labels || [];
+  const data   = payload.data   || [];
+  const active = (getState().dstIPFilter || "").toLowerCase();
+
+  const conf = buildConf(labels, data, "Top IP Destino", active, (evt) => {
+    const pts = chartDst.getElementsAtEventForMode(evt, "nearest", { intersect: true }, true);
+    if (!pts.length) return;
+    const idx = pts[0].index;
+    actions.toggleDstIP?.(labels[idx]);
+  });
+
+  if (!chartDst) {
+    chartDst = new Chart(ctx, conf);
+    ctx.canvas.style.cursor = "pointer";
+  } else {
+    chartDst.data.labels = conf.data.labels;
+    chartDst.data.datasets[0].data = conf.data.datasets[0].data;
+    chartDst.data.datasets[0].backgroundColor = conf.data.datasets[0].backgroundColor;
+    chartDst.data.datasets[0].borderColor = conf.data.datasets[0].borderColor;
+    chartDst.update(); // ← anima como acciones
   }
+}
+
+// Wrapper para dashboardsoar.js
+export function renderTopIPs() {
+  renderTopSrcIP();
+  renderTopDstIP();
 }

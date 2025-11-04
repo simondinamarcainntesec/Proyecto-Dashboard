@@ -212,3 +212,32 @@ body.modal-open { overflow: hidden; }
   border: 1px solid #3b82f6;
   color: #fff;
 }
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  color: var(--text-muted, #cbd5e1);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background .2s, color .2s;
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.nav-item.is-active {
+  background: #142246; /* mismo color que la barra lateral */
+  color: #fff;
+}

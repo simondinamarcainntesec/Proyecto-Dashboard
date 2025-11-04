@@ -13,22 +13,6 @@ Option A — from the project root (recommended):
 This is the most common workflow. Run these commands from the repository root (`/home/inntesec-ia/Proyecto-Dashboard`):
 
 ```bash
-# activate virtualenv
-source venv/bin/activate
-
-# change to the django project folder
-cd mysite
-
-# start beat (schedules tasks)
-celery -A mysite beat -l info &
-
-# start worker (execute tasks)
-celery -A mysite worker -l info --concurrency=1 &
-```
-
-Option B — if you are already inside `mysite/` (the inner package directory):
-
-```bash
 # if inside the inner mysite/ directory, the venv is one level up
 source ../venv/bin/activate
 

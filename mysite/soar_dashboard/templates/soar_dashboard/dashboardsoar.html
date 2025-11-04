@@ -1,12 +1,17 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Portal Clientes – SOAR</title>
 
+  <!-- Fuente igual al histórico -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
   <link rel="stylesheet" href="{% static 'css/soar.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/user_dropdown.css' %}?v={% now 'U' %}">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
@@ -24,16 +29,29 @@
     <div class="brand">
       <img src="{% static 'img/inntesec CSS negro 1.avif' %}" alt="Logo Inntesec" />
     </div>
+
     <nav class="nav">
-      <a class="nav-item is-active" href="{% url 'soar_dashboard:dashboard' %}"><span class="nav-ico">🏠</span>SOAR</a>
-      <a class="nav-item" href="{% url 'dashboard:dashboard_alarmsone' %}"><span class="nav-ico">🚨</span>Alarmas</a>
-      <a class="nav-item" href="{% url 'dashboard_realtime' %}"><span class="nav-ico">⏱️</span>Tiempo Real</a>
-      <a class="nav-item" href="{% url 'soar_incidents:list' %}"><span class="nav-ico">🤖</span>IA SOAR</a>
+      <a class="nav-item {% if request.resolver_match.url_name == 'dashboard_alarmsone' %}is-active{% endif %}"
+        href="{% url 'dashboard:dashboard_alarmsone' %}">
+        <span class="nav-ico">🏠</span>Alarmas
+      </a>
+      <a class="nav-item {% if request.resolver_match.url_name == 'dashboard_realtime' %}is-active{% endif %}"
+        href="{% url 'dashboard:dashboard_realtime' %}">
+        <span class="nav-ico">⏱️</span>Tiempo Real
+      </a>
+      <a class="nav-item {% if request.resolver_match.app_name == 'soar_dashboard' %}is-active{% endif %}"
+        href="{% url 'soar_dashboard:dashboard' %}">
+        <span class="nav-ico">🚨</span>SOAR
+      </a>
+      <a class="nav-item {% if request.resolver_match.app_name == 'soar_incidents' %}is-active{% endif %}"
+        href="{% url 'soar_incidents:list' %}">
+        <span class="nav-ico">🤖</span>IA SOAR
+      </a>
     </nav>
   </aside>
 
-  <!-- Contenido principal -->
   <div class="content">
+    <!-- Topbar -->
     <header class="topbar">
       <div class="top-left">
         <h1 class="top-title">
@@ -41,12 +59,11 @@
           {% if request.user.tenant.name|lower == "inntesec" %}
           <details class="tenant-dropdown">
             <summary class="tenant-summary">
-              {{ tenant.name }}
-              <span class="caret">▼</span>
+              {{ tenant.name }} <span class="caret">▼</span>
             </summary>
             <div class="tenant-list">
               {% for t in all_tenants %}
-              <form method="post" action="{% url 'switch_tenant' t.id %}">
+              <form method="post" action="{% url 'dashboard:switch_tenant' t.id %}">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="{{ request.path }}">
                 <button type="submit" class="tenant-option {% if tenant.id == t.id %}is-active{% endif %}">
@@ -64,32 +81,60 @@
 
       <div class="top-right">
         <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
-        <button class="btn ghost" title="Exportar" id="btn-export">⬇︎</button>
+        <button class="btn ghost" title="Exportar">⬇︎</button>
 
-        <div class="user" style="display:flex;align-items:center;gap:.5rem">
-          <div class="user-avatar">
-            {{ request.user.username|default:"U"|slice:":1"|upper }}
+        <!-- Menú usuario -->
+        <div class="user-menu" id="userMenu">
+          <button type="button" id="userButton" class="user-button">
+            <div class="user-avatar">{{ request.user.username|default:"U"|slice:":1"|upper }}</div>
+            <div class="user-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
+          </button>
+          <div class="dropdown-menu">
+            <a href="{% url 'cambiar_contraseña' %}">🔒 Cambiar contraseña</a>
+            <form action="{% url 'logout' %}" method="post">
+              {% csrf_token %}
+              <button type="submit">🚪 Cerrar sesión</button>
+            </form>
           </div>
-          <div class="user-name">
-            {{ request.user.get_full_name|default:request.user.username }}
-          </div>
-          <form action="{% url 'logout' %}" method="post" style="margin-left:.25rem">
-            {% csrf_token %}
-            <button class="btn ghost" title="Cerrar sesión">Salir</button>
-          </form>
         </div>
       </div>
     </header>
 
+    <!-- === Barra de filtros de fecha (idéntica al histórico) === -->
+    <section class="toolbar">
+      <form id="date-filter" method="get" class="toolbar-row">
+        <div class="group">
+          <button type="button" class="chip chip-btn" data-range="7d">Últimos 7 días</button>
+          <button type="button" class="chip chip-btn" data-range="30d">Últimos 30 días</button>
+          <button type="button" class="chip chip-btn" data-range="month">Este mes</button>
+        </div>
+        <div class="group">
+          <label class="date-range">
+            <span>Desde</span>
+            <input id="inp-from" type="date" name="from" value="{{ from_date_str }}" />
+          </label>
+          <label class="date-range">
+            <span>Hasta</span>
+            <input id="inp-to" type="date" name="to" value="{{ to_date_str }}" />
+          </label>
+          <button class="btn primary" type="submit">Aplicar</button>
+          <a class="btn ghost" href="?">Limpiar</a>
+        </div>
+      </form>
+    </section>
+
+    {# ===================================================== #}
+    {# IF: mostrar dashboard o estado vacío según events #}
+    {# ===================================================== #}
+    {% if events|length > 0 %}
     <!-- KPIs -->
     <section class="grid grid-kpis">
       <div class="card kpi">
         <div class="kpi-label">Total eventos</div>
         <div class="kpi-value" id="kpi-total">—</div>
-      </div>
-      <div class="card kpi">
-        <div class="kpi-label">% bloqueadas</div>
-        <div class="kpi-value" id="kpi-blocked">—</div>
       </div>
       <div class="card kpi">
         <div class="kpi-label">Top dispositivo</div>
@@ -100,7 +145,7 @@
         <div class="kpi-value" id="kpi-dom-sev">—</div>
       </div>
       <div class="card kpi">
-        <div class="kpi-label">País Top (últ. día)</div>
+        <div class="kpi-label">País Top Incidentes</div>
         <div class="kpi-value" id="kpi-top-country">—</div>
       </div>
     </section>
@@ -114,42 +159,53 @@
       <button class="chip" data-sec="operativa">Operativa</button>
     </div>
 
-    <!-- ÚNICA GRID de tarjetas (sin duplicar IDs); se filtra por data-groups -->
     <section class="sec visible">
       <div class="grid grid-main">
         <!-- Origen/Destino -->
         <div class="card chart" data-groups="all,origen">
-          <div class="card-head"><h3>Top países origen (srccountry)</h3></div>
+          <div class="card-head">
+            <h3>Top países origen</h3>
+          </div>
           <div class="card-body"><canvas id="chartCountries"></canvas></div>
         </div>
 
         <!-- Incidentes -->
         <div class="card chart" data-groups="all,incidentes">
-          <div class="card-head"><h3>Severidad</h3></div>
+          <div class="card-head">
+            <h3>Severidad</h3>
+          </div>
           <div class="card-body"><canvas id="chartSeverity"></canvas></div>
         </div>
 
         <!-- Políticas/Acciones -->
         <div class="card chart" data-groups="all,politicas">
-          <div class="card-head"><h3>Acción de seguridad</h3></div>
+          <div class="card-head">
+            <h3>Acción de seguridad</h3>
+          </div>
           <div class="card-body"><canvas id="chartSecAction"></canvas></div>
         </div>
 
         <!-- Incidentes -->
         <div class="card chart" data-groups="all,incidentes">
-          <div class="card-head"><h3>Tendencia diaria</h3></div>
+          <div class="card-head">
+            <h3>Tendencia diaria</h3>
+          </div>
           <div class="card-body"><canvas id="chartTrendDaily"></canvas></div>
         </div>
 
         <!-- Incidentes -->
         <div class="card chart" data-groups="all,incidentes">
-          <div class="card-head"><h3>Tendencia por hora</h3></div>
+          <div class="card-head">
+            <h3>Tendencia por hora</h3>
+          </div>
           <div class="card-body"><canvas id="chartTrendHourly"></canvas></div>
         </div>
 
         <!-- Operativa -->
         <div class="card table card--table" data-groups="all,operativa">
-          <div class="card-head between"><h3>Top dispositivos</h3></div>
+          <div class="card-head between">
+            <h3>Top dispositivos</h3>
+          </div>
           <div class="table-wrap">
             <table class="datatable" id="device-table">
               <thead>
@@ -166,52 +222,64 @@
 
         <!-- Operativa -->
         <div class="card chart" data-groups="all,operativa">
-          <div class="card-head"><h3>Top servicios</h3></div>
+          <div class="card-head">
+            <h3>Top servicios</h3>
+          </div>
           <div class="card-body"><canvas id="chartServices"></canvas></div>
         </div>
 
-        <!-- Operativa -->
+        <!-- NUEVO: Origen/Destino -->
         <div class="card chart" data-groups="all,operativa">
-          <div class="card-head"><h3>Top protocolos</h3></div>
-          <div class="card-body"><canvas id="chartProto"></canvas></div>
-        </div>
-
-        <!-- Incidentes -->
-        <div class="card chart" data-groups="all,incidentes">
-          <div class="card-head"><h3>Fuentes de alarmas</h3></div>
-          <div class="card-body"><canvas id="chartSources"></canvas></div>
+          <div class="card-head">
+            <h3>Top aplicaciones</h3>
+          </div>
+          <div class="card-body"><canvas id="chartApplications"></canvas></div>
         </div>
 
         <!-- Origen/Destino -->
         <div class="card chart" data-groups="all,origen">
-          <div class="card-head"><h3>Service × Proto (Stacked)</h3></div>
-          <div class="card-body"><canvas id="chartServiceProto"></canvas></div>
-        </div>
-
-        <!-- Origen/Destino -->
-        <div class="card chart" data-groups="all,origen">
-          <div class="card-head"><h3>Internas vs Externas</h3></div>
-          <div class="card-body"><canvas id="chartInternalExternal"></canvas></div>
-        </div>
-
-        <!-- Origen/Destino -->
-        <div class="card chart" data-groups="all,origen">
-          <div class="card-head"><h3>Top IP Origen</h3></div>
+          <div class="card-head">
+            <h3>Top IP Origen</h3>
+          </div>
           <div class="card-body"><canvas id="chartTopSrcIP"></canvas></div>
         </div>
 
         <!-- Origen/Destino -->
         <div class="card chart" data-groups="all,origen">
-          <div class="card-head"><h3>Top IP Destino</h3></div>
+          <div class="card-head">
+            <h3>Top IP Destino</h3>
+          </div>
           <div class="card-body"><canvas id="chartTopDstIP"></canvas></div>
         </div>
       </div>
     </section>
 
     <footer class="footnote">SOAR · última actualización: hace 1 min</footer>
+
+    {% else %}
+    <!-- ======= EMPTY STATE (sin datos) ======= -->
+    <section class="empty-state">
+      <div class="empty-card">
+        <h2>Sin eventos disponibles</h2>
+        <p>No se encontraron registros para <strong>{{ tenant.name|default:"—" }}</strong> en el rango seleccionado.</p>
+      </div>
+    </section>
+    {% endif %}
   </div>
 
   {{ events|json_script:"soar-events" }}
-  <script type="module" src="{% static 'js/soar/dashboardsoar.js' %}?v={% now 'U' %}"></script>
+
+  <!-- Reutilizamos el mismo JS de fechas del histórico -->
+  <script defer src="{% static 'js/alarms_one/date_filters.js' %}?v={% now 'U' %}"></script>
+
+  <!-- Control de chips de secciones -->
+  <script defer src="{% static 'js/soar/sections.js' %}?v={% now 'U' %}"></script>
+
+  <!-- App principal SOAR -->
+  <script type="module" src="{% static 'js/soar/dashboardsoar.js' %}?v={{ now|date:'U' }}"></script>
+
+  <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/soar/page-loader-universal.js' %}?v={% now 'U' %}"></script>
 </body>
+
 </html>
