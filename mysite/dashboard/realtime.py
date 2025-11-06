@@ -238,10 +238,14 @@ def realtime_page(request):
         alarms = _filter_for_request_tenant(request, alarms)
         ctx = build_realtime_context(alarms, value_for_column, tzname="America/Santiago")
 
+                # Totales
         kpi_total = sum(ctx.get("severity_counts", {}).values())
-        kpi_high  = (ctx.get("severity_counts", {}).get("high", 0) +
-                     ctx.get("severity_counts", {}).get("critical", 0))
-        kpi_dev   = len(ctx.get("device_counts", {}))
+        # KPI “Alta Severidad” basado en msg_severity (solo críticas)
+        msgsev = ctx.get("msg_severity_counts", {}) or {}
+        kpi_high = int(msgsev.get("critical", 0))
+        kpi_dev  = len(ctx.get("device_counts", {}))
+
+
 
         # 👇 NUEVO: lista de tenants solo para usuarios de Inntesec
         tenants_list = []

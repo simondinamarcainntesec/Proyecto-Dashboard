@@ -29,7 +29,7 @@ export function renderDonut(state, counts) {
     state.severityFilter ? `Severidad: ${safeLabel(state.severityFilter)}`
     : state.actionFilter   ? `Acción: ${state.actionFilter}`
     : state.deviceFilter   ? `Dispositivo: ${state.deviceFilter}`
-    : state.msgSeverityFilter ? `Msg severity: ${state.msgSeverityFilter}`
+    : state.msgSeverityFilter ? `Severity: ${state.msgSeverityFilter}`
     : "Severidad";
   const titleColor = state.severityFilter ? colorFor(state.severityFilter) : TXT;
 

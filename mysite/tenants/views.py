@@ -274,3 +274,17 @@ def oauth2_callback(request):
     # Guarda o devuelve el token (según tu necesidad)
     return JsonResponse(token_data)
 
+
+@login_required
+def config_notificaciones_view(request):
+    """Página o modal de configuración de notificaciones del usuario"""
+    user = request.user
+
+    if request.method == "POST":
+        user.Alarma_Telefono = "Alarma_Telefono" in request.POST
+        user.Alarma_Correo = "Alarma_Correo" in request.POST
+        user.Alarma_Telegram = "Alarma_Telegram" in request.POST
+        user.save()
+        return redirect(request.META.get("HTTP_REFERER", "dashboard:dashboard_alarmsone"))
+
+    return render(request, "tenants/config_notificaciones.html", {"user": user})

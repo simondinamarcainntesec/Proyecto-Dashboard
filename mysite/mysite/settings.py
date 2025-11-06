@@ -30,6 +30,8 @@ SECRET_KEY=os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
+#DEBUG = True
+
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.Argon2PasswordHasher',
     'django.contrib.auth.hashers.PBKDF2PasswordHasher',
@@ -51,6 +53,7 @@ ALARMSONE_ACCESS_TOKEN = os.getenv("ALARMSONE_ACCESS_TOKEN")
 # Application definition
 
 INSTALLED_APPS = [
+    'tenants',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -61,7 +64,6 @@ INSTALLED_APPS = [
     'api_client',
     'dashboard',
     'integrations',
-    'tenants',
 #    'csp',
     'accounts',
     'soar_dashboard',
@@ -292,6 +294,7 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Fuerza que todo el tráfico sea HTTPS
 SECURE_SSL_REDIRECT = True
+#SECURE_SSL_REDIRECT = not DEBUG
 
 # Asegura cookies seguras
 SESSION_COOKIE_SECURE = True

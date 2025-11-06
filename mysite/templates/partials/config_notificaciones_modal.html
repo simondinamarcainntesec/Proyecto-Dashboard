@@ -1,0 +1,51 @@
+{% load static %}
+
+<div id="configModal" class="modal-overlay hidden" aria-hidden="true">
+  <div class="modal-card">
+    <!-- ① Toast de confirmación -->
+    <div id="saveToast" class="save-toast hidden">
+      ✅ Preferencias guardadas
+    </div>
+
+    <!-- ② Cabecera -->
+    <div class="modal-head">
+      <h3>Configuración de Notificaciones</h3>
+      <button class="close-btn" type="button" aria-label="Cerrar" onclick="toggleConfigModal(false)">×</button>
+    </div>
+
+    <!-- ③ Formulario -->
+    <form method="POST" id="configForm" action="{% url 'config_notificaciones' %}">
+      {% csrf_token %}
+      <div class="modal-body">
+        <div class="config-option {% if user.Alarma_Telefono %}is-active{% endif %}">
+          <span>📞 Alerta por Teléfono</span>
+          <label class="switch">
+            <input type="checkbox" name="Alarma_Telefono" {% if user.Alarma_Telefono %}checked{% endif %}>
+          </label>
+        </div>
+
+        <div class="config-option {% if user.Alarma_Correo %}is-active{% endif %}">
+          <span>📧 Alerta por Correo</span>
+          <label class="switch">
+            <input type="checkbox" name="Alarma_Correo" {% if user.Alarma_Correo %}checked{% endif %}>
+          </label>
+        </div>
+
+        <div class="config-option {% if user.Alarma_Telegram %}is-active{% endif %}">
+          <span>💬 Alerta por Telegram</span>
+          <label class="switch">
+            <input type="checkbox" name="Alarma_Telegram" {% if user.Alarma_Telegram %}checked{% endif %}>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button type="submit" class="btn primary">Guardar</button>
+        <button type="button" class="btn ghost" onclick="toggleConfigModal(false)">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- JS del modal -->
+<script defer src="{% static 'js/config_notificaciones_modal.js' %}?v={% now 'U' %}"></script>

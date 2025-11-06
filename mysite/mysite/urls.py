@@ -21,6 +21,7 @@ urlpatterns = [
     path("auth/login/", tenant_login_view, name="auth_login"),
     path("logout/", logout_view, name="logout"),
     path("auth/registro_cliente/", registro_cliente, name="auth_registro_cliente"),
+    path("config/notificaciones/", views.config_notificaciones_view, name="config_notificaciones"),
 
     # === APLICACIONES PRINCIPALES ===
     # Multi-tenant dashboards, histórico, realtime y cambio de tenant

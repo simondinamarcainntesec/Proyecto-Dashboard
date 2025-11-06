@@ -267,3 +267,37 @@
     transform: translateY(0);
   }
 }
+/* === Corrección de estilo para submenú Configuración === */
+
+/* Quita subrayado y color violeta heredado */
+.tenant-option.nav-subitem {
+  text-decoration: none;
+  color: var(--inntesec-text, #e5e7eb);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 6px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Hover coherente */
+.tenant-option.nav-subitem:hover {
+  background-color: var(--inntesec-bg-hover, #132449);
+  color: #fff;
+}
+
+/* Activo igual al resto */
+.tenant-option.nav-subitem.is-active {
+  background-color: var(--inntesec-blue, rgb(18, 27, 51));
+  border: 1px solid var(--inntesec-border, rgba(255,255,255,0.08));
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Ícono (🔒 / 🔔) alineado con el texto */
+.tenant-option.nav-subitem span,
+.tenant-option.nav-subitem svg,
+.tenant-option.nav-subitem::before {
+  vertical-align: middle;
+}

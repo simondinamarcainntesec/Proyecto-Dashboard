@@ -22,7 +22,7 @@ body.coachmark-open .sidebar .nav-item {
   filter: grayscale(.2);
   pointer-events: none;
 }
-/* …pero NO atenuar el summary de SOAR (lo resaltamos) */
+
 #soarSummary {
   position: relative;
   z-index: 1002; /* por encima del blur del contenido */

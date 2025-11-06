@@ -46,6 +46,9 @@ class TenantUser(AbstractUser):
         blank=True,
         related_name='users'
     )
+    Alarma_Telefono = models.BooleanField(default=False)
+    Alarma_Correo = models.BooleanField(default=False)
+    Alarma_Telegram = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.username} ({self.tenant.name if self.tenant else 'Sin tenant'})"

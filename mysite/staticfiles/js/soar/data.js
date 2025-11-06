@@ -1,11 +1,6 @@
-// static/js/soar/data.js
-// Fuente única de datos embebidos desde el template (#soar-events)
+
 let EVENTS = [];
 
-/**
- * Carga y normaliza (mínimo) los eventos desde el <script id="soar-events"> embebido.
- * La dejo async para que puedas usar `await preloadEvents()` sin problema.
- */
 export async function preloadEvents() {
   const el = document.getElementById("soar-events");
   if (!el) {
@@ -15,7 +10,6 @@ export async function preloadEvents() {
   }
   try {
     const raw = JSON.parse(el.textContent || "[]") || [];
-    // Normalización ligera: solo aseguramos strings y trim.
     EVENTS = raw.map((r) => ({
       severity:        safeStr(r.severity),
       srccountry:      safeStr(r.srccountry),
@@ -26,7 +20,7 @@ export async function preloadEvents() {
       proto:           safeStr(r.proto),
       srcip:           safeStr(r.srcip),
       dstip:           safeStr(r.dstip),
-      application:     safeStr(r.Application ?? r.app), // ← NUEVO normalizado en minúscula
+      application:     safeStr(r.Application ?? r.app), 
       date:            safeStr(r.date),
       time:            safeStr(r.time),
     }));

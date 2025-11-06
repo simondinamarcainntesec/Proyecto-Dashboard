@@ -6,13 +6,13 @@ import "./data.js";
 
 import {
   getActiveCountsForDonut,
-  calcKpis,
+  // calcKpis, // <- no lo usamos para evitar que pise los valores
   actionDataForCurrentFilter,
   msgSeverityDataForCurrentFilter,
-  levelDataForCurrentFilter,     // coherencia de exports
+  levelDataForCurrentFilter,
   subtypeDataForCurrentFilter,
   logDescriptionDataForCurrentFilter,
-  getPeakHour,                   
+  getPeakHour,
 } from "./selectors.js";
 
 import { renderDonut } from "./charts/donut.js";
@@ -24,10 +24,7 @@ import { mountLevelBar } from "./charts/level.js";
 import { renderSubtypeBar } from "./charts/subtype.js";
 import { renderLogDescriptionBar } from "./charts/logDescription.js";
 
-
-function isEmptyState() {
-  return !!document.querySelector(".empty-state");
-}
+function isEmptyState() { return !!document.querySelector(".empty-state"); }
 
 // ======================================================
 // 1) Inicialización global
@@ -39,23 +36,67 @@ console.log("[realtime] Chart.js detectado:", !!window.Chart);
 // ======================================================
 // 2) KPIs
 // ======================================================
-function formatHour12(h) {
-  const hour = Number(h);
-  const ampm = hour < 12 ? "am" : "pm";
-  const h12 = hour % 12 === 0 ? 12 : hour % 12;
-  return { h12, ampm };
-}
-
 function formatHourRange(h) {
   const hour = Number(h);
-  const hh = String(hour).padStart(2, "0");     // 00..23
+  const hh = String(hour).padStart(2, "0");
   const ampm = hour < 12 ? "am" : "pm";
   return `${hh}:00–${hh}:59 ${ampm}`;
 }
 
+// --- Helpers para obtener data venga de donde venga ---
+function readJSON(id) {
+  try {
+    const el = document.getElementById(id);
+    if (!el) return null;
+    return JSON.parse(el.textContent);
+  } catch { return null; }
+}
+
+function firstNonEmpty(...objs) {
+  for (const o of objs) {
+    if (o && typeof o === "object" && Object.keys(o).length) return o;
+  }
+  return {};
+}
+
+function getDataCtx() {
+  const st = getState() || {};
+  const ctx = st.ctx || st.data || st; // a veces viene anidado
+
+  const sev =
+    ctx.severity_counts ||
+    ctx.severityCountsRaw ||
+    readJSON("severity-counts") ||
+    {};
+
+  const msg =
+    ctx.msg_severity_counts ||
+    ctx.msgSeverityCountsRaw ||
+    readJSON("msg-severity-counts") ||
+    {};
+
+  const devCounts =
+    ctx.device_counts ||
+    ctx.deviceCountsAll ||
+    readJSON("device-counts") ||
+    {};
+
+  return { sev, msg, devCounts };
+}
+
+function sumVals(obj) {
+  return Object.values(obj || {}).reduce((a, n) => a + Number(n || 0), 0);
+}
 
 function renderKPIs() {
-  const { total, high, devices } = calcKpis(getState());
+  const { sev, msg, devCounts } = getDataCtx();
+
+  const total   = sumVals(sev);
+  const high    = Number(msg.critical || 0); // usar CRITICAL de msg_severity
+  // Si quieres (high + critical) desde msg_severity, usa:
+  // const high = Number(msg.high || 0) + Number(msg.critical || 0);
+  const devices = Object.keys(devCounts).length;
+
   const elTotal   = $("#kpi-total");
   const elHigh    = $("#kpi-high");
   const elDevices = $("#kpi-devices");
@@ -63,11 +104,9 @@ function renderKPIs() {
   if (elHigh)    elHigh.textContent = high;
   if (elDevices) elDevices.textContent = devices;
 
-  // Nuevo KPI: hora con más alarmas (base global de hoy)
   const { hour } = getPeakHour();
   const elPeak = document.getElementById("kpi-peak-hour");
   if (elPeak) elPeak.textContent = (hour == null) ? "—" : formatHourRange(hour);
-
 }
 
 // ======================================================
@@ -77,7 +116,7 @@ function updateAll() {
   const st = getState();
   console.log("[realtime] Estado actual:", st);
 
-  // KPIs (incluye hora pico)
+  // KPIs
   renderKPIs();
 
   // Donut de severidad
@@ -90,7 +129,6 @@ function updateAll() {
   renderActionBar(actionDataForCurrentFilter(st));
   renderMsgSeverityBar(msgSeverityDataForCurrentFilter(st), st.msgSeverityFilter);
   renderHourly(st);
-
   renderSubtypeBar(subtypeDataForCurrentFilter(st), st.subtypeFilter);
   renderLogDescriptionBar(logDescriptionDataForCurrentFilter(st), st.logDescriptionFilter);
 
@@ -130,7 +168,6 @@ function wireTableSort() {
 let unmountLevel = null;
 
 function boot() {
-  // Si hay empty-state, solo cableamos el botón OK y salimos
   if (isEmptyState()) {
     const btn = document.getElementById("btn-empty-ok");
     if (btn) btn.addEventListener("click", () => {
@@ -143,13 +180,11 @@ function boot() {
   console.log("[realtime] DOM listo → inicializando...");
   wireTableSort();
 
-  // Monta Level UNA sola vez (si está en el DOM)
   const levelEl = document.getElementById("levelBar");
   if (levelEl) {
     unmountLevel = mountLevelBar("levelBar");
   }
 
-  // Render inicial del resto
   updateAll();
 }
 
@@ -163,7 +198,7 @@ if (document.readyState === "loading") {
 // 6) Redibujo ante cambios de filtros
 // ======================================================
 onStateChange(() => {
-  if (isEmptyState()) return; // no hay nada que refrescar
+  if (isEmptyState()) return;
   console.log("[realtime] Cambio detectado en filtros → refrescando...");
   updateAll();
 });
@@ -182,18 +217,12 @@ onStateChange(() => {
 })();
 
 // ======================================================
-// 8) EXPOSE & MIRROR STATE  ✅ (para que el modal siempre vea los filtros)
+// 8) EXPOSE & MIRROR STATE (para los modales)
 // ======================================================
 (function exposeRealtimeState() {
-  // Exponer estado actual (para alarms-modal.js)
-  window.getState = () => {
-    try { return getState(); } catch { return {}; }
-  };
-
-  // Espejar a data-* del <body> como fallback robusto
+  window.getState = () => { try { return getState(); } catch { return {}; } };
   function mirrorToBody(st) {
-    const b = document.body;
-    if (!b) return;
+    const b = document.body; if (!b) return;
     b.dataset.severityFilter        = st.severityFilter || "";
     b.dataset.deviceFilter          = st.deviceFilter || "";
     b.dataset.actionFilter          = st.actionFilter || "";
@@ -203,11 +232,6 @@ onStateChange(() => {
     b.dataset.subtypeFilter         = st.subtypeFilter || "";
     b.dataset.logDescriptionFilter  = st.logDescriptionFilter || "";
   }
-
-  // Inicial + reactivo
   try { mirrorToBody(getState()); } catch {}
-  onStateChange((st) => {
-    window.__APP_STATE = st;   // segundo canal global
-    mirrorToBody(st);
-  });
+  onStateChange((st) => { window.__APP_STATE = st; mirrorToBody(st); });
 })();

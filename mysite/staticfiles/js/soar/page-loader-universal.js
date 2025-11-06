@@ -1,5 +1,4 @@
 (function () {
-  // Crea o reutiliza el overlay, pero usando el HTML que depende del CSS externo
   const ensureOverlay = () => {
     let ov = document.getElementById('loading-overlay');
     if (!ov) {
@@ -21,7 +20,7 @@
     const ov = ensureOverlay();
     const txt = ov.querySelector('.loading-text');
     if (txt) txt.textContent = msg;
-    ov.classList.add('is-active'); // usa tu clase CSS
+    ov.classList.add('is-active'); 
   };
 
   const hide = () => {
@@ -33,7 +32,7 @@
   const bindHandlers = () => {
     hide();
 
-    // --- click en enlaces (navegación clásica) ---
+ 
     document.addEventListener('click', (e) => {
       const a = e.target.closest('a');
       if (!a) return;
@@ -44,10 +43,10 @@
       const href = a.getAttribute('href') || '';
       if (href.startsWith('#') || href.startsWith('javascript:')) return;
 
-      // === fuerza repintado antes del cambio ===
+     
       show();
       const start = performance.now();
-      while (performance.now() - start < 35) {} // ~35 ms
+      while (performance.now() - start < 35) {} 
     });
 
     // --- formularios ---

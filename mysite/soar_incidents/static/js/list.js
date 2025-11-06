@@ -81,7 +81,7 @@
 
   // ====== BUSCADOR: live (local) + global (Enter / botón) ======
   const input   = Q('#q');
-  const btnLive = Q('#btn-search-live'); // type="button" en tu HTML
+  const btnLive = Q('#btn-search-live'); 
 
   // --- util para GLOBAL (backend): recarga con ?q= y preserva from/to ---
   function submitGlobalSearch() {

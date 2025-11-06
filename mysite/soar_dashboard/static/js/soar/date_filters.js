@@ -1,6 +1,6 @@
-// static/js/alarms_one/date_filters.js
+// static/js/soar/date_filters.js
 (function () {
-  /* utilidades */
+  /* ===== utilidades ===== */
   function pad(n){ return String(n).padStart(2,'0'); }
   function toLocalIsoDate(dt){
     return dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
@@ -16,12 +16,13 @@
     return new Date(dt.getFullYear(), dt.getMonth(), 1, 0,0,0);
   }
 
-  const p = new URLSearchParams(location.search);
+  const params = new URLSearchParams(location.search);
+
+  /* ===== chips de rango ===== */
   const chips = document.querySelectorAll('.chip-btn');
   function setActiveChip(range){
     chips.forEach(c=>c.classList.toggle('is-active', c.dataset.range===range));
   }
-
   function goWithRange(range){
     const now = new Date();
     let from;
@@ -30,17 +31,20 @@
     else if(range==='month'){ from = firstDayOfMonth(now); }
     else { from = minusDays(now,30); }
 
-    const params = new URLSearchParams(window.location.search);
-    params.set('from', toLocalIsoDateTime(from));
-    params.set('to',   toLocalIsoDateTime(now));
-    window.location.search = params.toString();
+    const qs = new URLSearchParams(window.location.search);
+    qs.set('from', toLocalIsoDateTime(from));
+    qs.set('to',   toLocalIsoDateTime(now));
+    window.location.search = qs.toString();
   }
   chips.forEach(btn=>{
     btn.addEventListener('click', ()=> goWithRange(btn.dataset.range));
   });
 
+  /* ===== inputs de fecha ===== */
   const inpFrom = document.getElementById('inp-from');
   const inpTo   = document.getElementById('inp-to');
+
+  // Si no vienen valores, poner por defecto últimos 30 días (solo fecha)
   if (inpFrom && inpTo) {
     if (!inpFrom.value || !inpTo.value) {
       const now = new Date();
@@ -50,11 +54,12 @@
     }
   }
 
-  if (p.has('from') && p.has('to')) {
-    const toQ  = new Date(p.get('to').replace(' ', 'T'));
-    const fromQ= new Date(p.get('from').replace(' ', 'T'));
+  // Activar chip según querystring actual
+  if (params.has('from') && params.has('to')) {
+    const toQ   = new Date(params.get('to').replace(' ', 'T'));
+    const fromQ = new Date(params.get('from').replace(' ', 'T'));
     const diffMs = toQ - fromQ;
-    const dayMs = 24*60*60*1000;
+    const dayMs  = 24*60*60*1000;
     if (Math.abs(diffMs - 7*dayMs) < dayMs) setActiveChip('7d');
     else if (Math.abs(diffMs - 30*dayMs) < dayMs) setActiveChip('30d');
     else {
@@ -65,61 +70,38 @@
     }
   }
 
+  // Botón refresh: mantener "from" y actualizar "to" a ahora
   const r = document.getElementById('btn-refresh');
   if (r) r.addEventListener('click', ()=>{
     const now = new Date();
-    const params = new URLSearchParams(window.location.search);
-    params.set('to', toLocalIsoDateTime(now));
-    window.location.search = params.toString();
+    const qs = new URLSearchParams(window.location.search);
+    qs.set('to', toLocalIsoDateTime(now));
+    window.location.search = qs.toString();
   });
 
-  // ============================
-  // Hacer clickeable el ícono blanco (pseudo ::after)
-  // ============================
-  document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('label.date-range').forEach(lbl => {
-      const input = lbl.querySelector('input[type="date"]');
-      if (!input) return;
+  /* ===== Abrir picker al hacer click en el label/icono ===== */
+  // El CSS coloca el ícono con ::after en .date-range.
+  // Aquí interceptamos click en el label (si el target no es el input) para abrir el picker.
+  document.querySelectorAll('label.date-range').forEach(lbl=>{
+    const input = lbl.querySelector('input[type="date"]');
+    if (!input) return;
 
-      // Evitar duplicados
-      if (lbl.querySelector('.date-icon-trigger')) return;
+    lbl.addEventListener('click', (ev)=>{
+      // si clic fue directamente en el input, dejar comportamiento nativo
+      if (ev.target === input) return;
 
-      // Botón transparente colocado sobre el área del ícono
-      const trigger = document.createElement('button');
-      trigger.type = 'button';
-      trigger.className = 'date-icon-trigger';
-      trigger.setAttribute('aria-label', 'Abrir calendario');
-
-      Object.assign(trigger.style, {
-        position: 'absolute',
-        right: '6px',
-        top: '50%',
-        width: '24px',
-        height: '24px',
-        transform: 'translateY(-50%)',
-        background: 'transparent',
-        border: '0',
-        padding: '0',
-        margin: '0',
-        cursor: 'pointer'
-      });
-
-      trigger.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+      // enfocar y abrir el picker si el browser lo soporta
+      try {
+        input.focus({ preventScroll: true });
         if (typeof input.showPicker === 'function') {
-          input.showPicker();
+          input.showPicker(); // Chrome / Edge
         } else {
-          input.focus();
-          try { input.click(); } catch (_) {}
+          // fallback: abrir teclado/fecha en móviles al "clickear" el input
+          input.dispatchEvent(new MouseEvent('mousedown', {bubbles:true, cancelable:true, view:window}));
         }
-      });
-
-      // Asegurar posicionamiento relativo del label
-      const cs = window.getComputedStyle(lbl);
-      if (cs.position === 'static') lbl.style.position = 'relative';
-
-      lbl.appendChild(trigger);
+      } catch (e) {
+        // no pasa nada si no es soportado
+      }
     });
   });
 })();

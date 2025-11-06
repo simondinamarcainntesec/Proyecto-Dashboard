@@ -13,6 +13,8 @@
   <link rel="stylesheet" href="{% static 'css/coachmark.css' %}?v={% now 'U' %}">
   <link rel="icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
   <link rel="shortcut icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
+  <link rel="stylesheet" href="{% static 'css/config_notificaciones_modal.css' %}?v={% now 'U' %}">
+
 </head>
 
 <body class="layout" data-username="{{ request.user.username|default:'anon' }}">
@@ -89,6 +91,11 @@
           <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}"
              href="{% url 'cambiar_contrasena' %}">
             🔒 Cambiar contraseña
+          </a>
+          <a class="tenant-option nav-subitem"
+             href="#"
+             onclick="toggleConfigModal(true)">
+            🔔 Notificaciones
           </a>
         </div>
       </details>
@@ -195,7 +202,7 @@
             <div class="kpi-value" id="kpi-peak-hour">—</div>
           </div>
           <div class="card kpi">
-            <div class="kpi-label">Alta Severidad</div>
+            <div class="kpi-label">Severidad crítica</div>
             <div class="kpi-value" id="kpi-high">{{ kpi_high }}</div>
           </div>
           <div class="card kpi">
@@ -373,5 +380,7 @@
 
   <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/onboarding_hints.js' %}?v={% now 'U' %}"></script>
+  {% include 'partials/config_notificaciones_modal.html' %}
+
 </body>
 </html>

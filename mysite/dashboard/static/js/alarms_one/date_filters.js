@@ -72,4 +72,54 @@
     params.set('to', toLocalIsoDateTime(now));
     window.location.search = params.toString();
   });
+
+  // ============================
+  // Hacer clickeable el ícono blanco (pseudo ::after)
+  // ============================
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('label.date-range').forEach(lbl => {
+      const input = lbl.querySelector('input[type="date"]');
+      if (!input) return;
+
+      // Evitar duplicados
+      if (lbl.querySelector('.date-icon-trigger')) return;
+
+      // Botón transparente colocado sobre el área del ícono
+      const trigger = document.createElement('button');
+      trigger.type = 'button';
+      trigger.className = 'date-icon-trigger';
+      trigger.setAttribute('aria-label', 'Abrir calendario');
+
+      Object.assign(trigger.style, {
+        position: 'absolute',
+        right: '6px',
+        top: '50%',
+        width: '24px',
+        height: '24px',
+        transform: 'translateY(-50%)',
+        background: 'transparent',
+        border: '0',
+        padding: '0',
+        margin: '0',
+        cursor: 'pointer'
+      });
+
+      trigger.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof input.showPicker === 'function') {
+          input.showPicker();
+        } else {
+          input.focus();
+          try { input.click(); } catch (_) {}
+        }
+      });
+
+      // Asegurar posicionamiento relativo del label
+      const cs = window.getComputedStyle(lbl);
+      if (cs.position === 'static') lbl.style.position = 'relative';
+
+      lbl.appendChild(trigger);
+    });
+  });
 })();

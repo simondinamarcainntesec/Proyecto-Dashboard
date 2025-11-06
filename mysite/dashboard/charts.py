@@ -314,13 +314,14 @@ def build_kpis(dt_from=None, dt_to=None, qs_base=None):
     qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
     agg = qs.aggregate(
         total=Count("id"),
-        high_=Count("id", filter=Q(severity__iexact="high")),
-        crit_=Count("id", filter=Q(severity__iexact="critical")),
+        # ← ahora contamos CRITICAL desde msg_severity (no desde severity)
+        crit_=Count("id", filter=Q(msg_severity__iexact="critical")),
         dispositivos=Count("device_name", distinct=True),
     )
     return {
         "kpi_total": agg.get("total") or 0,
-        "kpi_high": (agg.get("high_") or 0) + (agg.get("crit_") or 0),
+        # “Alta Severidad” = CRITICAL de msg_severity (como pediste)
+        "kpi_high": agg.get("crit_") or 0,
         "kpi_dispositivos": agg.get("dispositivos") or 0,
     }
 
