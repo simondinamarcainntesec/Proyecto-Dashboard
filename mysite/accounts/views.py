@@ -42,26 +42,26 @@ def registro_cliente(request):
         password = get_random_string(10)
 
         try:
-            user, created = User.objects.get_or_create(
+            # ⚙️ Buscar si el usuario ya existe
+            existing_user = User.objects.filter(email=email).first()
+
+            if existing_user:
+                print("⚠️ Usuario ya existente:", existing_user)
+                messages.info(
+                    request,
+                    "Tu cuenta ya está registrada. Puedes iniciar sesión con tus credenciales existentes."
+                )
+                return redirect("login")
+
+            # ✅ Crear usuario nuevo
+            user = User.objects.create_user(
                 username=email,
-                defaults={
-                    "email": email,
-                    "first_name": getattr(cliente, "name", "Usuario"),
-                    "tenant": tenant,
-                },
+                email=email,
+                first_name=getattr(cliente, "name", "Usuario"),
+                tenant=tenant,
+                password=password,
             )
-
-            if created:
-                mensaje = "Tu cuenta ha sido creada."
-                print("✅ Usuario nuevo creado:", user)
-            else:
-                mensaje = "Tu cuenta ha sido actualizada."
-                user.tenant = tenant
-                print("♻️ Usuario existente, actualizado:", user)
-
-            user.set_password(password)
-            user.save()
-            print("🔐 Contraseña generada:", password)
+            print("✅ Usuario nuevo creado:", user)
 
         except IntegrityError:
             messages.error(request, "Ya existe un usuario con este correo.")
@@ -75,7 +75,7 @@ def registro_cliente(request):
         <html>
         <body style="font-family: Arial, sans-serif;">
             <h2>Hola, {user.first_name}</h2>
-            <p>{mensaje}</p>
+            <p>Tu cuenta ha sido creada exitosamente en <b>{tenant.name}</b>.</p>
             <p>
                 <b>Usuario:</b> {user.email}<br>
                 <b>Contraseña:</b> {password}
@@ -93,7 +93,7 @@ def registro_cliente(request):
         </html>
         """
 
-        # 4️⃣ Intentar enviar correo
+        # 4️⃣ Enviar correo solo si es usuario nuevo
         try:
             print("📬 Enviando correo a:", email)
             enviar_correo_ms(
@@ -104,13 +104,13 @@ def registro_cliente(request):
             print("✅ Correo enviado correctamente (Graph API).")
             messages.success(
                 request,
-                f"{mensaje} Se ha enviado un correo con tus credenciales de acceso.",
+                "Tu cuenta ha sido creada. Se ha enviado un correo con tus credenciales de acceso.",
             )
         except Exception as e:
             print("❌ Error al enviar correo:", str(e))
             messages.warning(
                 request,
-                f"{mensaje} Pero ocurrió un error al enviar el correo: {str(e)}",
+                f"Tu cuenta ha sido creada, pero ocurrió un error al enviar el correo: {str(e)}",
             )
 
         return redirect("login")
