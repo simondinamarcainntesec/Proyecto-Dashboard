@@ -1,0 +1,48 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <title>Inicio | Dashboard Inntesec</title>
+
+  <link rel="stylesheet" href="{% static 'css/home.css' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Overlay de carga -->
+  <div id="loading-overlay">
+    <div class="loader"></div>
+    <div class="loading-text">Cargando datos...</div>
+  </div>
+
+  <div class="home-container">
+    <header class="home-header">
+      <h1 class="home-title">Paneles de Control</h1>
+      <p class="home-subtitle">Selecciona un dashboard para visualizar los datos de tu entorno.</p>
+    </header>
+
+    <section class="dashboard-grid">
+      {% for dash in dashboards %}
+      <a href="{{ dash.url }}" class="dashboard-card" onclick="showLoader(event)">
+        <h2 class="dashboard-title">{{ dash.title }}</h2>
+        <p class="dashboard-description">{{ dash.description }}</p>
+      </a>
+      {% endfor %}
+    </section>
+  </div>
+
+  <!-- Scripts -->
+  <script src="{% static 'js/theme-switcher.js' %}"></script>
+  <script>
+    function showLoader(event) {
+      const overlay = document.getElementById('loading-overlay');
+      overlay.classList.add('visible');
+    }
+
+    window.addEventListener("load", () => {
+      const overlay = document.getElementById('loading-overlay');
+      overlay.classList.remove('visible');
+    });
+  </script>
+</body>
+</html>

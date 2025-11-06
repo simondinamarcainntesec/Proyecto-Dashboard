@@ -1,1 +1,16 @@
 venv/
+__pycache__/
+.vscode/
+.idea/
+# Local logs and runtime artifacts
+celery_beat.log
+celery_worker.log
+celery_full.log
+celery_run_log.txt
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+env/
+.env
+.venvvenv/

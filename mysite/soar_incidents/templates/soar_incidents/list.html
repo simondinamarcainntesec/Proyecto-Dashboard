@@ -1,0 +1,266 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOAR – Incidentes</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/list.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/user_dropdown.css' %}?v={% now 'U' %}">
+</head>
+
+<body class="layout">
+  <div id="loading-overlay" role="status" aria-live="polite" aria-label="Cargando">
+    <div class="loading-card">
+      <div class="spinner" aria-hidden="true"></div>
+      <div class="loading-text">Cargando datos…</div>
+    </div>
+  </div>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="{% static 'img/inntesec CSS negro 1.avif' %}" alt="Logo Inntesec" />
+    </div>
+
+    <nav class="nav">
+      <a class="nav-item {% if request.resolver_match.url_name == 'dashboard_alarmsone' %}is-active{% endif %}"
+        href="{% url 'dashboard:dashboard_alarmsone' %}">
+        <span class="nav-ico">🏠</span>Alarmas
+      </a>
+      <a class="nav-item {% if request.resolver_match.url_name == 'dashboard_realtime' %}is-active{% endif %}"
+        href="{% url 'dashboard:dashboard_realtime' %}">
+        <span class="nav-ico">⏱️</span>Tiempo Real
+      </a>
+      <a class="nav-item {% if request.resolver_match.app_name == 'soar_dashboard' %}is-active{% endif %}"
+        href="{% url 'soar_dashboard:dashboard' %}">
+        <span class="nav-ico">🚨</span>SOAR
+      </a>
+      <a class="nav-item {% if request.resolver_match.app_name == 'soar_incidents' %}is-active{% endif %}"
+        href="{% url 'soar_incidents:list' %}">
+        <span class="nav-ico">🤖</span>IA SOAR
+      </a>
+    </nav>
+  </aside>
+
+  <!-- Main -->
+  <div class="content">
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="top-left">
+        <h1 class="top-title">
+          Tenant:
+          {% if request.user.tenant.name|lower == "inntesec" %}
+          <details class="tenant-dropdown">
+            <summary class="tenant-summary">
+              {{ tenant.name }}
+              <span class="caret">▼</span>
+            </summary>
+            <div class="tenant-list">
+              {% for t in all_tenants %}
+              <form method="post" action="{% url 'dashboard:switch_tenant' t.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit" class="tenant-option {% if tenant.id == t.id %}is-active{% endif %}">
+                  {{ t.name }}
+                </button>
+              </form>
+              {% endfor %}
+            </div>
+          </details>
+          {% else %}
+          <span class="top-tenant">{{ tenant.name }}</span>
+          {% endif %}
+        </h1>
+      </div>
+
+      <div class="top-right">
+        <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
+        <button class="btn ghost" title="Exportar">⬇︎</button>
+
+        <!-- 🔽 Panel desplegable del usuario -->
+        <div class="user-menu" id="userMenu">
+          <button type="button" id="userButton" class="user-button">
+            <div class="user-avatar">
+              {{ request.user.username|default:"U"|slice:":1"|upper }}
+            </div>
+            <div class="user-name">
+              {{ request.user.get_full_name|default:request.user.username }}
+            </div>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
+          </button>
+
+          <div class="dropdown-menu">
+            <a href="{% url 'cambiar_contraseña' %}">🔒 Cambiar contraseña</a>
+            <form action="{% url 'logout' %}" method="post">
+              {% csrf_token %}
+              <button type="submit">🚪 Cerrar sesión</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Toolbar (buscador a la izquierda / fechas a la derecha) -->
+    <section class="toolbar">
+      <form id="filters-form" method="get" class="toolbar-row" role="search">
+        <div class="tb-left">
+          <input type="search" name="q" id="q" value="{{ q|default:'' }}" placeholder="Buscar (cualquier campo)…"
+            autocomplete="off" />
+          <!-- CAMBIO: ya no envía el form -->
+          <button class="btn ghost-sm" type="button" id="btn-search-live">Buscar</button>
+        </div>
+
+        <div class="tb-spacer"></div>
+
+        <div class="tb-right">
+          <button type="button" class="chip-btn" data-range="7d">Últimos 7 días</button>
+          <button type="button" class="chip-btn" data-range="30d">Últimos 30 días</button>
+          <button type="button" class="chip-btn" data-range="month">Este mes</button>
+
+          <label class="date-range">
+            <span>Desde</span>
+            <input id="inp-from" type="date" name="from" value="{{ from_date_str }}">
+          </label>
+          <label class="date-range">
+            <span>Hasta</span>
+            <input id="inp-to" type="date" name="to" value="{{ to_date_str }}">
+          </label>
+
+          <button class="btn primary" id="btn-apply" type="submit">Aplicar</button>
+          <a class="btn ghost" id="btn-clear" href="?">Limpiar</a>
+        </div>
+      </form>
+    </section>
+
+    {% if page_obj|length > 0 %}
+    <!-- Tabla -->
+    <section class="wrap">
+      <div class="card">
+        <div class="card-body">
+          <div class="table-wrap">
+            <table class="tbl" id="tbl-incidentes">
+              <thead>
+                <tr>
+                  <th>ID Alarma</th>
+                  <th>Dispositivo</th>
+                  <th>Tipo de amenaza</th>
+                  <th>Nivel de severidad</th>
+                  <th>Fecha</th>
+                  <th>Hora</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for it in page_obj %}
+                <tr data-id="{{ it.alarmd_id|escape }}" data-dispositivo="{{ it.dispositivo|default:''|escape }}"
+                  data-tipo="{{ it.tipo_de_amenaza|default:''|escape }}"
+                  data-sev="{{ it.nivel_de_severidad|default:''|escape }}"
+                  data-date="{% if it.date %}{{ it.date|date:'Y-m-d' }}{% endif %}"
+                  data-time="{% if it.time %}{{ it.time|time:'H:i:s' }}{% endif %}"
+                  data-descripcion="{{ it.descripcion_incidente|default:''|escape }}"
+                  data-analisis="{{ it.analisis_criticidad|default:''|escape }}"
+                  data-acciones="{{ it.medidas_correctivas|default:''|escape }}"
+                  data-resumen="{{ it.resumen_humano|default:''|escape }}"
+                  data-riesgo="{{ it.riego_detectado|default:''|escape }}"
+                  data-app="{{ it.application|default:''|escape }}">
+                  <td class="mono nowrap">{{ it.alarmd_id }}</td>
+                  <td class="w-240" title="{{ it.dispositivo }}">{{ it.dispositivo|default:"—" }}</td>
+                  <td class="w-320" title="{{ it.tipo_de_amenaza }}">{{ it.tipo_de_amenaza|default:"—" }}</td>
+                  <td class="nowrap">
+                    {% with sev=it.nivel_de_severidad|default:"n/a"|lower %}
+                    <span class="pill
+                          {% if sev == 'critical' %}sev-critical
+                          {% elif sev == 'high' %}sev-high
+                          {% elif sev == 'medium' %}sev-medium
+                          {% elif sev == 'low' %}sev-low
+                          {% elif sev == 'info' %}sev-info
+                          {% else %}sev-na{% endif %}">
+                      {{ it.nivel_de_severidad|default:"N/A" }}
+                    </span>
+                    {% endwith %}
+                  </td>
+                  {% with d=it.date|date:"Y-m-d" t=it.time|time:"H:i:s" %}
+                  <td class="mono nowrap">{% if d %}{{ d }}{% else %}—{% endif %}</td>
+                  <td class="mono nowrap">{% if t %}{{ t }}{% else %}—{% endif %}</td>
+                  {% endwith %}
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          {% if page_obj %}
+          <div class="paginate" id="paginate">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}">&laquo; Anterior</a>
+            {% else %}
+            <span class="meta">&laquo; Anterior</span>
+            {% endif %}
+            <span class="current">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}">Siguiente &raquo;</a>
+            {% else %}
+            <span class="meta">Siguiente &raquo;</span>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+    {% else %}
+    <!-- ======= EMPTY STATE (sin datos) ======= -->
+    <section class="empty-state">
+      <div class="empty-card">
+        <h2>Sin incidentes disponibles</h2>
+        <p>No se encontraron registros para <strong>{{ tenant.name|default:"—" }}</strong> en el rango seleccionado.</p>
+      </div>
+    </section>
+    {% endif %}
+  </div>
+
+  <!-- Modal Detalle -->
+  <div id="incidentModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop"></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="inc-title">
+      <div class="modal-header">
+        <h3 id="inc-title" class="alert-title">🔔 Detalle de Alerta</h3>
+        <button class="modal-close" data-close>&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="inc-header" class="block">
+          <h4>Encabezado</h4>
+          <ul class="stacked" id="inc-meta-list"></ul>
+        </div>
+        <div class="block">
+          <h4>Riesgo Detectado</h4>
+          <p id="inc-riesgo"></p>
+        </div>
+        <div class="block">
+          <h4>Clasificación</h4>
+          <p id="inc-clasif"></p>
+        </div>
+        <div class="block">
+          <h4>Acciones Recomendadas</h4>
+          <p id="inc-acciones"></p>
+        </div>
+        <div class="block" id="inc-app-wrap" style="display:none">
+          <h4>Application</h4>
+          <p id="inc-app"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS -->
+  <script src="{% static 'js/date_filters.js' %}?v={% now 'U' %}" defer></script>
+  <script src="{% static 'js/list.js' %}?v={% now 'U' %}" defer></script>
+  <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/page-loader-universal.js' %}?v={% now 'U' %}"></script>
+</body>
+
+</html>

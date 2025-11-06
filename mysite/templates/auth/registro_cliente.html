@@ -1,0 +1,42 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Registro de Usuario</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="{% static 'css/login.css' %}">
+</head>
+<body>
+
+  <div class="main-container">
+    <img src="{% static 'img/inntesec CSS negro 1.avif' %}" alt="Logo Inntesec" class="intesec-logo">
+
+    <div class="login-container">
+      <button id="theme-switcher"></button>
+      <h1>Activar Cuenta</h1>
+
+      {% if messages %}
+        {% for message in messages %}
+          <p class="error-message">{{ message }}</p>
+        {% endfor %}
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+        <label for="email">Correo electrónico</label>
+        <input type="email" name="email" id="email" placeholder="ejemplo@empresa.com" required>
+        <button type="submit">Enviar contraseña</button>
+      </form>
+
+      <div class="back-to-login">
+        <a href="{% url 'login' %}">← Volver al inicio de sesión</a>
+      </div>
+
+      <p class="footer-note">Inntesec © {{ now|date:"Y" }}</p>
+    </div>
+  </div>
+
+  <script src="{% static 'js/theme-switcher.js' %}"></script>
+</body>
+</html>

@@ -1,33 +1,35 @@
-"""
-URL configuration for mysite project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
 from django.contrib import admin
-from django.urls import path
-from django.contrib.auth import views as auth_views
-from django.contrib.auth.decorators import login_required   # <-- FALTA ESTO
-from django.http import HttpResponse                         # <-- y esto si usas home_view
+from django.urls import path, include
+from django.shortcuts import render
+from tenants.views import tenant_login_view, logout_view
+from accounts.views import registro_cliente
+from tenants import views
 
+# === HOME ===
 def home_view(request):
-    return HttpResponse(f"Hola {request.user.username}! <a href='/logout/'>Salir</a>")
+    return render(request, "home/home.html")
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path("login/",  auth_views.LoginView.as_view(template_name="auth/login.html"), name="login"),
-    path("logout/", auth_views.LogoutView.as_view(), name="logout"),
-    path("", login_required(home_view), name="home"),
+    # === ADMIN ===
+    path("admin/", admin.site.urls),
 
+    # === AUTENTICACIÓN / REGISTRO ===
+    path("", tenant_login_view, name="login"),
+    path("login/", tenant_login_view, name="login"),
+    path("auth/login/", tenant_login_view, name="auth_login"),
+    path("logout/", logout_view, name="logout"),
+    path("auth/registro_cliente/", registro_cliente, name="auth_registro_cliente"),
 
+    # === APLICACIONES PRINCIPALES ===
+    # Multi-tenant dashboards, histórico, realtime y cambio de tenant
+    path("dashboard/", include(("dashboard.urls", "dashboard"), namespace="dashboard")),
+
+    # Ingesta API / Integraciones
+    path("inyeccion_api/", include(("inyeccion_api.urls", "inyeccion_api"), namespace="inyeccion_api")),
+    path("integrations/", include(("integrations.urls", "integrations"), namespace="integrations")),
+
+    # Dashboards SOAR (Análisis e Incidentes)
+    path("dashboard-soar/", include(("soar_dashboard.urls", "soar_dashboard"), namespace="soar_dashboard")),
+    path("soar/incidentes/", include(("soar_incidents.urls", "soar_incidents"), namespace="soar_incidents")),
+    path('auth/cambiar_contraseña/', views.cambiar_contraseña, name='cambiar_contraseña'),
 ]

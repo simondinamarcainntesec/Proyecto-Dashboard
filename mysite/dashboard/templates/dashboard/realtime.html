@@ -1,0 +1,357 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portal Clientes Tiempo Real</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/realtime.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/user_dropdown.css' %}?v={% now 'U' %}">
+</head>
+
+<body class="layout">
+  <!-- Overlay de carga -->
+  <div id="loading-overlay" role="status" aria-live="polite" aria-label="Cargando">
+    <div class="loading-card">
+      <div class="spinner" aria-hidden="true"></div>
+      <div class="loading-text">Cargando datos…</div>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="{% static 'img/inntesec CSS negro 1.avif' %}" alt="Logo Inntesec" />
+    </div>
+
+    <nav class="nav">
+      <a class="nav-item {% if request.resolver_match.url_name == 'dashboard_alarmsone' %}is-active{% endif %}"
+        href="{% url 'dashboard:dashboard_alarmsone' %}">
+        <span class="nav-ico">🏠</span>Alarmas
+      </a>
+      <a class="nav-item {% if request.resolver_match.url_name == 'dashboard_realtime' %}is-active{% endif %}"
+        href="{% url 'dashboard:dashboard_realtime' %}">
+        <span class="nav-ico">⏱️</span>Tiempo Real
+      </a>
+      <a class="nav-item {% if request.resolver_match.app_name == 'soar_dashboard' %}is-active{% endif %}"
+        href="{% url 'soar_dashboard:dashboard' %}">
+        <span class="nav-ico">🚨</span>SOAR
+      </a>
+      <a class="nav-item {% if request.resolver_match.app_name == 'soar_incidents' %}is-active{% endif %}"
+        href="{% url 'soar_incidents:list' %}">
+        <span class="nav-ico">🤖</span>IA SOAR
+      </a>
+    </nav>
+  </aside>
+
+  <!-- Main -->
+  <div class="content">
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="top-left">
+        <h1 class="top-title">
+          Tenant:
+          {% if request.user.tenant.name|lower == "inntesec" %}
+          <details class="tenant-dropdown">
+            <summary class="tenant-summary">
+              {{ tenant.name }}
+              <span class="caret">▼</span>
+            </summary>
+            <div class="tenant-list">
+              {% for t in all_tenants %}
+              <form method="post" action="{% url 'dashboard:switch_tenant' t.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit" class="tenant-option {% if tenant.id == t.id %}is-active{% endif %}">
+                  {{ t.name }}
+                </button>
+              </form>
+              {% endfor %}
+            </div>
+          </details>
+          {% else %}
+          <span class="top-tenant">{{ tenant.name }}</span>
+          {% endif %}
+        </h1>
+      </div>
+
+      <div class="top-right">
+        <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
+        <button class="btn ghost" title="Exportar">⬇︎</button>
+
+        <!-- 🔽 Panel desplegable del usuario -->
+        <div class="user-menu" id="userMenu">
+          <button type="button" id="userButton" class="user-button">
+            <div class="user-avatar">
+              {{ request.user.username|default:"U"|slice:":1"|upper }}
+            </div>
+            <div class="user-name">
+              {{ request.user.get_full_name|default:request.user.username }}
+            </div>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
+          </button>
+
+          <div class="dropdown-menu">
+            <a href="{% url 'cambiar_contraseña' %}">🔒 Cambiar contraseña</a>
+            <form action="{% url 'logout' %}" method="post">
+              {% csrf_token %}
+              <button type="submit">🚪 Cerrar sesión</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </header>
+
+
+    {% if kpi_total|default:0 > 0 %}
+    <!-- ======= APP (con datos) ======= -->
+    <section class="grid grid-kpis">
+      <div class="card kpi">
+        <div class="kpi-label">Hora con más alarmas</div>
+        <div class="kpi-value" id="kpi-peak-hour">—</div>
+      </div>
+
+      <div class="card kpi">
+        <div class="kpi-label">Alta Severidad</div>
+        <div class="kpi-value" id="kpi-high">{{ kpi_high }}</div>
+      </div>
+      <div class="card kpi">
+        <div class="kpi-label">Total Alarmas</div>
+        <div class="kpi-value" id="kpi-total">{{ kpi_total }}</div>
+      </div>
+      <div class="card kpi">
+        <div class="kpi-label">Dispositivos Detectados</div>
+        <div class="kpi-value" id="kpi-devices">{{ kpi_dispositivos }}</div>
+      </div>
+    </section>
+
+    <section class="grid grid-main" id="app">
+      <!-- Alarmas por hora -->
+      <div class="card chart card--hourly">
+        <div class="card-head between">
+          <h3>Alarmas por hora</h3>
+          <button id="btn-open-hourly-alarms" class="btn ghost-sm" title="Ver alarmas de estas horas">🗂 Ver
+            alarmas</button>
+        </div>
+        <div class="card-body"><canvas id="hourlyChart"></canvas></div>
+      </div>
+
+      <!-- Severidad (donut) -->
+      <div class="card chart card--donut">
+        <div class="card-head between">
+          <h3>Severidad</h3>
+          <button id="btn-open-severity-alarms" class="btn ghost-sm" title="Ver alarmas de esta severidad">🗂 Ver
+            alarmas</button>
+        </div>
+        <div class="card-body"><canvas id="severityDonut"></canvas></div>
+      </div>
+
+      <!-- Acciones -->
+      <div class="card chart card--actions">
+        <div class="card-head between">
+          <h3>Acciones</h3>
+          <button id="btn-open-action-alarms" class="btn ghost-sm" title="Ver alarmas de estas acciones">🗂 Ver
+            alarmas</button>
+        </div>
+        <div class="card-body"><canvas id="actionBar"></canvas></div>
+      </div>
+
+      <!-- Level -->
+      <div class="card chart card--level">
+        <div class="card-head between">
+          <h3>Level</h3>
+          <button id="btn-open-level-alarms" class="btn ghost-sm" title="Ver alarmas de este level">🗂 Ver
+            alarmas</button>
+        </div>
+        <div class="card-body"><canvas id="levelBar"></canvas></div>
+      </div>
+
+      <!-- Subtype -->
+      <div class="card chart card--subtype">
+        <div class="card-head between">
+          <h3>Subtype</h3>
+          <button id="btn-open-subtype-alarms" class="btn ghost-sm" title="Ver alarmas de este Subtype">🗂 Ver
+            alarmas</button>
+        </div>
+        <div class="card-body"><canvas id="subtypeBar"></canvas></div>
+      </div>
+
+      <!-- Tabla Dispositivos -->
+      <div class="card table card--table">
+        <div class="card-head between">
+          <h3>Dispositivos recientes</h3>
+          <!-- Si luego quieres botón aquí, se puede, por ahora lo dejamos sin botón -->
+        </div>
+        <div class="table-wrap">
+          <table class="datatable" id="device-table">
+            <thead>
+              <tr>
+                <th data-sort="text">Dispositivo</th>
+                <th data-sort="number" class="is-right">Cantidad</th>
+              </tr>
+            </thead>
+            <tbody id="device-table-body"></tbody>
+          </table>
+        </div>
+        <div class="table-footnote">* Clic en los encabezados para ordenar</div>
+      </div>
+
+      <!-- Msg Severity -->
+      <div class="card chart card--msgsev">
+        <div class="card-head between">
+          <h3>Severidad Alarma</h3>
+          <button id="btn-open-msgsev-alarms" class="btn ghost-sm" title="Ver alarmas de esta severidad (msg)">🗂 Ver
+            alarmas</button>
+        </div>
+        <div class="card-body"><canvas id="msgSeverityBar"></canvas></div>
+      </div>
+    </section>
+
+    <footer class="footnote">Tiempo real (hoy 00:00 → ahora)</footer>
+
+    {% else %}
+    <!-- ======= EMPTY STATE (sin datos) ======= -->
+    <section class="empty-state">
+      <div class="empty-card">
+        <h2>Sin alarmas disponibles</h2>
+        <p>No se encontraron alarmas para <strong>{{ tenant.name|default:"—" }}</strong> hoy.</p>
+        <button id="btn-empty-ok" class="btn primary">OK</button>
+      </div>
+    </section>
+    {% endif %}
+  </div>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- JSON embebidos (mismos IDs que histórico) -->
+  {{ trend_labels|json_script:"trend-labels" }}
+  {{ trend_data|json_script:"trend-data" }}
+  {{ severity_trends|json_script:"severity-trends" }}
+  {{ severity_counts|json_script:"severity-counts" }}
+
+  {{ device_counts|json_script:"device-counts" }}
+  {{ action_counts|json_script:"action-counts" }}
+
+  {{ device_counts_by_severity|json_script:"device-counts-by-severity" }}
+  {{ device_counts_by_severity_full|json_script:"device-counts-by-severity-full" }}
+
+  {{ trend_by_device|json_script:"trend-by-device" }}
+  {{ top_devices|json_script:"top-devices" }}
+
+  {{ trend_by_action|json_script:"trend-by-action" }}
+  {{ device_counts_by_action|json_script:"device-counts-by-action" }}
+  {{ action_counts_by_device|json_script:"action-counts-by-device" }}
+  {{ action_counts_by_severity|json_script:"action-counts-by-severity" }}
+
+  {{ trend_by_subtype|json_script:"trend-by-subtype" }}
+  {{ subtype_counts_by_hour|json_script:"subtype-counts-by-hour" }}
+  {{ level_counts_by_subtype|json_script:"level-counts-by-subtype" }}
+
+  {{ hour_labels|json_script:"hour-labels" }}
+  {{ hour_data|json_script:"hour-data" }}
+  {{ severity_counts_by_hour|json_script:"severity-counts-by-hour" }}
+  {{ device_counts_by_hour|json_script:"device-counts-by-hour" }}
+  {{ device_counts_by_hour_full|json_script:"device-counts-by-hour-full" }}
+  {{ action_counts_by_hour|json_script:"action-counts-by-hour" }}
+  {{ trend_labels_hour|json_script:"trend-labels-hour" }}
+  {{ trend_by_hour|json_script:"trend-by-hour" }}
+
+  {{ msg_severity_counts|json_script:"msg-severity-counts" }}
+  {{ device_counts_by_msg_severity|json_script:"device-counts-by-msg-severity" }}
+  {{ action_counts_by_msg_severity|json_script:"action-counts-by-msg-severity" }}
+  {{ severity_counts_by_msg_severity|json_script:"severity-counts-by-msg-severity" }}
+  {{ msg_severity_counts_by_hour|json_script:"msg-severity-counts-by-hour" }}
+  {{ trend_by_msg_severity|json_script:"trend-by-msg-severity" }}
+
+  {{ level_counts|json_script:"level-counts" }}
+  {{ device_counts_by_level|json_script:"device-counts-by-level" }}
+  {{ action_counts_by_level|json_script:"action-counts-by-level" }}
+  {{ severity_counts_by_level|json_script:"severity-counts-by-level" }}
+  {{ trend_by_level|json_script:"trend-by-level" }}
+  {{ level_counts_by_hour|json_script:"level-counts-by-hour" }}
+  {{ subtype_counts_by_level|json_script:"subtype-counts-by-level" }}
+  {{ msg_severity_by_level|json_script:"msg-severity-by-level" }}
+  {{ msg_severity_by_subtype|json_script:"msg-severity-by-subtype" }}
+
+  {{ subtype_counts|json_script:"subtype-counts" }}
+  {{ device_counts_by_subtype|json_script:"device-counts-by-subtype" }}
+  {{ action_counts_by_subtype|json_script:"action-counts-by-subtype" }}
+  {{ severity_counts_by_subtype|json_script:"severity-counts-by-subtype" }}
+
+  {{ level_by_msg_severity|json_script:"level-by-msg-severity" }}
+  {{ subtype_by_msg_severity|json_script:"subtype-by-msg-severity" }}
+  {{ hour_series_by_subtype|json_script:"hour-series-by-subtype" }}
+
+  <!-- Loader navegación -->
+  <!-- <script defer src="{% static 'js/alarms_one/page-loader.js' %}?v={% now 'U' %}"></script> -->
+
+
+  <!-- App realtime -->
+  <script type="module" src="{% static 'js/alarms_one/dashboard.realtime.js' %}?v={% now 'U' %}"></script>
+  <script>
+    window.RT_ENDPOINTS = {
+      alarms: "{% url 'dashboard:realtime_alarms_by_subtype' %}",
+      log: "{% url 'dashboard:realtime_alarm_log_table' %}",
+    };
+  </script>
+
+  <!-- ========= MODAL: lista de alarmas ========= -->
+  <div id="alarmsModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="alarmsModalTitle">Alarmas</h3>
+        <button class="modal-close" data-close-alarms>&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-toolbar">
+          <input id="alarmsSearch" type="search" placeholder="Buscar en la tabla..." />
+        </div>
+        <div class="table-wrap">
+          <table class="tbl" id="alarmsTable">
+            <thead>
+              <tr>
+                <th>Hora</th>
+                <th>Severidad</th>
+                <th>Dispositivo</th>
+                <th>Level</th>
+                <th>Action</th>
+                <th>Subtype</th>
+                <th>Log Desc</th>
+              </tr>
+            </thead>
+            <tbody><!-- dinámico --></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========= MODAL: LOG ========= -->
+  <div id="logModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="logModalTitle">Detalle de Log</h3>
+        <button class="modal-close" data-close-log>&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="logMeta" class="meta"></div>
+        <div id="logHtml" class="log-html"><!-- tabla html aquí --></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts de los modales -->
+  <script type="module" src="{% static 'js/alarms_one/alarms-modal.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/alarms_one/page-loader-universal.js' %}?v={% now 'U' %}"></script>
+</body>
+
+</html>

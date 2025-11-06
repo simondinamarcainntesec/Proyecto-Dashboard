@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 import dj_database_url
+from celery.schedules import crontab
+import sys
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,16 +28,22 @@ SECRET_KEY = 'django-insecure-#z3!m0#s)!q+13psr_)l=o2)g*y@jh(p%#=n3lahw+^8h#^gt4
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-PASSWORD_HASHERS = ["django.contrib.auth.hashers.Argon2PasswordHasher"]
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+]
 TIME_ZONE = "America/Santiago"
 USE_TZ = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
-CSRF_TRUSTED_ORIGINS = ["http://localhost", "http://127.0.0.1"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.0","ia.inntesec.com","ia-customer-portal.eastus2.cloudapp.azure.com","127.0.0.1"]
+CSRF_TRUSTED_ORIGINS = ["http://localhost", "http://127.0.0.0"]
 
 LOGIN_URL = "login"
-LOGIN_REDIRECT_URL = "dashboard:index"
+LOGIN_REDIRECT_URL = "dashboard/"
 LOGOUT_REDIRECT_URL = "login"
+ALARMSONE_ACCESS_TOKEN = '1000.7e825b058846b3c4a526b131d516cb8b.cc3ebe0d9437edbca6d70a8efa7af8de' 
 
 
 # Application definition
@@ -47,7 +55,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'inyeccion_api',
+    'api_client',
     'dashboard',
+    'integrations',
+    'tenants',
+#    'csp',
+    'accounts',
+    'soar_dashboard',
+    'soar_incidents',
 ]
 
 MIDDLEWARE = [
@@ -56,9 +72,55 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'tenants.middleware.ActiveTenantMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+#    'csp.middleware.CSPMiddleware',
 ]
+
+# === Content Security Policy ===
+#CONTENT_SECURITY_POLICY = {
+#    "DIRECTIVES": {
+#        "default-src": ("'self'",),
+#        "font-src": ("'self'",),
+#        "img-src": ("'self'",),
+#        "object-src": ("'none'",),
+#        "script-src": ("'self'",),
+#        "style-src": ("'self'",),
+#        "frame-ancestors": ("'none'",),
+#        "connect-src": (
+#            "'self'",
+#            "https://iaproductivo.inntesec.cl",
+#            "https://alarmsone.manageengine.com",
+#        ),
+#    }
+#}
+
+# === Seguridad Django ===
+
+# Fuerza HTTPS
+#SECURE_SSL_REDIRECT = not DEBUG
+
+# HSTS - indica al navegador usar solo HTTPS
+#SECURE_HSTS_SECONDS = 31536000
+#SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+#SECURE_HSTS_PRELOAD = False
+
+# Evita que el navegador interprete tipos MIME incorrectos
+#SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# Bloquea iframes externos (clickjacking)
+#X_FRAME_OPTIONS = 'DENY'
+
+# Cookies seguras y con políticas de restricción
+#SESSION_COOKIE_SECURE = True
+#SESSION_COOKIE_HTTPONLY = True
+#SESSION_COOKIE_SAMESITE = 'Lax'
+
+#CSRF_COOKIE_SECURE = True
+#CSRF_COOKIE_HTTPONLY = True
+#CSRF_COOKIE_SAMESITE = 'Lax'
+
 
 ROOT_URLCONF = 'mysite.urls'
 
@@ -80,10 +142,14 @@ WSGI_APPLICATION = 'mysite.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    "default": dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600,
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'portal_db',
+        'USER': 'inntesec_ai',
+        'PASSWORD': 'KDo9yOyPfhd$LjOguKi6Oq93PJNDAqm4',
+        'HOST': 'localhost', 
+        'PORT': '5432',
+    }
 }
 
 
@@ -123,8 +189,73 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "unique-dashboard-cache",
+        "TIMEOUT": 300,  # segundos (puedes dejarlo None = infinito)
+    }
+}
+
+
+
+# Configuración de Celery
+# === Celery Config ===
+CELERY_BROKER_URL = "redis://localhost:6379/0"        
+CELERY_RESULT_BACKEND = "redis://localhost:6379/1"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = "America/Santiago"
+CELERY_ENABLE_UTC = False
+
+AUTH_USER_MODEL = 'tenants.TenantUser'
+
+AUTHENTICATION_BACKENDS = [
+    'tenants.auth_backends.TenantBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "simple": {"format": "[%(levelname)s] %(name)s: %(message)s"},
+        "verbose": {"format": "[%(asctime)s] %(levelname)s %(name)s %(module)s:%(lineno)d — %(message)s"},
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "stream": sys.stdout,
+            "formatter": "simple",
+            "level": "DEBUG",
+        },
+    },
+    "loggers": {
+        # Tus módulos donde pusimos logger = logging.getLogger(__name__)
+        "tenants.middleware": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
+        "tenants.authbackends": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
+        "tenants.decorators": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
+        "auth.views": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
+
+        # (Opcional) raíz para ver otros logs
+        # "": {"handlers": ["console"], "level": "INFO"},
+    },
+}
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "sandbox.smtp.mailtrap.io"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "4b42117563a1fe"
+EMAIL_HOST_PASSWORD = "341855ffe86c3d"
+DEFAULT_FROM_EMAIL = "no-reply@inntesec.com"
+
+CSRF_FAILURE_VIEW = "tenants.views.csrf_failure_view"

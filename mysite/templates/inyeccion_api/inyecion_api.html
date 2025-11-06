@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Dashboard de Alarmas</title>
+  </head>
+  <body>
+    <h1>Alarmas de AlarmsOne</h1>
+    <a href="{% url 'logout' %}">Salir</a>
+    <hr>
+
+    {% if alarms %}
+      <ul>
+        {% for alarm in alarms %}
+          <li>
+            <strong>Alarma:</strong> {{ alarm.subject }} <br>
+            <strong>Aplicación:</strong> {{ alarm.application.name }} <br>
+            <strong>Estado:</strong> {{ alarm.status }}
+          </li>
+          <br>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>No se pudieron cargar las alarmas o no hay alarmas disponibles.</p>
+    {% endif %}
+
+    {% if messages %}
+    <ul class="messages">
+        {% for message in messages %}
+        <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>
+            {{ message }}
+        </li>
+        {% endfor %}
+    </ul>
+{% endif %}
+  </body>
+</html>
