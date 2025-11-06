@@ -1,0 +1,175 @@
+/* ================================
+   HOME DASHBOARD STYLE
+   ================================ */
+
+/* --- Variables base (modo claro) --- */
+:root {
+  --background: #f4f6f8;
+  --card-bg: #ffffff;
+  --text: #222;
+  --primary: #0078d7;
+  --shadow: rgba(0, 0, 0, 0.1);
+  --loader-bg: rgba(255, 255, 255, 0.96);
+}
+
+/* --- Modo oscuro --- */
+[data-theme="dark"] {
+  --background: #000f2c;
+  --card-bg: #1a1d24;
+  --text: #e3e6eb;
+  --primary: #4da8ff;
+  --shadow: rgba(0, 0, 0, 0.6);
+  --loader-bg: rgba(10, 12, 18, 0.92);
+}
+
+/* --- Estilos base --- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--background);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.home-container {
+  width: 100%;
+  max-width: 1200px;
+  padding: 40px 20px;
+}
+
+.home-header {
+  text-align: center;
+  margin-bottom: 50px;
+  animation: fadeInDown 0.8s ease;
+}
+
+.home-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.home-subtitle {
+  font-size: 1.1rem;
+  color: var(--text);
+  opacity: 0.8;
+  margin-top: 10px;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 30px;
+  animation: fadeInUp 0.9s ease;
+}
+
+/* --- Tarjetas --- */
+.dashboard-card {
+  background: var(--card-bg);
+  border-radius: 16px;
+  box-shadow: 0 6px 20px var(--shadow);
+  text-decoration: none;
+  color: inherit;
+  padding: 30px;
+  transition: all 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0, 120, 215, 0.25);
+}
+
+.dashboard-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.dashboard-description {
+  color: var(--text);
+  opacity: 0.8;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* --- Animaciones --- */
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Loader adaptable al tema --- */
+#loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--loader-bg);
+  backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+#loading-overlay.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.loader {
+  border: 6px solid rgba(180, 180, 180, 0.3);
+  border-top: 6px solid var(--primary);
+  border-radius: 50%;
+  width: 55px;
+  height: 55px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 15px;
+}
+
+.loading-text {
+  font-weight: 600;
+  color: var(--primary);
+  font-size: 1.1rem;
+  text-shadow: 0 0 6px rgba(4, 0, 255, 0.377);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+  .home-title {
+    font-size: 2rem;
+  }
+  .home-subtitle {
+    font-size: 1rem;
+  }
+}

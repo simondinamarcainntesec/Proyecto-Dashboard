@@ -1,0 +1,155 @@
+/* static/css/login.css */
+
+/* --- Variables de Color --- */
+:root {
+  --color-bg: #f4f7f6;
+  --color-surface: #ffffff;
+  --color-text: #333;
+  --color-border: #ddd;
+  --color-primary: #007bff;
+  --color-primary-hover: #0056b3;
+  --color-error-bg: #f8d7da;
+  --color-error-text: #d93025;
+  --color-error-border: #f5c6cb;
+}
+
+/* --- Modo oscuro (se activa con data-theme="dark") --- */
+[data-theme="dark"] {
+  --color-bg: #121212;
+  --color-surface: #1e1e1e;
+  --color-text: #e0e0e0;
+  --color-border: #444;
+  --color-primary: #3ea6ff;
+  --color-primary-hover: #2196f3;
+  --color-error-bg: #5c1a1f;
+  --color-error-text: #f5c6cb;
+  --color-error-border: #8c2d36;
+}
+
+/* --- Transición suave entre modos --- */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* --- CONTENEDOR PRINCIPAL --- */
+.main-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.login-container {
+  padding: 2rem 3rem;
+  border-radius: 8px;
+  background-color: var(--color-surface);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+  transition: background-color 0.3s;
+  text-align: center;
+}
+
+/* --- TÍTULOS Y FORMULARIO --- */
+h1 {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+label {
+  margin-bottom: 0.5rem;
+}
+
+input {
+  padding: 0.8rem;
+  margin-bottom: 1.5rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+}
+
+/* --- BOTÓN PRINCIPAL --- */
+button[type="submit"] {
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  padding: 0.9rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+button[type="submit"]:hover {
+  background-color: var(--color-primary-hover);
+}
+
+/* --- MENSAJES DE ERROR --- */
+.error-message {
+  color: var(--color-error-text);
+  background-color: var(--color-error-bg);
+  border: 1px solid var(--color-error-border);
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 1rem;
+  border-radius: 4px;
+  text-align: center;
+}
+
+/* --- BOTÓN DE CAMBIO DE TEMA --- */
+#theme-switcher {
+  display: inline-block;
+  margin-bottom: 1rem;
+  padding: 8px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  border: 1px solid var(--color-border);
+  background-color: transparent;
+  font-size: 1.2rem;
+  color: var(--color-text);
+  transition: color 0.3s, border-color 0.3s, background-color 0.3s;
+}
+
+/* --- LOGO --- */
+.intesec-logo {
+  width: 100%;
+  max-width: 400px;
+  height: auto;
+  margin-bottom: -20px;
+  padding-bottom: 20px;
+  box-sizing: border-box;
+  z-index: 10;
+}
+
+/* --- ENLACE "Volver al login" / Registro --- */
+.back-to-login {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.back-to-login a {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.back-to-login a:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+}

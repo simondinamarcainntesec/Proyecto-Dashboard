@@ -15,16 +15,18 @@ import os
 import dj_database_url
 from celery.schedules import crontab
 import sys
+from dotenv import load_dotenv
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-#z3!m0#s)!q+13psr_)l=o2)g*y@jh(p%#=n3lahw+^8h#^gt4'
+SECRET_KEY=os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -37,13 +39,13 @@ PASSWORD_HASHERS = [
 TIME_ZONE = "America/Santiago"
 USE_TZ = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.0","ia.inntesec.com","ia-customer-portal.eastus2.cloudapp.azure.com","127.0.0.1"]
-CSRF_TRUSTED_ORIGINS = ["http://localhost", "http://127.0.0.0"]
+ALLOWED_HOSTS = ['ia.inntesec.com', 'www.ia.inntesec.com', '127.0.0.1:8001','127.0.0.1:8000', '127.0.0.1']
+CSRF_TRUSTED_ORIGINS = ['https://ia.inntesec.com', 'https://www.ia.inntesec.com', 'http://127.0.0.1:8001','http://127.0.0.1:8000']
 
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard/"
 LOGOUT_REDIRECT_URL = "login"
-ALARMSONE_ACCESS_TOKEN = '1000.7e825b058846b3c4a526b131d516cb8b.cc3ebe0d9437edbca6d70a8efa7af8de' 
+ALARMSONE_ACCESS_TOKEN = os.getenv("ALARMSONE_ACCESS_TOKEN")
 
 
 # Application definition
@@ -146,7 +148,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'portal_db',
         'USER': 'inntesec_ai',
-        'PASSWORD': 'KDo9yOyPfhd$LjOguKi6Oq93PJNDAqm4',
+        'PASSWORD': os.getenv("DB_PASSWORD"),
         'HOST': 'localhost', 
         'PORT': '5432',
     }
@@ -176,7 +178,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'es-ES'
 
 TIME_ZONE = 'UTC'
 
@@ -190,6 +192,14 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),  # carpeta principal
+    os.path.join(BASE_DIR, 'dashboard', 'static'),  # ejemplo de app
+    os.path.join(BASE_DIR, 'soar_dashboard', 'static'),     # ejemplo de app
+    os.path.join(BASE_DIR, 'soar_incidents', 'static'),     # ejemplo de app
+]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -250,12 +260,37 @@ LOGGING = {
     },
 }
 
+# ============================================
+# 📧 CONFIGURACIÓN DE EMAIL (MICROSOFT OAUTH2)
+# ============================================
+
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "sandbox.smtp.mailtrap.io"
+
+EMAIL_HOST = "smtp.office365.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = "4b42117563a1fe"
-EMAIL_HOST_PASSWORD = "341855ffe86c3d"
-DEFAULT_FROM_EMAIL = "no-reply@inntesec.com"
 
-CSRF_FAILURE_VIEW = "tenants.views.csrf_failure_view"
+# Dirección desde la cual se enviarán los correos
+EMAIL_HOST_USER = "ia@inntesec.com"
+
+# No pongas EMAIL_HOST_PASSWORD, lo reemplaza OAuth2
+
+
+MS_TENANT_ID = os.getenv("MS_TENANT_ID")
+MS_CLIENT_ID = os.getenv("MS_CLIENT_ID")
+MS_CLIENT_SECRET = os.getenv("MS_CLIENT_SECRET")
+MS_USER_EMAIL = os.getenv("MS_USER_EMAIL")
+
+MS_TOKEN_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
+MS_REDIRECT_URI = "https://ia.inntesec.com/rest/oauth2-credential/callback"
+
+
+# Indica a Django que confíe en Nginx cuando marca HTTPS
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Fuerza que todo el tráfico sea HTTPS
+SECURE_SSL_REDIRECT = not DEBUG
+
+# Asegura cookies seguras
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
