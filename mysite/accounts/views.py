@@ -1,12 +1,55 @@
-from django.contrib.auth import get_user_model
-from django.core.mail import send_mail
+# ==========================
+# 📦 IMPORTS DJANGO CORE
+# ==========================
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from django.utils.crypto import get_random_string
+from django.utils import timezone
 from django.conf import settings
-from tenants.models import Client, Tenant
 from django.db import IntegrityError
-from utils.ms_email import enviar_correo_ms
+
+# ==========================
+# 👥 AUTENTICACIÓN DJANGO
+# ==========================
+from django.contrib.auth import get_user_model, update_session_auth_hash
+from django.contrib.auth.hashers import check_password
+from django.contrib.auth.tokens import default_token_generator
+
+# ==========================
+# ✉️ EMAILS
+# ==========================
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+
+# ==========================
+# 🔐 UTILIDADES DE TOKENS / ENCODING
+# ==========================
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+
+# ==========================
+# ⚙️ UTILIDADES DJANGO
+# ==========================
+from django.utils.crypto import get_random_string
+
+# ==========================
+# 🏢 MODELOS LOCALES
+# ==========================
+from tenants.models import Client, Tenant
+
+# ==========================
+# 🧰 MÓDULOS PERSONALIZADOS
+# ==========================
+from utils.ms_email import  enviar_correo_recuperar_contrasena, enviar_correo_registro_cliente
+
+# ==========================
+# 🧩 LIBRERÍAS ESTÁNDAR
+# ==========================
+import re
+
+# ==========================
+# ✅ CONFIGURACIÓN DE USUARIO
+# ==========================
+User = get_user_model()
 
 def registro_cliente(request):
     print("🚀 Entrando a registro_cliente()")
@@ -68,38 +111,17 @@ def registro_cliente(request):
             print("❌ Error de integridad: usuario ya existente.")
             return redirect("auth_registro_cliente")
 
-        # 3️⃣ Construir correo HTML
+        # 3️⃣ Enviar correo corporativo de bienvenida (usando Microsoft Graph API)
         url_login = "https://ia.inntesec.com/login"
-        asunto = f"Acceso a tu cuenta en {tenant.name}"
-        cuerpo_html = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif;">
-            <h2>Hola, {user.first_name}</h2>
-            <p>Tu cuenta ha sido creada exitosamente en <b>{tenant.name}</b>.</p>
-            <p>
-                <b>Usuario:</b> {user.email}<br>
-                <b>Contraseña:</b> {password}
-            </p>
-            <p>
-                Puedes acceder a tu cuenta haciendo clic aquí:<br>
-                <a href="{url_login}" target="_blank">{url_login}</a>
-            </p>
-            <p>Por seguridad, cambia tu contraseña al iniciar sesión.</p>
-            <hr>
-            <p style="font-size: 12px; color: #777;">
-                Este mensaje fue generado automáticamente por el sistema Inntesec IA.
-            </p>
-        </body>
-        </html>
-        """
 
-        # 4️⃣ Enviar correo solo si es usuario nuevo
         try:
             print("📬 Enviando correo a:", email)
-            enviar_correo_ms(
-                destinatario=email,
-                asunto=asunto,
-                cuerpo_html=cuerpo_html,
+            enviar_correo_registro_cliente(
+                email_destino=email,
+                nombre_usuario=user.first_name or "Usuario",
+                tenant_name=tenant.name,
+                password=password,
+                url_login=url_login,
             )
             print("✅ Correo enviado correctamente (Graph API).")
             messages.success(
@@ -117,3 +139,51 @@ def registro_cliente(request):
 
     print("📭 Método no POST, renderizando formulario.")
     return render(request, "auth/registro_cliente.html")
+
+def recuperar_contrasena(request):
+    """
+    Permite al usuario solicitar un enlace de recuperación de contraseña.
+    Envía un correo con token seguro (usando Graph API).
+    """
+    # Limpia mensajes previos
+    storage = messages.get_messages(request)
+    for _ in storage:
+        pass
+
+    if request.method == "POST":
+        email = (request.POST.get("email") or "").strip().lower()
+
+        if not email:
+            messages.error(request, "Debes ingresar tu correo electrónico.")
+            return render(request, "auth/recuperar_contrasena.html", {"now": timezone.now()})
+
+        # Buscar usuario asociado al correo
+        user = User.objects.filter(email__iexact=email).first()
+
+        if not user:
+            messages.warning(request, "No existe una cuenta asociada a este correo.")
+            return render(request, "auth/recuperar_contrasena.html", {"now": timezone.now()})
+
+        # Generar token seguro
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+        # Construir enlace completo para restablecer contraseña
+        reset_link = f"{request.scheme}://{request.get_host()}/auth/reset/{uid}/{token}/"
+
+        try:
+            print(f"📬 Enviando correo de recuperación a: {email}")
+            enviar_correo_recuperar_contrasena(
+                email_destino=email,
+                nombre_usuario=user.first_name or user.username,
+                reset_link=reset_link,
+            )
+            print("✅ Correo de recuperación enviado correctamente (Graph API).")
+            messages.success(request, "✅ Se ha enviado un enlace de recuperación a tu correo.")
+            return redirect("login")
+
+        except Exception as e:
+            print("❌ Error al enviar correo con Graph API:", str(e))
+            messages.error(request, f"Ocurrió un error al enviar el correo: {str(e)}")
+
+    return render(request, "auth/recuperar_contrasena.html", {"now": timezone.now()})

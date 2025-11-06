@@ -1,0 +1,39 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Recuperar Contraseña</title>
+  <link rel="stylesheet" href="{% static 'css/cambiar_contraseña.css' %}?v={% now 'U' %}">
+</head>
+<body>
+  <div class="main-container">
+    <img src="{% static 'img/inntesec_logo_negro.png' %}" alt="Inntesec" class="intesec-logo">
+
+    <div class="password-container">
+      <button id="theme-switcher"></button>
+      <h1>Recuperar Contraseña</h1>
+
+      {% if messages %}
+        {% for message in messages %}
+          <div class="{{ message.tags }}-message">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+        <label for="email">Correo electrónico</label>
+        <input type="email" name="email" id="email" placeholder="ejemplo@empresa.com" required>
+        <button type="submit">Enviar enlace</button>
+      </form>
+
+      <div class="back-to-login">
+        <a href="{% url 'login' %}">← Volver al inicio de sesión</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="{% static 'js/theme-switcher.js' %}"></script>
+  <script src="{% static 'js/password_validation.js' %}"></script>
+</body>
+</html>

@@ -3,7 +3,9 @@ from django.urls import path, include
 from django.shortcuts import render
 from tenants.views import tenant_login_view, logout_view
 from accounts.views import registro_cliente
+from accounts import views as accounts_views
 from tenants import views
+from django.contrib.auth import views as auth_views
 
 # === HOME ===
 def home_view(request):
@@ -33,4 +35,16 @@ urlpatterns = [
     path("dashboard-soar/", include(("soar_dashboard.urls", "soar_dashboard"), namespace="soar_dashboard")),
     path("soar/incidentes/", include(("soar_incidents.urls", "soar_incidents"), namespace="soar_incidents")),
     path('auth/cambiar_contraseña/', views.cambiar_contraseña, name='cambiar_contrasena'),
+
+    # ===== CAMBIO CONTRASEÑA ======
+    path("auth/recuperar_contrasena/", accounts_views.recuperar_contrasena, name="recuperar_contrasena"),
+        # Reset real (cuando el usuario entra al enlace del correo)
+    path("auth/reset/<uidb64>/<token>/", auth_views.PasswordResetConfirmView.as_view(
+        template_name="auth/password_reset_confirm.html",
+        success_url="/auth/reset/done/"
+    ), name="password_reset_confirm"),
+
+    path("auth/reset/done/", auth_views.PasswordResetCompleteView.as_view(
+        template_name="auth/password_reset_complete.html"
+    ), name="password_reset_complete"),
 ]

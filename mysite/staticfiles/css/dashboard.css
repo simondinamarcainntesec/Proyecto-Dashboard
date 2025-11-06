@@ -627,3 +627,57 @@ body {
   background: var(--brand, #3b82f6);
   color: #fff;
 }
+
+/* ===== Onboarding coachmark & hint ===== */
+.hidden{ display:none !important; }
+
+.hint-dot{
+  display:inline-block;
+  width:10px; height:10px;
+  margin-left:8px;
+  border-radius:999px;
+  background:#f59e0b;            /* naranja */
+  box-shadow:0 0 0 0 rgba(245,158,11,0.65);
+  animation:pulse-dot 1.6s infinite;
+  vertical-align:middle;
+}
+@keyframes pulse-dot{
+  0%{ box-shadow:0 0 0 0 rgba(245,158,11,0.65); }
+  70%{ box-shadow:0 0 0 12px rgba(245,158,11,0); }
+  100%{ box-shadow:0 0 0 0 rgba(245,158,11,0); }
+}
+
+.coachmark{
+  position: fixed;
+  z-index: 3000;
+  /* Posición inicial (se recalcula por JS para quedar junto a SOAR) */
+  top: 120px;
+  left: 260px;
+  color: var(--text, #e5e7eb);
+}
+.coachmark-body{
+  background: var(--card, #0f1d35);
+  border: 1px solid var(--border, #1e293b);
+  border-radius: 12px;
+  padding: 12px 14px;
+  min-width: 280px;
+  box-shadow: var(--shadow, 0 10px 28px rgba(2,6,23,.25));
+}
+.coachmark-title{
+  font-weight: 800; margin-bottom: 6px;
+}
+.coachmark-text{
+  color: var(--muted, #94a3b8);
+  margin-bottom: 10px; line-height: 1.4;
+}
+.coachmark-arrow{
+  width: 0; height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 10px solid var(--card, #0f1d35);
+  margin-left: 18px;
+  filter: drop-shadow(0 -1px 0 var(--border, #1e293b));
+}
+.coachmark .btn.primary{
+  padding: 6px 10px; border-radius: 10px; font-weight: 800;
+}

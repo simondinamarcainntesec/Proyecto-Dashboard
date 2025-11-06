@@ -1,12 +1,14 @@
 {% load static %}
 <!doctype html>
 <html lang="es">
+
 <head>
   <meta charset="utf-8">
   <title>Iniciar Sesión</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="{% static 'css/login.css' %}">
 </head>
+
 <body>
 
   <div class="main-container">
@@ -18,13 +20,19 @@
       <h1>Iniciar Sesión</h1>
 
       {% if messages %}
-        {% for message in messages %}
-          <p class="error-message">{{ message }}</p>
-        {% endfor %}
+      {% for message in messages %}
+      {% if message.tags == 'success' %}
+      <div class="success-message">{{ message }}</div>
+      {% elif message.tags == 'warning' %}
+      <div class="warning-message">{{ message }}</div>
+      {% else %}
+      <div class="error-message">{{ message }}</div>
+      {% endif %}
+      {% endfor %}
       {% endif %}
 
       {% if form.errors %}
-        <p class="error-message">Credenciales inválidas o empresa no encontrada.</p>
+      <p class="error-message">Credenciales inválidas o empresa no encontrada.</p>
       {% endif %}
 
       <form method="post" novalidate>
@@ -34,6 +42,11 @@
 
         <label for="password">Contraseña</label>
         <input type="password" name="password" id="password" placeholder="••••••••" required>
+
+        <!-- 🔹 Enlace de recuperación de contraseña -->
+        <div class="forgot-password">
+          <a href="{% url 'recuperar_contrasena' %}">¿Olvidaste tu contraseña?</a>
+        </div>
 
         <button type="submit">Entrar</button>
       </form>
@@ -50,4 +63,5 @@
 
   <script src="{% static 'js/theme-switcher.js' %}"></script>
 </body>
+
 </html>

@@ -15,7 +15,6 @@ from django.contrib.auth import update_session_auth_hash
 import re
 from django.contrib.messages import get_messages
 from utils.ms_email import enviar_correo_cambio_contrasena
-from utils.ms_email import enviar_correo_ms
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -189,34 +188,34 @@ def switch_tenant(request, tenant_id):
 
 @login_required
 def cambiar_contraseña(request):
-    if request.method == 'POST':
-        actual = request.POST.get('actual')
-        nueva = request.POST.get('nueva')
-        confirmar = request.POST.get('confirmar')
+    if request.method == "POST":
+        actual = request.POST.get("actual")
+        nueva = request.POST.get("nueva")
+        confirmar = request.POST.get("confirmar")
 
         # 🔸 Validaciones de seguridad
         if not request.user.check_password(actual):
-            messages.error(request, 'La contraseña actual no es correcta.')
+            messages.error(request, "La contraseña actual no es correcta.")
         elif nueva != confirmar:
-            messages.error(request, 'Las contraseñas nuevas no coinciden.')
+            messages.error(request, "Las contraseñas nuevas no coinciden.")
         elif len(nueva) < 8:
-            messages.error(request, 'La nueva contraseña debe tener al menos 8 caracteres.')
+            messages.error(request, "La nueva contraseña debe tener al menos 8 caracteres.")
         elif not re.search(r"\d", nueva):
-            messages.error(request, 'La nueva contraseña debe incluir al menos un número.')
-        elif not re.search(r"[!@#$%^&*(),.?\":{}|<>_\-+=/\\;\']", nueva):
+            messages.error(request, "La nueva contraseña debe incluir al menos un número.")
+        elif not re.search(r"[!@#$%^&*(),.?\":{}|<>_\-+=/\\;'\[\]]", nueva):
             messages.error(
                 request,
-                'La nueva contraseña debe incluir al menos un carácter especial (como @, #, $, %, etc.).'
+                "La nueva contraseña debe incluir al menos un carácter especial (como @, #, $, %, etc.)."
             )
         else:
-            # ✅ Cambia la contraseña y mantiene la sesión
+            # ✅ Cambia la contraseña y mantiene la sesión activa
             request.user.set_password(nueva)
             request.user.save()
             update_session_auth_hash(request, request.user)
 
             success_msg = "✅ Contraseña cambiada correctamente."
 
-            # 📨 Envío de correo de confirmación
+            # 📨 Envío del correo de confirmación (diseño corporativo Inntesec)
             try:
                 enviar_correo_cambio_contrasena(
                     email_destino=request.user.email,
@@ -231,14 +230,14 @@ def cambiar_contraseña(request):
                 )
 
             messages.success(request, success_msg)
-            return redirect('cambiar_contrasena')
+            return redirect("cambiar_contrasena")
 
     # ✅ Limpieza de mensajes antiguos (por accesibilidad)
     storage = get_messages(request)
     for _ in storage:
         pass
 
-    return render(request, 'auth/cambiar_contrasena.html')
+    return render(request, "auth/cambiar_contrasena.html")
 
 def csrf_failure_view(request, reason=""):
     """

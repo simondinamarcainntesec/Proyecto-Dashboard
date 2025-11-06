@@ -175,3 +175,25 @@ button[type="submit"]:hover {
   color: var(--color-text);
   transition: color 0.3s, border-color 0.3s, background-color 0.3s;
 }
+
+/* --- CAMPOS DE TEXTO (correo, contraseña, etc.) --- */
+input[type="email"],
+input[type="password"],
+input[type="text"] {
+  width: 100%;
+  padding: 0.8rem;
+  margin-bottom: 1.5rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+}
+
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="text"]:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
