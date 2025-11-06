@@ -14,6 +14,8 @@ from tenants.context import current_tenant, current_tenant_source
 from django.contrib.auth import update_session_auth_hash
 import re
 from django.contrib.messages import get_messages
+from utils.ms_email import enviar_correo_cambio_contrasena
+from utils.ms_email import enviar_correo_ms
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -192,6 +194,7 @@ def cambiar_contraseña(request):
         nueva = request.POST.get('nueva')
         confirmar = request.POST.get('confirmar')
 
+        # 🔸 Validaciones de seguridad
         if not request.user.check_password(actual):
             messages.error(request, 'La contraseña actual no es correcta.')
         elif nueva != confirmar:
@@ -200,21 +203,42 @@ def cambiar_contraseña(request):
             messages.error(request, 'La nueva contraseña debe tener al menos 8 caracteres.')
         elif not re.search(r"\d", nueva):
             messages.error(request, 'La nueva contraseña debe incluir al menos un número.')
-        elif not re.search(r"[!@#$%^&*(),.?\":{}|<>_\-+=/\\;']", nueva):
-            messages.error(request, 'La nueva contraseña debe incluir al menos un carácter especial (como @, #, $, %, etc.).')
+        elif not re.search(r"[!@#$%^&*(),.?\":{}|<>_\-+=/\\;\']", nueva):
+            messages.error(
+                request,
+                'La nueva contraseña debe incluir al menos un carácter especial (como @, #, $, %, etc.).'
+            )
         else:
+            # ✅ Cambia la contraseña y mantiene la sesión
             request.user.set_password(nueva)
             request.user.save()
             update_session_auth_hash(request, request.user)
-            messages.success(request, '✅ Contraseña cambiada correctamente.')
-            return redirect('dashboard:dashboard')
 
-    # ✅ Limpia los mensajes después de mostrarlos
+            success_msg = "✅ Contraseña cambiada correctamente."
+
+            # 📨 Envío de correo de confirmación
+            try:
+                enviar_correo_cambio_contrasena(
+                    email_destino=request.user.email,
+                    nombre_usuario=(request.user.first_name or request.user.username),
+                )
+                success_msg += " Se ha enviado un correo de confirmación a tu dirección registrada."
+            except Exception as e:
+                # ⚠️ Si falla el envío, mostrar advertencia pero mantener éxito
+                messages.warning(
+                    request,
+                    f"Contraseña cambiada, pero ocurrió un error al enviar el correo: {e}"
+                )
+
+            messages.success(request, success_msg)
+            return redirect('cambiar_contrasena')
+
+    # ✅ Limpieza de mensajes antiguos (por accesibilidad)
     storage = get_messages(request)
     for _ in storage:
         pass
 
-    return render(request, 'auth/cambiar_contraseña.html')
+    return render(request, 'auth/cambiar_contrasena.html')
 
 def csrf_failure_view(request, reason=""):
     """
@@ -226,3 +250,28 @@ def csrf_failure_view(request, reason=""):
         "Tu sesión expiró o el formulario no es válido. Por favor, inicia sesión nuevamente."
     )
     return redirect("/login/")
+
+def oauth2_callback(request):
+    code = request.GET.get("code")
+    if not code:
+        return JsonResponse({"error": "Missing authorization code"}, status=400)
+
+    # URL del token de Microsoft
+    token_url = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
+
+    # Datos requeridos para el intercambio
+    data = {
+        "client_id": settings.MS_CLIENT_ID,
+        "client_secret": settings.MS_CLIENT_SECRET,
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": "https://ia.inntesec.com/rest/oauth2-credential/callback",
+    }
+
+    # Solicita el token a Microsoft
+    response = requests.post(token_url, data=data)
+    token_data = response.json()
+
+    # Guarda o devuelve el token (según tu necesidad)
+    return JsonResponse(token_data)
+

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Cambiar Contraseña</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/cambiar_contraseña.css' %}?v={% now 'U' %}">
+</head>
+
+<body>
+    <div class="main-container">
+        <!-- Logo Inntesec -->
+        <img src="{% static 'img/inntesec_logo_negro.png' %}" alt="Logo Inntesec" class="intesec-logo">
+
+        <div class="password-container">
+            <h1>🔒 Cambiar Contraseña</h1>
+
+            <!-- 🔹 Formulario con acción al endpoint Django -->
+            <form method="POST" action="{% url 'cambiar_contrasena' %}">
+                {% csrf_token %}
+
+                <!-- 🔸 Mensajes del sistema -->
+                {% if messages %}
+                    {% for message in messages %}
+                        {% if message.tags == 'success' %}
+                            <div class="success-message">{{ message }}</div>
+                        {% elif message.tags == 'warning' %}
+                            <div class="warning-message">{{ message }}</div>
+                        {% else %}
+                            <div class="error-message">{{ message }}</div>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+
+                <label for="actual">Contraseña actual</label>
+                <input type="password" id="actual" name="actual" placeholder="Ingresa tu contraseña actual" required>
+
+                <label for="nueva">Nueva contraseña</label>
+                <input type="password" id="nueva" name="nueva" placeholder="Mínimo 8 caracteres" required>
+
+                <label for="confirmar">Confirmar nueva contraseña</label>
+                <input type="password" id="confirmar" name="confirmar" placeholder="Confirma la nueva contraseña" required>
+
+                <button type="submit" id="submit-btn">Guardar cambios</button>
+            </form>
+
+            <div class="back-to-login">
+                <a href="{% url 'login' %}">← Volver al inicio de sesión</a>
+            </div>
+        </div>
+
+        <!-- Botón para cambiar tema -->
+        <button id="theme-switcher" aria-label="Cambiar tema">🌓</button>
+    </div>
+
+    <!-- ✅ Archivos JavaScript externos -->
+    <script src="{% static 'js/theme-switcher.js' %}?v={% now 'U' %}"></script>
+    <script src="{% static 'js/password-validation.js' %}?v={% now 'U' %}"></script>
+</body>
+
+</html>

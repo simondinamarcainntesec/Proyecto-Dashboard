@@ -261,29 +261,31 @@ LOGGING = {
 }
 
 # ============================================
-# 📧 CONFIGURACIÓN DE EMAIL (MICROSOFT OAUTH2)
+# 📧 CONFIGURACIÓN MICROSOFT GRAPH (OAuth2)
 # ============================================
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
-EMAIL_HOST = "smtp.office365.com"
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
+# Variables base (desde entorno)
+MS_TENANT_ID = os.getenv("MS_TENANT_ID", "").strip()
+MS_CLIENT_ID = os.getenv("MS_CLIENT_ID", "").strip()
+MS_CLIENT_SECRET = os.getenv("MS_CLIENT_SECRET", "").strip()
+MS_USER_EMAIL = os.getenv("MS_USER_EMAIL", "").strip()  # ej: ia@inntesec.com
+MS_REDIRECT_URI = os.getenv("MS_REDIRECT_URI", "").strip()
 
-# Dirección desde la cual se enviarán los correos
-EMAIL_HOST_USER = "ia@inntesec.com"
+# Evitar f-string con None o vacío
+if MS_TENANT_ID:
+    MS_TOKEN_URL = f"https://login.microsoftonline.com/{MS_TENANT_ID}/oauth2/v2.0/token"
+else:
+    MS_TOKEN_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
 
-# No pongas EMAIL_HOST_PASSWORD, lo reemplaza OAuth2
-
-
-MS_TENANT_ID = os.getenv("MS_TENANT_ID")
-MS_CLIENT_ID = os.getenv("MS_CLIENT_ID")
-MS_CLIENT_SECRET = os.getenv("MS_CLIENT_SECRET")
-MS_USER_EMAIL = os.getenv("MS_USER_EMAIL")
-
-MS_TOKEN_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
-MS_REDIRECT_URI = "https://ia.inntesec.com/rest/oauth2-credential/callback"
-
+# Diccionario consolidado (seguro)
+OAUTH2_MICROSOFT = {
+    "MS_TOKEN_URL": MS_TOKEN_URL,
+    "MS_CLIENT_ID": MS_CLIENT_ID,
+    "MS_CLIENT_SECRET": MS_CLIENT_SECRET,
+    "MS_USER_EMAIL": MS_USER_EMAIL,
+}
 
 # Indica a Django que confíe en Nginx cuando marca HTTPS
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -294,3 +296,42 @@ SECURE_SSL_REDIRECT = not DEBUG
 # Asegura cookies seguras
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+
+# ==========================================
+# 🧠 LOGGING CONFIGURATION
+# ==========================================
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "[{levelname}] {asctime} {name} – {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "file": {
+            "level": "DEBUG",
+            "class": "logging.FileHandler",
+            "filename": "/home/inntesec-ia/Proyecto-Dashboard/mysite/django_debug.log",
+            "formatter": "verbose",
+        },
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["file", "console"],
+            "level": "DEBUG",
+            "propagate": True,
+        },
+        "utils.ms_email": {  # 👈 tu módulo de correo
+            "handlers": ["file", "console"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+    },
+}

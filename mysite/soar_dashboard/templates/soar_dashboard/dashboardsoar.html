@@ -7,9 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Portal Clientes – SOAR</title>
 
-  <!-- Fuente igual al histórico -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
-
   <link rel="stylesheet" href="{% static 'css/soar.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/user_dropdown.css' %}?v={% now 'U' %}">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -31,22 +29,56 @@
     </div>
 
     <nav class="nav">
-      <a class="nav-item {% if request.resolver_match.url_name == 'dashboard_alarmsone' %}is-active{% endif %}"
-        href="{% url 'dashboard:dashboard_alarmsone' %}">
-        <span class="nav-ico">🏠</span>Alarmas
-      </a>
-      <a class="nav-item {% if request.resolver_match.url_name == 'dashboard_realtime' %}is-active{% endif %}"
-        href="{% url 'dashboard:dashboard_realtime' %}">
-        <span class="nav-ico">⏱️</span>Tiempo Real
-      </a>
-      <a class="nav-item {% if request.resolver_match.app_name == 'soar_dashboard' %}is-active{% endif %}"
-        href="{% url 'soar_dashboard:dashboard' %}">
-        <span class="nav-ico">🚨</span>SOAR
-      </a>
-      <a class="nav-item {% if request.resolver_match.app_name == 'soar_incidents' %}is-active{% endif %}"
-        href="{% url 'soar_incidents:list' %}">
-        <span class="nav-ico">🤖</span>IA SOAR
-      </a>
+      {# Mostrar Alarmas / Tiempo Real / SOAR SOLO si hay servicio de alarmas #}
+      {% if tenant.alarms_one_id %}
+        <a class="nav-item {% if request.resolver_match.url_name == 'dashboard_alarmsone' %}is-active{% endif %}"
+           href="{% url 'dashboard:dashboard_alarmsone' %}">
+          <span class="nav-ico">🏠</span>Alarmas
+        </a>
+
+        <a class="nav-item {% if request.resolver_match.url_name == 'dashboard_realtime' %}is-active{% endif %}"
+           href="{% url 'dashboard:dashboard_realtime' %}">
+          <span class="nav-ico">⏱️</span>Tiempo Real
+        </a>
+
+        <!-- ▼▼▼ SOAR como menú desplegable ▼▼▼ -->
+        <details class="tenant-dropdown nav-dropdown"
+                 {% if request.resolver_match.app_name == 'soar_dashboard' or request.resolver_match.app_name == 'soar_incidents' %}open{% endif %}>
+          <summary class="nav-item {% if request.resolver_match.app_name == 'soar_dashboard' or request.resolver_match.app_name == 'soar_incidents' %}is-active{% endif %}">
+            <span class="nav-ico">🚨</span>SOAR
+            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
+          </summary>
+          <div class="tenant-list nav-submenu">
+            <a class="tenant-option nav-subitem {% if request.resolver_match.app_name == 'soar_dashboard' %}is-active{% endif %}"
+               href="{% url 'soar_dashboard:dashboard' %}">
+              SOAR Dashboard
+            </a>
+            <a class="tenant-option nav-subitem {% if request.resolver_match.app_name == 'soar_incidents' %}is-active{% endif %}"
+               href="{% url 'soar_incidents:list' %}">
+              Detalles
+            </a>
+          </div>
+        </details>
+        <!-- ▲▲▲ SOAR como menú desplegable ▲▲▲ -->
+      {% endif %}
+
+      <!-- ▼▼▼ Configuración (SIEMPRE visible) ▼▼▼ -->
+      <details class="tenant-dropdown nav-dropdown"
+               {% if request.resolver_match.url_name == 'cambiar_contrasena' %}open{% endif %}>
+        <summary class="nav-item {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}">
+          <span class="nav-ico">⚙️</span>Configuración
+          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+        </summary>
+        <div class="tenant-list nav-submenu">
+          <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}"
+             href="{% url 'cambiar_contrasena' %}">🔒 Cambiar contraseña</a>
+        </div>
+      </details>
+      <!-- ▲▲▲ Configuración ▲▲▲ -->
     </nav>
   </aside>
 
@@ -83,7 +115,7 @@
         <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
         <button class="btn ghost" title="Exportar">⬇︎</button>
 
-        <!-- Menú usuario -->
+        <!-- Menú usuario (solo logout) -->
         <div class="user-menu" id="userMenu">
           <button type="button" id="userButton" class="user-button">
             <div class="user-avatar">{{ request.user.username|default:"U"|slice:":1"|upper }}</div>
@@ -93,7 +125,6 @@
             </svg>
           </button>
           <div class="dropdown-menu">
-            <a href="{% url 'cambiar_contraseña' %}">🔒 Cambiar contraseña</a>
             <form action="{% url 'logout' %}" method="post">
               {% csrf_token %}
               <button type="submit">🚪 Cerrar sesión</button>
@@ -103,7 +134,8 @@
       </div>
     </header>
 
-    <!-- === Barra de filtros de fecha (idéntica al histórico) === -->
+    {# === Barra de filtros de fecha: SOLO si hay servicio de alarmas === #}
+    {% if tenant.alarms_one_id %}
     <section class="toolbar">
       <form id="date-filter" method="get" class="toolbar-row">
         <div class="group">
@@ -125,6 +157,7 @@
         </div>
       </form>
     </section>
+    {% endif %}
 
     {# ===================================================== #}
     {# IF: mostrar dashboard o estado vacío según events #}
@@ -161,51 +194,33 @@
 
     <section class="sec visible">
       <div class="grid grid-main">
-        <!-- Origen/Destino -->
         <div class="card chart" data-groups="all,origen">
-          <div class="card-head">
-            <h3>Top países origen</h3>
-          </div>
+          <div class="card-head"><h3>Top países origen</h3></div>
           <div class="card-body"><canvas id="chartCountries"></canvas></div>
         </div>
 
-        <!-- Incidentes -->
         <div class="card chart" data-groups="all,incidentes">
-          <div class="card-head">
-            <h3>Severidad</h3>
-          </div>
+          <div class="card-head"><h3>Severidad</h3></div>
           <div class="card-body"><canvas id="chartSeverity"></canvas></div>
         </div>
 
-        <!-- Políticas/Acciones -->
         <div class="card chart" data-groups="all,politicas">
-          <div class="card-head">
-            <h3>Acción de seguridad</h3>
-          </div>
+          <div class="card-head"><h3>Acción de seguridad</h3></div>
           <div class="card-body"><canvas id="chartSecAction"></canvas></div>
         </div>
 
-        <!-- Incidentes -->
         <div class="card chart" data-groups="all,incidentes">
-          <div class="card-head">
-            <h3>Tendencia diaria</h3>
-          </div>
+          <div class="card-head"><h3>Tendencia diaria</h3></div>
           <div class="card-body"><canvas id="chartTrendDaily"></canvas></div>
         </div>
 
-        <!-- Incidentes -->
         <div class="card chart" data-groups="all,incidentes">
-          <div class="card-head">
-            <h3>Tendencia por hora</h3>
-          </div>
+          <div class="card-head"><h3>Tendencia por hora</h3></div>
           <div class="card-body"><canvas id="chartTrendHourly"></canvas></div>
         </div>
 
-        <!-- Operativa -->
         <div class="card table card--table" data-groups="all,operativa">
-          <div class="card-head between">
-            <h3>Top dispositivos</h3>
-          </div>
+          <div class="card-head between"><h3>Top dispositivos</h3></div>
           <div class="table-wrap">
             <table class="datatable" id="device-table">
               <thead>
@@ -220,35 +235,23 @@
           <div class="table-footnote">* Clic en una fila para filtrar</div>
         </div>
 
-        <!-- Operativa -->
         <div class="card chart" data-groups="all,operativa">
-          <div class="card-head">
-            <h3>Top servicios</h3>
-          </div>
+          <div class="card-head"><h3>Top servicios</h3></div>
           <div class="card-body"><canvas id="chartServices"></canvas></div>
         </div>
 
-        <!-- NUEVO: Origen/Destino -->
         <div class="card chart" data-groups="all,operativa">
-          <div class="card-head">
-            <h3>Top aplicaciones</h3>
-          </div>
+          <div class="card-head"><h3>Top aplicaciones</h3></div>
           <div class="card-body"><canvas id="chartApplications"></canvas></div>
         </div>
 
-        <!-- Origen/Destino -->
         <div class="card chart" data-groups="all,origen">
-          <div class="card-head">
-            <h3>Top IP Origen</h3>
-          </div>
+          <div class="card-head"><h3>Top IP Origen</h3></div>
           <div class="card-body"><canvas id="chartTopSrcIP"></canvas></div>
         </div>
 
-        <!-- Origen/Destino -->
         <div class="card chart" data-groups="all,origen">
-          <div class="card-head">
-            <h3>Top IP Destino</h3>
-          </div>
+          <div class="card-head"><h3>Top IP Destino</h3></div>
           <div class="card-body"><canvas id="chartTopDstIP"></canvas></div>
         </div>
       </div>
@@ -269,15 +272,12 @@
 
   {{ events|json_script:"soar-events" }}
 
-  <!-- Reutilizamos el mismo JS de fechas del histórico -->
+  <!-- Fechas, secciones y app -->
   <script defer src="{% static 'js/alarms_one/date_filters.js' %}?v={% now 'U' %}"></script>
-
-  <!-- Control de chips de secciones -->
   <script defer src="{% static 'js/soar/sections.js' %}?v={% now 'U' %}"></script>
-
-  <!-- App principal SOAR -->
   <script type="module" src="{% static 'js/soar/dashboardsoar.js' %}?v={{ now|date:'U' }}"></script>
 
+  <!-- Cierre de dropdowns / UX -->
   <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/soar/page-loader-universal.js' %}?v={% now 'U' %}"></script>
 </body>

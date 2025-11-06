@@ -10,9 +10,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/user_dropdown.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/coachmark.css' %}?v={% now 'U' %}">
+  <link rel="icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
+  <link rel="shortcut icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
 </head>
 
-<body class="layout">
+<body class="layout" data-username="{{ request.user.username|default:'anon' }}">
   <!-- Overlay de carga -->
   <div id="loading-overlay" role="status" aria-live="polite" aria-label="Cargando">
     <div class="loading-card">
@@ -28,18 +31,67 @@
     </div>
 
     <nav class="nav">
-      <a class="nav-item is-active" href="{% url 'dashboard:dashboard_alarmsone' %}">
-        <span class="nav-ico">🏠</span>Alarmas
-      </a>
-      <a class="nav-item" href="{% url 'dashboard:dashboard_realtime' %}">
-        <span class="nav-ico">⏱️</span>Tiempo Real
-      </a>
-      <a class="nav-item" href="{% url 'soar_dashboard:dashboard' %}">
-        <span class="nav-ico">🚨</span>SOAR
-      </a>
-      <a class="nav-item" href="{% url 'soar_incidents:list' %}">
-        <span class="nav-ico">🤖</span>IA SOAR
-      </a>
+      {# Ítems de navegación visibles SOLO si hay servicio #}
+      {% if tenant.alarms_one_id %}
+        <!-- Alarmas -->
+        <a id="alarmsLink"
+           class="nav-item is-active"
+           href="{% url 'dashboard:dashboard_alarmsone' %}">
+          <span class="nav-ico">🏠</span>Alarmas
+          <span id="hintDotAlarms" class="coachmark-dot" aria-hidden="true"></span>
+        </a>
+
+        <!-- Tiempo Real -->
+        <a id="realtimeLink"
+           class="nav-item"
+           href="{% url 'dashboard:dashboard_realtime' %}">
+          <span class="nav-ico">⏱️</span>Tiempo Real
+          <span id="hintDotRealtime" class="coachmark-dot" aria-hidden="true"></span>
+        </a>
+
+        <!-- SOAR -->
+        <details class="tenant-dropdown nav-dropdown"
+                 {% if request.resolver_match.app_name == 'soar_dashboard' or request.resolver_match.app_name == 'soar_incidents' %}open{% endif %}>
+          <summary id="soarSummary"
+                   class="nav-item {% if request.resolver_match.app_name == 'soar_dashboard' or request.resolver_match.app_name == 'soar_incidents' %}is-active{% endif %}">
+            <span class="nav-ico">🚨</span>SOAR
+            <span id="hintDotSoar" class="coachmark-dot" aria-hidden="true"></span>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
+          </summary>
+
+          <div class="tenant-list nav-submenu">
+            <a class="tenant-option nav-subitem {% if request.resolver_match.app_name == 'soar_dashboard' %}is-active{% endif %}"
+               href="{% url 'soar_dashboard:dashboard' %}">
+              SOAR Dashboard
+            </a>
+            <a class="tenant-option nav-subitem {% if request.resolver_match.app_name == 'soar_incidents' %}is-active{% endif %}"
+               href="{% url 'soar_incidents:list' %}">
+              Detalles
+            </a>
+          </div>
+        </details>
+      {% endif %}
+
+      <!-- Configuración (SIEMPRE visible) -->
+      <details class="tenant-dropdown nav-dropdown"
+               {% if request.resolver_match.url_name == 'cambiar_contrasena' %}open{% endif %}>
+        <summary id="settingsSummary"
+                 class="nav-item {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}">
+          <span class="nav-ico">⚙️</span>Configuración
+          <span id="hintDotConfig" class="coachmark-dot" aria-hidden="true"></span>
+          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+        </summary>
+        <div class="tenant-list nav-submenu">
+          <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}"
+             href="{% url 'cambiar_contrasena' %}">
+            🔒 Cambiar contraseña
+          </a>
+        </div>
+      </details>
     </nav>
   </aside>
 
@@ -78,7 +130,7 @@
         <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
         <button class="btn ghost" title="Exportar">⬇︎</button>
 
-        <!-- 🔽 Panel desplegable del usuario -->
+        <!-- Usuario -->
         <div class="user-menu" id="userMenu">
           <button type="button" id="userButton" class="user-button">
             <div class="user-avatar">
@@ -93,7 +145,6 @@
           </button>
 
           <div class="dropdown-menu">
-            <a href="{% url 'cambiar_contraseña' %}">🔒 Cambiar contraseña</a>
             <form action="{% url 'logout' %}" method="post">
               {% csrf_token %}
               <button type="submit">🚪 Cerrar sesión</button>
@@ -103,212 +154,224 @@
       </div>
     </header>
 
-    <!-- Filtros -->
-    <section class="toolbar">
-      <form id="date-filter" method="get" class="toolbar-row">
-        <div class="group">
-          <button type="button" class="chip chip-btn" data-range="7d">Últimos 7 días</button>
-          <button type="button" class="chip chip-btn" data-range="30d">Últimos 30 días</button>
-          <button type="button" class="chip chip-btn" data-range="month">Este mes</button>
-        </div>
-
-        <div class="group">
-          <label class="date-range">
-            <span>Desde</span>
-            <input id="inp-from" type="date" name="from" value="{{ from_date_str }}" />
-          </label>
-          <label class="date-range">
-            <span>Hasta</span>
-            <input id="inp-to" type="date" name="to" value="{{ to_date_str }}" />
-          </label>
-          <button class="btn primary" type="submit">Aplicar</button>
-          <a class="btn ghost" href="?">Limpiar</a>
-        </div>
-      </form>
-    </section>
-
-    {# ===================================================== #}
-    {# IF: mostrar dashboard o estado vacío según KPI total  #}
-    {# ===================================================== #}
-    {% if kpi_total|default:0 > 0 %}
-      {% cache 300 "kpis_hist" tenant.id from_date_str to_date_str %}
-      <section class="grid grid-kpis">
-        <div class="card kpi">
-          <div class="kpi-label">Hora con más alarmas</div>
-          <div class="kpi-value" id="kpi-peak-hour">—</div>
-        </div>
-        <div class="card kpi">
-          <div class="kpi-label">Alta Severidad</div>
-          <div class="kpi-value" id="kpi-high">{{ kpi_high }}</div>
-        </div>
-        <div class="card kpi">
-          <div class="kpi-label">Total Alarmas</div>
-          <div class="kpi-value" id="kpi-total">{{ kpi_total }}</div>
-        </div>
-        <div class="card kpi">
-          <div class="kpi-label">Dispositivos Detectados</div>
-          <div class="kpi-value" id="kpi-devices">{{ kpi_dispositivos }}</div>
-        </div>
-      </section>
-      {% endcache %}
-
-      {% cache 300 "grid_hist" tenant.id from_date_str to_date_str %}
-      <section class="grid grid-main">
-        <div class="card chart card--trend">
-          <div class="card-head">
-            <h3>Alarmas por día</h3>
-          </div>
-          <div class="card-body"><canvas id="trendChart"></canvas></div>
-        </div>
-
-        <div class="card chart card--hourly">
-          <div class="card-head">
-            <h3>Alarmas por hora</h3>
-          </div>
-          <div class="card-body"><canvas id="hourlyChart"></canvas></div>
-        </div>
-
-        <div class="card chart card--donut">
-          <div class="card-head">
-            <h3>Severidad</h3>
-          </div>
-          <div class="card-body"><canvas id="severityDonut"></canvas></div>
-        </div>
-
-        <div class="card chart card--actions">
-          <div class="card-head">
-            <h3>Acciones</h3>
-          </div>
-          <div class="card-body"><canvas id="actionBar"></canvas></div>
-        </div>
-
-        <div class="card chart card--level">
-          <div class="card-head">
-            <h3>Level</h3>
-          </div>
-          <div class="card-body"><canvas id="levelBar"></canvas></div>
-        </div>
-
-        <div class="card chart card--subtype">
-          <div class="card-head">
-            <h3>Subtype</h3>
-          </div>
-          <div class="card-body"><canvas id="subtypeBar"></canvas></div>
-        </div>
-
-        <div class="card table card--table">
-          <div class="card-head between">
-            <h3>Dispositivos recientes</h3>
-          </div>
-          <div class="table-wrap">
-            <table class="datatable" id="device-table">
-              <thead>
-                <tr>
-                  <th data-sort="text">Dispositivo</th>
-                  <th data-sort="number" class="is-right">Cantidad</th>
-                </tr>
-              </thead>
-              <tbody id="device-table-body">
-                {% for device, count in device_counts.items %}
-                <tr>
-                  <td><span class="cell-device">{{ device }}</span></td>
-                  <td class="is-right"><span class="pill pill-count">{{ count }}</span></td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-          <div class="table-footnote">* Clic en los encabezados para ordenar</div>
-        </div>
-
-        <div class="card chart card--msgsev">
-          <div class="card-head">
-            <h3>Severidad Alarma</h3>
-          </div>
-          <div class="card-body"><canvas id="msgSeverityBar"></canvas></div>
-        </div>
-      </section>
-      {% endcache %}
-
-      <footer class="footnote">Última actualización: hace 7 min</footer>
-
-    {% else %}
-      <!-- ======= EMPTY STATE (sin datos) ======= -->
+    {% if not tenant.alarms_one_id %}
       <section class="empty-state">
         <div class="empty-card">
-          <h2>Sin alarmas disponibles</h2>
-          <p>No se encontraron alarmas para <strong>{{ tenant.name|default:"—" }}</strong> en el rango seleccionado.</p>
+          <h2>Servicio no disponible</h2>
+          <p>La empresa <strong>{{ tenant.name|default:"—" }}</strong> no tiene el servicio de alarmas contratado.</p>
+          <p>Por favor, contacte con un administrador.</p>
         </div>
       </section>
+    {% else %}
+      <!-- Filtros -->
+      <section class="toolbar">
+        <form id="date-filter" method="get" class="toolbar-row">
+          <div class="group">
+            <button type="button" class="chip chip-btn" data-range="7d">Últimos 7 días</button>
+            <button type="button" class="chip chip-btn" data-range="30d">Últimos 30 días</button>
+            <button type="button" class="chip chip-btn" data-range="month">Este mes</button>
+          </div>
+
+          <div class="group">
+            <label class="date-range">
+              <span>Desde</span>
+              <input id="inp-from" type="date" name="from" value="{{ from_date_str }}" />
+            </label>
+            <label class="date-range">
+              <span>Hasta</span>
+              <input id="inp-to" type="date" name="to" value="{{ to_date_str }}" />
+            </label>
+            <button class="btn primary" type="submit">Aplicar</button>
+            <a class="btn ghost" href="?">Limpiar</a>
+          </div>
+        </form>
+      </section>
+
+      {% if kpi_total|default:0 > 0 %}
+        {% cache 300 "kpis_hist" tenant.id from_date_str to_date_str %}
+        <section class="grid grid-kpis">
+          <div class="card kpi">
+            <div class="kpi-label">Hora con más alarmas</div>
+            <div class="kpi-value" id="kpi-peak-hour">—</div>
+          </div>
+          <div class="card kpi">
+            <div class="kpi-label">Alta Severidad</div>
+            <div class="kpi-value" id="kpi-high">{{ kpi_high }}</div>
+          </div>
+          <div class="card kpi">
+            <div class="kpi-label">Total Alarmas</div>
+            <div class="kpi-value" id="kpi-total">{{ kpi_total }}</div>
+          </div>
+          <div class="card kpi">
+            <div class="kpi-label">Dispositivos Detectados</div>
+            <div class="kpi-value" id="kpi-devices">{{ kpi_dispositivos }}</div>
+          </div>
+        </section>
+        {% endcache %}
+
+        {% cache 300 "grid_hist" tenant.id from_date_str to_date_str %}
+        <section class="grid grid-main">
+          <div class="card chart card--trend">
+            <div class="card-head">
+              <h3>Alarmas por día</h3>
+            </div>
+            <div class="card-body"><canvas id="trendChart"></canvas></div>
+          </div>
+
+          <div class="card chart card--hourly">
+            <div class="card-head">
+              <h3>Alarmas por hora</h3>
+            </div>
+            <div class="card-body"><canvas id="hourlyChart"></canvas></div>
+          </div>
+
+          <div class="card chart card--donut">
+            <div class="card-head">
+              <h3>Severidad</h3>
+            </div>
+            <div class="card-body"><canvas id="severityDonut"></canvas></div>
+          </div>
+
+          <div class="card chart card--actions">
+            <div class="card-head">
+              <h3>Acciones</h3>
+            </div>
+            <div class="card-body"><canvas id="actionBar"></canvas></div>
+          </div>
+
+          <div class="card chart card--level">
+            <div class="card-head">
+              <h3>Level</h3>
+            </div>
+            <div class="card-body"><canvas id="levelBar"></canvas></div>
+          </div>
+
+          <div class="card chart card--subtype">
+            <div class="card-head">
+              <h3>Subtype</h3>
+            </div>
+            <div class="card-body"><canvas id="subtypeBar"></canvas></div>
+          </div>
+
+          <div class="card table card--table">
+            <div class="card-head between">
+              <h3>Dispositivos recientes</h3>
+            </div>
+            <div class="table-wrap">
+              <table class="datatable" id="device-table">
+                <thead>
+                  <tr>
+                    <th data-sort="text">Dispositivo</th>
+                    <th data-sort="number" class="is-right">Cantidad</th>
+                  </tr>
+                </thead>
+                <tbody id="device-table-body">
+                  {% for device, count in device_counts.items %}
+                  <tr>
+                    <td><span class="cell-device">{{ device }}</span></td>
+                    <td class="is-right"><span class="pill pill-count">{{ count }}</span></td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            <div class="table-footnote">* Clic en los encabezados para ordenar</div>
+          </div>
+
+          <div class="card chart card--msgsev">
+            <div class="card-head">
+              <h3>Severidad Alarma</h3>
+            </div>
+            <div class="card-body"><canvas id="msgSeverityBar"></canvas></div>
+          </div>
+        </section>
+        {% endcache %}
+
+        <footer class="footnote">Última actualización: hace 7 min</footer>
+
+      {% else %}
+        <section class="empty-state">
+          <div class="empty-card">
+            <h2>Sin alarmas disponibles</h2>
+            <p>No se encontraron alarmas para <strong>{{ tenant.name|default:"—" }}</strong> en el rango seleccionado.</p>
+          </div>
+        </section>
+      {% endif %}
     {% endif %}
   </div>
 
-  {% cache 300 "payload_hist" tenant.id from_date_str to_date_str %}
-  {{ trend_labels|json_script:"trend-labels" }}
-  {{ trend_data|json_script:"trend-data" }}
-  {{ severity_trends|json_script:"severity-trends" }}
-  {{ severity_counts|json_script:"severity-counts" }}
-  {{ device_counts|json_script:"device-counts" }}
-  {{ action_counts|json_script:"action-counts" }}
-  {{ device_counts_by_severity|json_script:"device-counts-by-severity" }}
-  {{ device_counts_by_severity_full|json_script:"device-counts-by-severity-full" }}
-  {{ trend_by_device|json_script:"trend-by-device" }}
-  {{ top_devices|json_script:"top-devices" }}
-  {{ trend_by_action|json_script:"trend-by-action" }}
-  {{ device_counts_by_action|json_script:"device-counts-by-action" }}
-  {{ action_counts_by_device|json_script:"action-counts-by-device" }}
-  {{ action_counts_by_severity|json_script:"action-counts-by-severity" }}
-  {{ trend_by_subtype|json_script:"trend-by-subtype" }}
-  {{ subtype_counts_by_hour|json_script:"subtype-counts-by-hour" }}
-  {{ level_counts_by_subtype|json_script:"level-counts-by-subtype" }}
-  {{ hour_labels|json_script:"hour-labels" }}
-  {{ hour_data|json_script:"hour-data" }}
-  {{ severity_counts_by_hour|json_script:"severity-counts-by-hour" }}
-  {{ device_counts_by_hour|json_script:"device-counts-by-hour" }}
-  {{ device_counts_by_hour_full|json_script:"device-counts-by-hour-full" }}
-  {{ action_counts_by_hour|json_script:"action-counts-by-hour" }}
-  {{ trend_labels_hour|json_script:"trend-labels-hour" }}
-  {{ trend_by_hour|json_script:"trend-by-hour" }}
-  {{ msg_severity_counts|json_script:"msg-severity-counts" }}
-  {{ device_counts_by_msg_severity|json_script:"device-counts-by-msg-severity" }}
-  {{ action_counts_by_msg_severity|json_script:"action-counts-by-msg-severity" }}
-  {{ severity_counts_by_msg_severity|json_script:"severity-counts-by-msg-severity" }}
-  {{ msg_severity_counts_by_hour|json_script:"msg-severity-counts-by-hour" }}
-  {{ trend_by_msg_severity|json_script:"trend-by-msg-severity" }}
-  {{ level_counts|json_script:"level-counts" }}
-  {{ device_counts_by_level|json_script:"device-counts-by-level" }}
-  {{ action_counts_by_level|json_script:"action-counts-by-level" }}
-  {{ severity_counts_by_level|json_script:"severity-counts-by-level" }}
-  {{ trend_by_level|json_script:"trend-by-level" }}
-  {{ level_counts_by_hour|json_script:"level-counts-by-hour" }}
-  {{ subtype_counts_by_level|json_script:"subtype-counts-by-level" }}
-  {{ msg_severity_by_level|json_script:"msg-severity-by-level" }}
-  {{ msg_severity_by_subtype|json_script:"msg-severity-by-subtype" }}
-  {{ subtype_counts|json_script:"subtype-counts" }}
-  {{ device_counts_by_subtype|json_script:"device-counts-by-subtype" }}
-  {{ action_counts_by_subtype|json_script:"action-counts-by-subtype" }}
-  {{ severity_counts_by_subtype|json_script:"severity-counts-by-subtype" }}
-  {{ logdesc_counts|json_script:"logdesc-counts" }}
-  {{ device_counts_by_logdesc|json_script:"device-counts-by-logdesc" }}
-  {{ action_counts_by_logdesc|json_script:"action-counts-by-logdesc" }}
-  {{ severity_counts_by_logdesc|json_script:"severity-counts-by-logdesc" }}
-  {{ level_by_msg_severity|json_script:"level-by-msg-severity" }}
-  {{ subtype_by_msg_severity|json_script:"subtype-by-msg-severity" }}
-  {{ hour_series_by_subtype|json_script:"hour-series-by-subtype" }}
-  {% endcache %}
+  <!-- Backdrop + Coachmark genérico -->
+  <div id="coachmarkBackdrop" class="coachmark-backdrop hidden" aria-hidden="true"></div>
+  <div id="coachmarkGeneric" class="coachmark hidden" role="dialog" aria-live="polite">
+    <h4 class="coachmark-title">Sugerencia</h4>
+    <p><!-- el texto se setea desde JS según la sección --></p>
+    <button class="btn primary" type="button" data-coachmark-close>Entendido</button>
+  </div>
 
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  {% if tenant.alarms_one_id %}
+    {% cache 300 "payload_hist" tenant.id from_date_str to_date_str %}
+    {{ trend_labels|json_script:"trend-labels" }}
+    {{ trend_data|json_script:"trend-data" }}
+    {{ severity_trends|json_script:"severity-trends" }}
+    {{ severity_counts|json_script:"severity-counts" }}
+    {{ device_counts|json_script:"device-counts" }}
+    {{ action_counts|json_script:"action-counts" }}
+    {{ device_counts_by_severity|json_script:"device-counts-by-severity" }}
+    {{ device_counts_by_severity_full|json_script:"device-counts-by-severity-full" }}
+    {{ trend_by_device|json_script:"trend-by-device" }}
+    {{ top_devices|json_script:"top-devices" }}
+    {{ trend_by_action|json_script:"trend-by-action" }}
+    {{ device_counts_by_action|json_script:"device-counts-by-action" }}
+    {{ action_counts_by_device|json_script:"action-counts-by-device" }}
+    {{ action_counts_by_severity|json_script:"action-counts-by-severity" }}
+    {{ trend_by_subtype|json_script:"trend-by-subtype" }}
+    {{ subtype_counts_by_hour|json_script:"subtype-counts-by-hour" }}
+    {{ level_counts_by_subtype|json_script:"level-counts-by-subtype" }}
+    {{ hour_labels|json_script:"hour-labels" }}
+    {{ hour_data|json_script:"hour-data" }}
+    {{ severity_counts_by_hour|json_script:"severity-counts-by-hour" }}
+    {{ device_counts_by_hour|json_script:"device-counts-by-hour" }}
+    {{ device_counts_by_hour_full|json_script:"device-counts-by-hour-full" }}
+    {{ action_counts_by_hour|json_script:"action-counts-by-hour" }}
+    {{ trend_labels_hour|json_script:"trend-labels-hour" }}
+    {{ trend_by_hour|json_script:"trend-by-hour" }}
+    {{ msg_severity_counts|json_script:"msg-severity-counts" }}
+    {{ device_counts_by_msg_severity|json_script:"device-counts-by-msg-severity" }}
+    {{ action_counts_by_msg_severity|json_script:"action-counts-by-msg-severity" }}
+    {{ severity_counts_by_msg_severity|json_script:"severity-counts-by-msg-severity" }}
+    {{ msg_severity_counts_by_hour|json_script:"msg-severity-counts-by-hour" }}
+    {{ trend_by_msg_severity|json_script:"trend-by-msg-severity" }}
+    {{ level_counts|json_script:"level-counts" }}
+    {{ device_counts_by_level|json_script:"device-counts-by-level" }}
+    {{ action_counts_by_level|json_script:"action-counts-by-level" }}
+    {{ severity_counts_by_level|json_script:"severity-counts-by-level" }}
+    {{ trend_by_level|json_script:"trend-by-level" }}
+    {{ level_counts_by_hour|json_script:"level-counts-by-hour" }}
+    {{ subtype_counts_by_level|json_script:"subtype-counts-by-level" }}
+    {{ msg_severity_by_level|json_script:"msg-severity-by-level" }}
+    {{ msg_severity_by_subtype|json_script:"msg-severity-by-subtype" }}
+    {{ subtype_counts|json_script:"subtype-counts" }}
+    {{ device_counts_by_subtype|json_script:"device-counts-by-subtype" }}
+    {{ action_counts_by_subtype|json_script:"action-counts-by-subtype" }}
+    {{ severity_counts_by_subtype|json_script:"severity-counts-by-subtype" }}
+    {{ logdesc_counts|json_script:"logdesc-counts" }}
+    {{ device_counts_by_logdesc|json_script:"device-counts-by-logdesc" }}
+    {{ action_counts_by_logdesc|json_script:"action-counts-by-logdesc" }}
+    {{ severity_counts_by_logdesc|json_script:"severity-counts-by-logdesc" }}
+    {{ level_by_msg_severity|json_script:"level-by-msg-severity" }}
+    {{ subtype_by_msg_severity|json_script:"subtype-by-msg-severity" }}
+    {{ hour_series_by_subtype|json_script:"hour-series-by-subtype" }}
+    {% endcache %}
 
-  <!-- Controlador del overlay -->
-  <script defer src="{% static 'js/alarms_one/page-loader-universal.js' %}?v={% now 'U' %}"></script>
-  
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script defer src="{% static 'js/alarms_one/page-loader-universal.js' %}?v={% now 'U' %}"></script>
+    <script defer src="{% static 'js/alarms_one/date_filters.js' %}?v={% now 'U' %}"></script>
+    <script type="module" src="{% static 'js/alarms_one/dashboard.js' %}?v={% now 'U' %}"></script>
+  {% else %}
+    <script defer src="{% static 'js/alarms_one/page-loader-universal.js' %}?v={% now 'U' %}"></script>
+  {% endif %}
 
-
-  <!-- App principal -->
-  <script defer src="{% static 'js/alarms_one/date_filters.js' %}?v={% now 'U' %}"></script>
-  <script type="module" src="{% static 'js/alarms_one/dashboard.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/onboarding_hints.js' %}?v={% now 'U' %}"></script>
 </body>
-
 </html>

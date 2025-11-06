@@ -23,6 +23,7 @@ urlpatterns = [
     # === APLICACIONES PRINCIPALES ===
     # Multi-tenant dashboards, histórico, realtime y cambio de tenant
     path("dashboard/", include(("dashboard.urls", "dashboard"), namespace="dashboard")),
+    path("rest/oauth2-credential/callback", views.oauth2_callback, name="oauth2_callback"),
 
     # Ingesta API / Integraciones
     path("inyeccion_api/", include(("inyeccion_api.urls", "inyeccion_api"), namespace="inyeccion_api")),
@@ -31,5 +32,5 @@ urlpatterns = [
     # Dashboards SOAR (Análisis e Incidentes)
     path("dashboard-soar/", include(("soar_dashboard.urls", "soar_dashboard"), namespace="soar_dashboard")),
     path("soar/incidentes/", include(("soar_incidents.urls", "soar_incidents"), namespace="soar_incidents")),
-    path('auth/cambiar_contraseña/', views.cambiar_contraseña, name='cambiar_contraseña'),
+    path('auth/cambiar_contraseña/', views.cambiar_contraseña, name='cambiar_contrasena'),
 ]
