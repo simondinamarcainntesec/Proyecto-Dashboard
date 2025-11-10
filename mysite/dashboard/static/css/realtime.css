@@ -232,6 +232,7 @@
   display: flex; align-items: center; gap: 6px; padding: 10px 14px; border-radius: 12px;
   color: var(--text-muted, #cbd5e1); font-weight: 600; text-decoration: none;
   transition: background .2s, color .2s;
+  cursor: pointer;
 }
 .nav-item:hover    { background: rgba(255, 255, 255, 0.06); color: #fff; }
 .nav-item.is-active{ background: #142246; color: #fff; }
@@ -271,4 +272,14 @@
   min-width: 2.4rem;
   text-align: center;
   border: 1px solid rgba(55, 48, 163, .18);
+}
+
+#alarmsModal .modal-card {
+  max-width: min(1400px, calc(100% - 64px)); /* más ancho + respiro lateral */
+  width: 100%;
+}
+
+#logModal .modal-card {
+  max-width: min(1280px, calc(100% - 64px)); /* un poco menos que el de alarmas */
+  width: 100%;
 }

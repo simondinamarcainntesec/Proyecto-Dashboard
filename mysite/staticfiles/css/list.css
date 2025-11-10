@@ -205,3 +205,9 @@ body.modal-open { overflow: hidden; }
 }
 .nav-item:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
 .nav-item.is-active { background: #142246; color: #fff; }
+
+#incidentModal .modal-card{
+  max-width: min(1400px, calc(100% - 64px));
+  width: 100%;
+}
+

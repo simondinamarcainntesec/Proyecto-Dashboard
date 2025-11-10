@@ -39,7 +39,7 @@ class TenantUserAdmin(UserAdmin):
   
     list_display = (
         "username", "email", "first_name", "last_name",
-        "tenant", "is_active", "is_staff", "is_superuser", "last_login"
+        "tenant", "is_active", "is_staff", "is_superuser", "last_login", "Alarma_Telegram","Alarma_Telefono","Alarma_Correo"
     )
 
     list_filter = ("tenant", "is_staff", "is_superuser", "is_active")

@@ -62,7 +62,7 @@ function buildConf(rawLabels, data, title, activeKey, onCanvasClick) {
 }
 
 export function renderTopSrcIP(){
-  const payload = selectTopIPsPayload("src", 10, true);
+  const payload = selectTopIPsPayload("src", 6, true);
   const el = document.getElementById("chartTopSrcIP"); if (!el) return;
   const ctx = el.getContext("2d");
 
@@ -90,7 +90,7 @@ export function renderTopSrcIP(){
 }
 
 export function renderTopDstIP(){
-  const payload = selectTopIPsPayload("dst", 10, true);
+  const payload = selectTopIPsPayload("dst", 6, true);
   const el = document.getElementById("chartTopDstIP"); if (!el) return;
   const ctx = el.getContext("2d");
 

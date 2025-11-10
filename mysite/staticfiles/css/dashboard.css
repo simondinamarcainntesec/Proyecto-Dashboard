@@ -60,6 +60,7 @@ body {
   color: var(--text-muted, #cbd5e1);
   font-weight: 600; text-decoration: none;
   transition: background .2s, color .2s;
+  cursor: pointer;
 }
 .nav-item:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
 .nav-item.is-active { background: #142246; color: #fff; }

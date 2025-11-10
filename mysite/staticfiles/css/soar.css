@@ -297,6 +297,7 @@ body[data-active-sec="operativa"] .grid-main .card:not([data-groups*="operativa"
   font-weight: 600;
   text-decoration: none;
   transition: background .2s, color .2s;
+  cursor: pointer;
 }
 
 .nav-item:hover {
