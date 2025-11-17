@@ -1,9 +1,7 @@
 // static/js/onboarding_hints.js
 (function () {
   document.addEventListener('DOMContentLoaded', () => {
-    // Si quieres forzar que vuelva a salir para todos, sube esta versión (v13 -> v14)
-    const PREFIX = 'inntesec:coachmark:v14';
-    // 🔹 Ahora solo una vez
+    const PREFIX = 'inntesec:coachmark:v15';   // bump version para que se recalcule una vez
     const MAX_RUNS = 1;
 
     const body = document.body;
@@ -17,16 +15,14 @@
     const btnOK    = coach?.querySelector('[data-coachmark-close]');
     if (!sidebar || !backdrop || !coach || !coachTxt || !btnOK) return;
 
-    // Pasos disponibles en esta vista (sólo los que existan)
+    // Solo 3 pasos: Alarmas (summary), SOAR y Configuración
     const steps = [
-      { id: 'alarms',   el: document.getElementById('alarmsLink'),    dot: document.getElementById('hintDotAlarms'),
-        msg: 'En esta sección encontrarás un panel histórico de tus alarmas.' },
-      { id: 'realtime', el: document.getElementById('realtimeLink'),  dot: document.getElementById('hintDotRealtime'),
-        msg: 'En esta sección encontrarás las alarmas durante el día y su detalle.' },
-      { id: 'soar',     el: document.getElementById('soarSummary'),   dot: document.getElementById('hintDotSoar'),
-        msg: 'En esta sección encontrarás detalles de tus alarmas analizadas por Inntesec Agent.' },
-      { id: 'config',   el: document.getElementById('settingsSummary'), dot: document.getElementById('hintDotConfig'),
-        msg: 'En esta sección encontrarás las diferentes configuraciones del servicio.' },
+      { id: 'alarms', el: document.getElementById('alarmsSummary'),  dot: document.getElementById('hintDotAlarms'),
+        msg: 'En la sección Alarmas existen dos vistas: Dashboard histórico y Tiempo Real.' },
+      { id: 'soar',   el: document.getElementById('soarSummary'),    dot: document.getElementById('hintDotSoar'),
+        msg: 'SOAR muestra el análisis y correlación de eventos mediante Inntesec Agent IA.' },
+      { id: 'config', el: document.getElementById('settingsSummary'), dot: document.getElementById('hintDotConfig'),
+        msg: 'Desde Configuración puedes cambiar tu contraseña y notificaciones.' },
     ].filter(s => !!s.el);
 
     if (!steps.length) return;
@@ -34,15 +30,12 @@
     let runs = parseInt(localStorage.getItem(KEY_RUNS) || '0', 10);
     if (isNaN(runs)) runs = 0;
 
-    // Si ya se cumplió el máximo: ocultar dots sin flicker y salir
     if (runs >= MAX_RUNS) {
       steps.forEach(s => s.dot && s.dot.classList.add('hidden'));
       return;
     }
 
-    // ========== utilidades de UI ==========
     const navItems = Array.from(document.querySelectorAll('.nav .nav-item, .nav summary.nav-item'));
-
     const dimAllNav = () => navItems.forEach(n => n.classList.add('coachmark-dim'));
     const undimAllNav = () => navItems.forEach(n => n.classList.remove('coachmark-dim'));
 
@@ -50,7 +43,7 @@
       steps.forEach(s => s.dot && s.dot.classList.add('hidden'));
       if (step.dot) {
         step.dot.classList.remove('hidden');
-        step.dot.classList.add('is-on'); // animación
+        step.dot.classList.add('is-on');
       }
     };
 
@@ -60,10 +53,9 @@
       coach.style.left = `${window.scrollX + r.left + 8}px`;
     };
 
-    // Backdrop solo sobre el área de contenido (no tapa la sidebar)
     const positionBackdrop = () => {
       const s = sidebar.getBoundingClientRect();
-      backdrop.style.left = `${s.right + window.scrollX}px`; // libera la barra lateral
+      backdrop.style.left = `${s.right + window.scrollX}px`;
       backdrop.style.top = `0px`;
       backdrop.style.right = `0px`;
       backdrop.style.bottom = `0px`;
@@ -71,7 +63,7 @@
     };
 
     const highlight = (target) => {
-      body.classList.add('coachmark-open'); // blurea .content
+      body.classList.add('coachmark-open');
       dimAllNav();
       target.classList.remove('coachmark-dim');
       target.classList.add('coachmark-highlight');
@@ -100,13 +92,10 @@
       if (step.dot) step.dot.classList.add('hidden');
     };
 
-    // ========== flujo secuencial ==========
     let idx = 0;
-
     const proceed = () => {
       const step = steps[idx];
       closeCoach(step);
-
       idx += 1;
       if (idx >= steps.length) {
         try { localStorage.setItem(KEY_RUNS, String(runs + 1)); } catch {}

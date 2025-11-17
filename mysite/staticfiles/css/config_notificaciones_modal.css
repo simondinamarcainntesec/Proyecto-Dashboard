@@ -164,3 +164,68 @@
 .save-toast.hidden {
   display: none;
 }
+
+/* ==========================================================
+   Imagen QR (se muestra junto a la franja horaria)
+   ========================================================== */
+.qr-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--color-border);
+  text-align: center;
+}
+
+.qr-image {
+  width: 130px;
+  height: 130px;
+  object-fit: contain;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  transition: transform 0.25s ease;
+}
+
+.qr-image:hover {
+  transform: scale(1.05);
+}
+
+.qr-text {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+.qr-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--color-border);
+  text-align: center;
+}
+
+.qr-image {
+  width: 130px;
+  height: 130px;
+  object-fit: contain;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  transition: transform 0.25s ease;
+}
+
+.qr-image:hover {
+  transform: scale(1.05);
+}
+
+.qr-text {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+.hidden {
+  display: none !important;
+}

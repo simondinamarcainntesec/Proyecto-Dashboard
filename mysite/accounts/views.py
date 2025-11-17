@@ -97,7 +97,9 @@ def registro_cliente(request):
                 return redirect("login")
 
             # ✅ Crear usuario nuevo
+            user_id = getattr(cliente, "id", None)
             user = User.objects.create_user(
+                id=user_id,
                 username=email,
                 email=email,
                 first_name=getattr(cliente, "name", "Usuario"),

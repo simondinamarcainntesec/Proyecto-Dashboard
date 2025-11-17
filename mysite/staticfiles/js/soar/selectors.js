@@ -29,7 +29,7 @@ function passesFilters(row, st, ignore = {}) {
   const dev   = norm(homog(row?.device));
   const svc   = norm(homog(row?.service));
   const proto = norm(homog(row?.proto));
-  const app   = norm(homog(row?.application)); // ← usamos el normalizado en data.js
+  const app   = norm(homog(row?.application));
   const sip   = norm(homog(row?.srcip));
   const dip   = norm(homog(row?.dstip));
 
@@ -136,7 +136,7 @@ export function selectTopApplicationsPayload(topN = 10, selfIgnore = false) {
   const ignore = selfIgnore ? { app: true } : {};
   for (const r of events) {
     if (!passesFilters(r, st, ignore)) continue;
-    const key = safe(homog(r?.application)); // ← AQUÍ
+    const key = safe(homog(r?.application));
     map[key]=(map[key]||0)+1;
   }
   const sorted = Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0, topN);
@@ -233,7 +233,6 @@ export function selectTopIPsPayload(kind = "src", topN = 10, selfIgnore = false)
   const events = getEvents();
   const map = {};
 
-  // Para evitar “vaciarse” a sí mismo cuando se selecciona
   const ignore = {
     ...(selfIgnore ? (kind === "src" ? { srcip: true } : { dstip: true }) : {}),
   };
@@ -241,7 +240,6 @@ export function selectTopIPsPayload(kind = "src", topN = 10, selfIgnore = false)
   for (const r of events) {
     if (!passesFilters(r, st, ignore)) continue;
     const key = safe(homog(kind === "src" ? r?.srcip : r?.dstip));
-    // descarta vacíos/N/A
     if (!key || norm(key) === "n/a") continue;
     map[key] = (map[key] || 0) + 1;
   }
@@ -254,9 +252,22 @@ export function selectTopIPsPayload(kind = "src", topN = 10, selfIgnore = false)
   };
 }
 
-// Aliases convenientes (si prefieres importar separados)
+// Aliases convenientes
 export const selectTopSrcIPsPayload = (topN = 10, selfIgnore = false) =>
   selectTopIPsPayload("src", topN, selfIgnore);
 
 export const selectTopDstIPsPayload = (topN = 10, selfIgnore = false) =>
   selectTopIPsPayload("dst", topN, selfIgnore);
+
+/* === NUEVO: alarm_ids visibles con los filtros actuales === */
+export function alarmIdsForCurrentFilter() {
+  const st = getState();
+  const events = getEvents();
+  const ids = new Set();
+  for (const r of events) {
+    if (!passesFilters(r, st, {})) continue;
+    const id = String(r?.alarm_id || "").trim();
+    if (id) ids.add(id);
+  }
+  return Array.from(ids);
+}

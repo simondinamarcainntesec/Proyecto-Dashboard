@@ -284,6 +284,18 @@ def config_notificaciones_view(request):
         user.Alarma_Telefono = "Alarma_Telefono" in request.POST
         user.Alarma_Correo = "Alarma_Correo" in request.POST
         user.Alarma_Telegram = "Alarma_Telegram" in request.POST
+
+        # 🔹 Nuevos campos: franja horaria
+        hora_inicio = request.POST.get("hora_inicio") or None
+        hora_fin = request.POST.get("hora_fin") or None
+
+        if user.Alarma_Telefono:
+            user.hora_inicio = hora_inicio
+            user.hora_fin = hora_fin
+        else:
+            user.hora_inicio = None
+            user.hora_fin = None
+
         user.save()
         return redirect(request.META.get("HTTP_REFERER", "dashboard:dashboard_alarmsone"))
 

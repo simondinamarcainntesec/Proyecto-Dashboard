@@ -1,6 +1,8 @@
+// charts/applications.js
 import { AXIS, GRID } from "/static/js/soar/theme.js";
 import { actions, getState } from "/static/js/soar/state.js";
 import { selectTopApplicationsPayload } from "/static/js/soar/selectors.js";
+import { collectAlarmIdsForCurrentFilter, ensureHeaderButton, showAlarms } from "/static/js/soar/helpers/alarms-helper.js";
 
 let chart;
 
@@ -38,7 +40,7 @@ export function renderApplications(){
       }]
     },
     options: {
-      animation: { duration: 600, easing: "easeOutQuart" }, // ← como acciones
+      animation: { duration: 600, easing: "easeOutQuart" },
       plugins: { legend: { display: false } },
       elements: { bar: { borderSkipped: false } },
       scales: {
@@ -50,7 +52,7 @@ export function renderApplications(){
         y: { beginAtZero: true, ticks: { color: AXIS }, grid: { color: GRID } },
       },
       datasets: {
-        bar: { barThickness: "flex", categoryPercentage: 0.8, barPercentage: 0.7 }, // ← como acciones
+        bar: { barThickness: "flex", categoryPercentage: 0.8, barPercentage: 0.7 },
       },
     }
   };
@@ -64,11 +66,17 @@ export function renderApplications(){
       actions.toggleApplication?.(labels[idx]);
     };
     ctx.canvas.style.cursor = "pointer";
+
+    ensureHeaderButton(ctx.canvas, "btn-see-alarms-apps", () => {
+      const activeApp = (getState().applicationFilter || "").toLowerCase();
+      const ids = collectAlarmIdsForCurrentFilter(activeApp ? (r) => String(r?.application ?? "").trim().toLowerCase() === activeApp : undefined);
+      showAlarms(ids);
+    });
   } else {
     chart.data.labels = labels;
     chart.data.datasets[0].data = data;
     chart.data.datasets[0].backgroundColor = bg;
     chart.data.datasets[0].borderColor = border;
-    chart.update(); // ← anima como acciones
+    chart.update();
   }
 }

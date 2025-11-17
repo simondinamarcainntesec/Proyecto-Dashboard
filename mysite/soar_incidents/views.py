@@ -9,7 +9,8 @@ from django.core.paginator import Paginator
 from django.db.models import Q, F, Value, TextField
 from django.db.models.functions import Lower, Replace, Trim, Cast
 from django.shortcuts import render, redirect
-from django.http import HttpResponseRedirect 
+from django.http import HttpResponseRedirect, JsonResponse
+from django.views.decorators.http import require_GET
 from tenants.decorators import tenant_required
 from tenants.models import Tenant
 from urllib.parse import urlparse
@@ -17,7 +18,6 @@ from urllib.parse import urlparse
 from .models import IncidenteSOAR
 
 logger = logging.getLogger(__name__)
-
 
 # ---------- helpers de fechas ----------
 def _parse_date(s):
@@ -31,7 +31,6 @@ def _parse_date(s):
         except Exception:
             return None
 
-
 # ---------- helpers de normalización ----------
 def _normalize_string_local(s: str) -> str:
     if not s:
@@ -41,11 +40,9 @@ def _normalize_string_local(s: str) -> str:
         out = out.replace(ch, "")
     return out.lower()
 
-
 def _normalize_tenant_aotag(tenant) -> str:
     raw = getattr(tenant, "alarms_one_id", "") or ""
     return _normalize_string_local(raw)
-
 
 def _annotate_norm_aotag(qs):
     cleaned = Cast(F("aotag"), TextField())
@@ -54,7 +51,6 @@ def _annotate_norm_aotag(qs):
     cleaned = Trim(cleaned, output_field=TextField())
     cleaned = Lower(cleaned, output_field=TextField())
     return qs.annotate(norm_aotag=cleaned)
-
 
 # ---------- vista principal ----------
 @login_required
@@ -118,17 +114,14 @@ def incidents_list(request):
     }
     return render(request, "soar_incidents/list.html", context)
 
-
 # ---------- cambio de tenant ----------
 @login_required
 def switch_tenant(request, tenant_id):
     """
     Permite a usuarios de Inntesec cambiar de tenant desde cualquier dashboard.
-    Mantiene al usuario en el mismo módulo (SOAR, Realtime, Alarmas, etc.)
-    tras el cambio, y limpia la caché para evitar datos inconsistentes.
+    Mantiene al usuario en el mismo módulo tras el cambio y limpia la caché.
     """
     from tenants.models import Tenant
-    from django.contrib import messages
     from django.core.cache import cache
 
     logger = logging.getLogger(__name__)
@@ -192,3 +185,48 @@ def switch_tenant(request, tenant_id):
     except Exception as e:
         logger.warning(f"[SwitchTenant] Fallback al dashboard por error ({e})")
         return redirect("dashboard:dashboard")
+
+# ---------- API JSON: incidentes por alarm_ids (para el modal del dashboard) ----------
+@login_required
+@tenant_required
+@require_GET
+def api_incidents_by_alarm_ids(request):
+    """
+    Devuelve incidentes de IncidenteSOAR pertenecientes al tenant activo,
+    filtrados por ?alarm_ids=ID1,ID2,ID3
+    """
+    tenant = getattr(request, "tenant", None)
+    norm_tid = _normalize_tenant_aotag(tenant) if tenant else ""
+    if not norm_tid:
+        return JsonResponse([], safe=False)
+
+    raw_ids = (request.GET.get("alarm_ids") or "").strip()
+    alarm_ids = [s for s in (raw_ids.split(",") if raw_ids else []) if s]
+    if not alarm_ids:
+        return JsonResponse([], safe=False)
+
+    try:
+        qs = IncidenteSOAR.objects.all()
+        qs = _annotate_norm_aotag(qs).filter(norm_aotag=norm_tid)
+        qs = qs.filter(alarmd_id__in=alarm_ids).order_by("-date", "-time")[:1000]
+
+        data = list(qs.values(
+            "alarmd_id",
+            "aotag",
+            "dispositivo",
+            "descripcion_incidente",
+            "tipo_de_amenaza",
+            "nivel_de_severidad",
+            "medidas_correctivas",
+            "resumen_humano",
+            "riego_detectado",
+            "analisis_criticidad",
+            "date",
+            "time",
+            "application",
+        ))
+        return JsonResponse(data, safe=False)
+    except Exception as e:
+        logger.exception("[api_by_alarm_ids] Error: %s", e)
+        # 200 con [] evita alertas en el front; el modal abre vacío.
+        return JsonResponse([], safe=False)

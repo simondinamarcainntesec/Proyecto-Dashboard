@@ -1,19 +1,17 @@
+// charts/top-ips.js
 import { AXIS, GRID } from "/static/js/soar/theme.js";
 import { actions, getState } from "/static/js/soar/state.js";
 import { selectTopIPsPayload } from "/static/js/soar/selectors.js";
+import { collectAlarmIdsForCurrentFilter, ensureHeaderButton, showAlarms } from "/static/js/soar/helpers/alarms-helper.js";
 
 let chartSrc, chartDst;
+const norm = (s) => String(s ?? "").trim().toLowerCase();
 
 function buildConf(rawLabels, data, title, activeKey, onCanvasClick) {
-  const labels = (rawLabels || []).map(String); // asegurar strings
-
+  const labels = (rawLabels || []).map(String);
   const base = "#22C55E";
-  const bg = labels.map(lbl =>
-    !activeKey ? base : (lbl.toLowerCase() === activeKey ? base : "rgba(255,255,255,0.18)")
-  );
-  const border = labels.map(lbl =>
-    !activeKey ? "#e5e7eb" : (lbl.toLowerCase() === activeKey ? "#e5e7eb" : "rgba(229,231,235,0.85)")
-  );
+  const bg = labels.map(lbl => !activeKey ? base : (lbl.toLowerCase() === activeKey ? base : "rgba(255,255,255,0.18)"));
+  const border = labels.map(lbl => !activeKey ? "#e5e7eb" : (lbl.toLowerCase() === activeKey ? "#e5e7eb" : "rgba(229,231,235,0.85)"));
 
   return {
     type: "bar",
@@ -29,33 +27,30 @@ function buildConf(rawLabels, data, title, activeKey, onCanvasClick) {
         hoverBorderWidth: 2,
         borderSkipped: false,
         borderRadius: 6,
-      }],
+      }]
     },
     options: {
+      indexAxis: "y",                       // 👈 barras horizontales
       responsive: true,
       maintainAspectRatio: false,
-      animation: { duration: 600, easing: "easeOutQuart" }, // ← igual que acciones
-      plugins: {
-        legend: { display: false },
-        title: { display: true, text: title, color: "#E5E7EB", font: { size: 16, weight: "700" } },
-        tooltip: { enabled: true },
-      },
+      animation: { duration: 600, easing: "easeOutQuart" },
+      plugins: { legend: { display: false }, tooltip: { enabled: true } },
       elements: { bar: { borderSkipped: false } },
       scales: {
-        x: {
+        x: { beginAtZero: true, ticks: { color: AXIS }, grid: { color: GRID } },
+        y: {
           type: "category",
           ticks: {
-            color: AXIS, autoSkip: false, maxRotation: 0, minRotation: 0,
-            callback: (val, i) => labels[i] ?? val,
+            color: AXIS,
+            autoSkip: false,
+            maxRotation: 0,
+            minRotation: 0,
+            callback: (val, i) => labels[i] ?? val
           },
-          grid: { color: GRID },
+          grid: { color: GRID }
         },
-        y: { beginAtZero: true, ticks: { color: AXIS }, grid: { color: GRID } },
       },
-      // mismo “grosor” que acciones
-      datasets: {
-        bar: { barThickness: "flex", categoryPercentage: 0.8, barPercentage: 0.7 },
-      },
+      datasets: { bar: { barThickness: "flex", categoryPercentage: 0.8, barPercentage: 0.7 } },
       onClick: onCanvasClick,
     },
   };
@@ -68,7 +63,7 @@ export function renderTopSrcIP(){
 
   const labels = payload.labels || [];
   const data   = payload.data   || [];
-  const active = (getState().srcIPFilter || "").toLowerCase();
+  const active = norm(getState().srcIPFilter || "");
 
   const conf = buildConf(labels, data, "Top IP Origen", active, (evt) => {
     const pts = chartSrc.getElementsAtEventForMode(evt, "nearest", { intersect: true }, true);
@@ -80,12 +75,18 @@ export function renderTopSrcIP(){
   if (!chartSrc) {
     chartSrc = new Chart(ctx, conf);
     ctx.canvas.style.cursor = "pointer";
+
+    ensureHeaderButton(ctx.canvas, "btn-see-alarms-srcip", () => {
+      const act = norm(getState().srcIPFilter || "");
+      const ids = collectAlarmIdsForCurrentFilter(act ? (r) => norm(r?.srcip) === act : undefined);
+      showAlarms(ids);
+    });
   } else {
     chartSrc.data.labels = conf.data.labels;
     chartSrc.data.datasets[0].data = conf.data.datasets[0].data;
     chartSrc.data.datasets[0].backgroundColor = conf.data.datasets[0].backgroundColor;
     chartSrc.data.datasets[0].borderColor = conf.data.datasets[0].borderColor;
-    chartSrc.update(); // ← anima como acciones
+    chartSrc.update();
   }
 }
 
@@ -96,7 +97,7 @@ export function renderTopDstIP(){
 
   const labels = payload.labels || [];
   const data   = payload.data   || [];
-  const active = (getState().dstIPFilter || "").toLowerCase();
+  const active = norm(getState().dstIPFilter || "");
 
   const conf = buildConf(labels, data, "Top IP Destino", active, (evt) => {
     const pts = chartDst.getElementsAtEventForMode(evt, "nearest", { intersect: true }, true);
@@ -108,17 +109,20 @@ export function renderTopDstIP(){
   if (!chartDst) {
     chartDst = new Chart(ctx, conf);
     ctx.canvas.style.cursor = "pointer";
+
+    ensureHeaderButton(ctx.canvas, "btn-see-alarms-dstip", () => {
+      const act = norm(getState().dstIPFilter || "");
+      const ids = collectAlarmIdsForCurrentFilter(act ? (r) => norm(r?.dstip) === act : undefined);
+      showAlarms(ids);
+    });
   } else {
     chartDst.data.labels = conf.data.labels;
     chartDst.data.datasets[0].data = conf.data.datasets[0].data;
     chartDst.data.datasets[0].backgroundColor = conf.data.datasets[0].backgroundColor;
     chartDst.data.datasets[0].borderColor = conf.data.datasets[0].borderColor;
-    chartDst.update(); // ← anima como acciones
+    chartDst.update();
   }
 }
 
-// Wrapper para dashboardsoar.js
-export function renderTopIPs() {
-  renderTopSrcIP();
-  renderTopDstIP();
-}
+// wrapper
+export function renderTopIPs() { renderTopSrcIP(); renderTopDstIP(); }

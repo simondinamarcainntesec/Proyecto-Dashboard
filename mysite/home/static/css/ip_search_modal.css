@@ -1,0 +1,409 @@
+/* === Toolbar layout === */
+.toolbar { padding: 8px 0 14px; }
+.toolbar-row{
+  display:flex; align-items:center; gap:12px;
+  border:1px solid var(--border, #1e293b); border-radius:14px;
+  padding:10px; background:var(--card,#0f1d35);
+}
+
+.tb-left{ display:flex; gap:8px; align-items:center; min-width:360px; }
+.tb-spacer{ flex:1 1 auto; }
+
+.tb-right{
+  display:flex; align-items:center; gap:10px;
+  justify-content:flex-end;
+  margin-left:auto;
+  flex-wrap:wrap;
+}
+
+.tb-left input[type="search"]{
+  width:min(520px, 42vw);
+  background:#0f1b31; color:#e5e7eb; border:1px solid #1e293b;
+  border-radius:12px; padding:10px 12px;
+}
+
+.btn.primary{
+  background:var(--brand,#3b82f6); color:#fff; border:0;
+  padding:8px 12px; border-radius:12px; font-weight:700;
+}
+.btn.ghost{
+  background:transparent; border:1px solid var(--border,#1e293b);
+  color:var(--text,#e5e7eb); padding:8px 12px; border-radius:12px;
+}
+.btn.ghost-sm{
+  background:transparent; border:1px solid var(--border,#1e293b);
+  color:var(--text,#e5e7eb); padding:8px 10px; border-radius:12px; font-size:12px;
+}
+
+.chip-btn{
+  padding:6px 10px; border-radius:999px;
+  border:1px solid var(--border,#1e293b); background:#0f1b31; color:var(--text,#e5e7eb);
+  font-weight:600; cursor:pointer;
+}
+.chip-btn.is-active{ background:rgba(255,255,255,.06); }
+
+/* === Date range === */
+.date-range{
+  position: relative;
+  display:flex; align-items:center; gap:8px;
+  padding:6px 10px; border:1px solid var(--border,#1e293b); border-radius:12px;
+}
+.date-range input[type="date"]{
+  background:transparent; color:var(--text,#e5e7eb); border:0; outline:0;
+  color-scheme: dark;
+  padding-right: 30px;
+}
+.date-range input[type="date"]::-webkit-calendar-picker-indicator{
+  opacity: 0;
+  width: 0;
+  height: 0;
+  padding: 0;
+  margin: 0;
+  pointer-events: none;
+}
+.date-range::after{
+  content: "";
+  position: absolute;
+  right: 10px; top: 50%;
+  width: 18px; height: 18px;
+  transform: translateY(-50%);
+  background: no-repeat center / contain;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M7 2a1 1 0 0 0-1 1v1H5a3 3 0 0 0-3 3v11a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3h-1V3a1 1 0 1 0-2 0v1H8V3a1 1 0 0 0-1-1ZM5 7h14a1 1 0 0 1 1 1v2H4V8a1 1 0 0 1 1-1Zm-1 5h16v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-6Z'/%3E%3C/svg%3E");
+}
+
+/* === Tabla === */
+.table-wrap{ overflow:auto; border:1px solid var(--border,#1e293b); border-radius:12px; }
+.tbl{
+  width:100%; border-collapse:separate; border-spacing:0; font-size:13px; table-layout:auto;
+}
+.tbl thead th{
+  position:sticky; top:0; z-index:1; background:var(--panel,#0f1b31);
+  text-align:left; font-weight:700; padding:10px 12px; border-bottom:1px solid var(--border,#1e293b); white-space:nowrap;
+}
+.tbl tbody td{
+  padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.06); vertical-align:middle;
+}
+.tbl tbody tr:nth-child(odd){ background:rgba(255,255,255,0.02); }
+.tbl tbody tr:hover{ background:rgba(255,255,255,0.06); }
+
+.mono{ font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace; }
+.nowrap{ white-space:nowrap; }
+.w-240{ max-width:240px; overflow:hidden; text-overflow:ellipsis; }
+.w-320{ max-width:320px; overflow:hidden; text-overflow:ellipsis; }
+
+/* Severidad pills */
+.pill{
+  display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; font-weight:800;
+  line-height:1.6; letter-spacing:.2px; color:#fff;
+}
+.sev-critical{ background:#dc262633; border:1px solid #dc2626aa; color:#fff; }
+.sev-high{ background:#f9731633; border:1px solid #f97316aa; color:#fff; }
+.sev-medium{ background:#f59e0b33; border:1px solid #f59e0baa; color:#fff; }
+.sev-low{ background:#38bdf833; border:1px solid #38bdf8aa; color:#fff; }
+.sev-info{ background:#60a5fa33; border:1px solid #60a5faaa; color:#fff; }
+.sev-na{ background:#6b728033; border:1px solid #6b7280aa; color:#fff; }
+
+/* Paginación */
+.paginate{ display:flex; gap:8px; justify-content:flex-end; margin-top:10px; }
+.paginate a,.paginate span{
+  padding:6px 10px; border:1px solid var(--border,#1e293b);
+  border-radius:10px; text-decoration:none; color:var(--text,#e5e7eb);
+}
+.paginate .current{ background:rgba(255,255,255,0.06); font-weight:700; }
+
+/* Topbar tenant */
+.tenant-selector{
+  background:#0f1b31; border:1px solid #1e293b; color:#e5e7eb;
+  border-radius:10px; padding:6px 8px;
+}
+
+/* === Modal base (MISMO look que la original) === */
+body.modal-open { overflow: hidden; }
+
+.modal {
+  position: fixed; inset: 0; z-index: 1000; display: none;
+}
+.modal:not(.hidden) { display: block; }
+
+.modal-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.modal-card {
+  position: relative; z-index: 1001;
+  background: var(--card, #0f1d35);           /* 💙 mismo fondo que la original */
+  border: 1px solid var(--border, #1e293b);  /* 💙 mismo borde */
+  border-radius: 12px;
+  max-width: 1000px;
+  width: calc(100% - 48px);
+  margin: 5vh auto;
+  padding: 16px;
+  color: var(--text, #e5e7eb);
+  box-shadow: 0 10px 28px rgba(2,6,23,.35);  /* 💙 misma sombra */
+}
+
+.modal-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border, #1e293b);
+  margin-bottom: 12px;
+}
+.modal-close {
+  background: transparent;
+  border: 1px solid var(--border, #1e293b);
+  border-radius: 8px;
+  color: var(--text, #e5e7eb);
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.modal-close:hover { background: rgba(255, 255, 255, 0.08); }
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 65vh;
+  overflow-y: auto;
+}
+
+/* Bloques internos de la modal (ENCABEZADO, RIESGO, etc.) */
+.block {
+  background:#0f1b31;                  /* 💙 igual al original */
+  border:1px solid #1e293b;            /* 💙 igual al original */
+  border-radius:12px;
+  padding:12px 14px;
+}
+.block h4 {
+  margin:.1rem 0 .6rem;
+  font-size:14px;
+  letter-spacing:.3px;
+  text-transform:uppercase;
+  color:#cbd5e1;
+}
+.block p {
+  margin:.35rem 0;
+  line-height:1.5;
+  color:#cbd5e1;
+}
+
+.stacked { list-style:none; padding:0; margin:0; }
+.stacked li { padding:4px 0; border-bottom:1px dashed rgba(255,255,255,0.06); }
+.stacked li:last-child { border-bottom:0; }
+.muted { opacity:.92; }
+
+.tenant-dropdown { display: inline-block; position: relative; }
+.tenant-summary {
+  cursor: pointer; background: #0f1b31; color: #e5e7eb;
+  border: 1px solid #1e293b; padding: 6px 10px; border-radius: 10px;
+  font-weight: 600; display: inline-flex; align-items: center; gap: 6px; user-select: none;
+}
+.tenant-summary:hover { background: rgba(255, 255, 255, 0.05); }
+.tenant-dropdown[open] .caret { transform: rotate(180deg); }
+
+.tenant-list {
+  position: absolute; top: 120%; left: 0; background: #0f1d35; border: 1px solid #1e293b;
+  border-radius: 12px; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4); padding: 6px; z-index: 50;
+  display: flex; flex-direction: column; min-width: 180px;
+}
+.tenant-option {
+  display: block; width: 100%; background: transparent; border: 0; color: #e5e7eb;
+  text-align: left; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 14px;
+}
+.tenant-option:hover { background: rgba(255, 255, 255, 0.08); }
+.tenant-option.is-active {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid #3b82f6;
+  color: #fff;
+}
+
+.nav { display: flex; flex-direction: column; gap: 6px; padding: 10px; }
+.nav-item {
+  display: flex; align-items: center; gap: 6px; padding: 10px 14px; border-radius: 12px;
+  color: var(--text-muted, #cbd5e1); font-weight: 600; text-decoration: none; transition: background .2s, color .2s;
+}
+.nav-item:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
+.nav-item.is-active { background: #142246; color: #fff; }
+
+#incidentModal .modal-card{
+  max-width: min(1400px, calc(100% - 64px));
+  width: 100%;
+}
+
+/* ==========================================================
+   Buscadores de IP (tarjetas)
+   ========================================================== */
+
+.ip-search-card{
+  display:flex;
+  flex-direction:column;
+}
+
+.ip-search-form{
+  margin-top:0.75rem;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+
+/* Input centrado y oscuro */
+.ip-search-card .ip-input{
+  width:100%;
+  max-width:260px;
+  padding:0.6rem 0.85rem;
+  border-radius:10px;
+  border:1px solid var(--border, #1e293b);
+  background:#020617;
+  color:var(--text, #e5e7eb);
+  font-size:0.9rem;
+  outline:none;
+  transition:border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+
+.ip-search-card .ip-input::placeholder{
+  color:var(--muted, #94a3b8);
+}
+
+.ip-search-card .ip-input:focus{
+  border-color:var(--brand, #3b82f6);
+  box-shadow:0 0 0 1px rgba(59,130,246,.4);
+}
+
+/* Botón debajo del input */
+.ip-search-btn{
+  margin-top:0.55rem;
+  padding:0.5rem 1.1rem;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* ==========================================================
+   Modal de resultados de búsqueda de IP
+   ========================================================== */
+
+.ip-modal-body{
+  display:flex;
+  flex-direction:column;
+  gap:1rem;
+}
+
+/* Bloques internos (Blacklist / Whitelist) */
+.ip-modal-section{
+  padding:0.75rem 0.25rem;
+  border-top:1px solid var(--border, #1e293b);
+}
+.ip-modal-section:first-child{
+  border-top:none;
+}
+
+.ip-modal-title{
+  margin:0 0 0.25rem;
+  font-size:0.95rem;
+  font-weight:700;
+}
+
+/* Lista de resultados */
+.ip-results-list{
+  list-style:none;
+  margin:0.25rem 0 0;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+  gap:0.75rem;
+}
+
+/* Cada resultado: dejar que el contenido interno use .block */
+.ip-result-item{
+  padding:0;
+  border-radius:0;
+  background:transparent;
+  border:0;
+}
+
+/* Form de acción (ticket) se alinea a la derecha dentro del bloque */
+.ip-remove-form{
+  margin-left:auto;
+}
+
+.btn-danger{
+  border:1px solid #b91c1c;
+  background:#b91c1c;
+  color:#fee2e2;
+}
+.btn-danger:hover{
+  background:#dc2626;
+  border-color:#dc2626;
+}
+
+/* Botón verde (success) */
+.btn-success {
+  background: #22c55e;
+  border-color: #16a34a;
+  color: #ffffff;
+}
+.btn-success:hover {
+  background: #16a34a;
+  border-color: #15803d;
+}
+
+.btn-xs{
+  padding:0.2rem 0.55rem;
+  font-size:0.75rem;
+}
+
+/* Chip de IP */
+.ip-pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:0.15rem 0.6rem;
+  border-radius:999px;
+  background:rgba(59,130,246,0.14);
+  color:#dbeafe;
+  font-size:0.8rem;
+  font-weight:600;
+}
+
+/* Textos auxiliares */
+.ip-search-meta{
+  margin:0;
+  font-size:0.86rem;
+  color:var(--muted, #94a3b8);
+}
+.ip-empty-text{
+  font-size:0.8rem;
+  color:var(--muted, #94a3b8);
+}
+
+/* Franjas internas de la modal de IP, estilo incidente crítico */
+#ipSearchModal .ip-detail-card {
+  /* el contenedor general del resultado; transparente para que solo se vean las franjas */
+  background: transparent;
+  padding: 0;
+}
+
+/* Cada franja (ENCABEZADO, RIESGO, etc.) */
+#ipSearchModal .ip-section-block {
+  background: #0f1b31;          /* mismo fondo interno que el incidente */
+  border: 1px solid #1e293b;    /* mismo borde */
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-top: 12px;             /* separa visualmente las franjas */
+}
+
+/* la primera franja pegada al borde superior, sin margen arriba */
+#ipSearchModal .ip-section-block:first-child {
+  margin-top: 0;
+}
+
+/* Título de cada franja, igual estilo que el incidente */
+#ipSearchModal .ip-section-block h4 {
+  margin: .1rem 0 .6rem;
+  font-size: 14px;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+  color: #cbd5e1;
+}

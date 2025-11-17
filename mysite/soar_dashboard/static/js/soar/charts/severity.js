@@ -1,8 +1,10 @@
 import { TXT, colorFor } from "/static/js/soar/theme.js";
 import { actions, getState } from "/static/js/soar/state.js";
 import { selectSeverityCounts } from "/static/js/soar/selectors.js";
+import { ensureHeaderButton, collectAlarmIdsForCurrentFilter, showAlarms } from "/static/js/soar/helpers/alarms-helper.js";
 
-let chart; const norm = (s)=>String(s??"").trim().toLowerCase();
+let chart;
+const norm = (s)=>String(s??"").trim().toLowerCase();
 
 export function renderSeverity(){
   const counts = selectSeverityCounts(true);
@@ -36,6 +38,13 @@ export function renderSeverity(){
       const els = chart.getElementsAtEventForMode(evt,"nearest",{intersect:true},true);
       if (!els.length) return; const idx = els[0].index; actions.toggleSeverity(labels[idx]);
     };
+
+    // botón uniforme (helper)
+    ensureHeaderButton(ctx.canvas, "btn-see-alarms-severity", () => {
+      const ids = collectAlarmIdsForCurrentFilter();
+      showAlarms(ids);
+    });
+
     chart.$static = { labels: labels.slice(), values: values.slice() };
     return;
   }
@@ -53,4 +62,3 @@ export function renderSeverity(){
     chart.update();
   }
 }
-

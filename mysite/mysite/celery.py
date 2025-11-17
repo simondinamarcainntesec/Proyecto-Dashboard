@@ -20,18 +20,22 @@ app.conf.beat_schedule = {
     # Obtención del token cada hora
     "obtener-token-cada-hora": {
         "task": "integrations.tasks.tarea_obtener_token",
-        "schedule": crontab(minute='0'),  # cada hora exacta
+        "schedule": crontab(minute="0"),  # cada hora exacta
     },
-    # Ingesta de alarmas cada 65 minutos
+
+    # Ingesta de alarmas cada 65 minutos (en realidad: cada hora, minuto 5)
     "ingesta-api-cada-65-min": {
         "task": "integrations.tasks.tarea_ingesta_api",
         "schedule": crontab(minute="5", hour="*/1"),  # cada hora, en el minuto 5
+        # Si de verdad quieres cada 65 min, conviene usar timedelta(minutes=65)
     },
+
+    # Ingesta mensual cada 5 minutos
+    #"ingesta-mensual": {
+    #    "task": "integrations.tasks.ingesta_mensual_ciclica",
+    #    "schedule": crontab(minute="*/5"),  # Cada 5 minutos
+    #},
 }
-#    "ingesta-mensual": {
-#        "task": "integrations.tasks.ingesta_mensual_ciclica",
-#        "schedule": crontab(minute='0'),  # Cada hora exacta
-#    }
 
 
 # Configuración adicional

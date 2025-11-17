@@ -17,13 +17,44 @@
     <form method="POST" id="configForm" action="{% url 'config_notificaciones' %}">
       {% csrf_token %}
       <div class="modal-body">
+        <!-- Alerta por Teléfono -->
         <div class="config-option {% if user.Alarma_Telefono %}is-active{% endif %}">
           <span>📞 Alerta por Teléfono</span>
           <label class="switch">
-            <input type="checkbox" name="Alarma_Telefono" {% if user.Alarma_Telefono %}checked{% endif %}>
+            <input type="checkbox" id="toggleTelefono" name="Alarma_Telefono" {% if user.Alarma_Telefono %}checked{% endif %}>
           </label>
         </div>
 
+        <!-- 🔹 Franja horaria -->
+        <div id="franjaHoraria" class="franja-horaria {% if not user.Alarma_Telefono %}hidden{% endif %}">
+          <label for="hora_inicio" class="franja-label">🕒 Recibir notificaciones desde:</label>
+          <input 
+            type="time" 
+            id="hora_inicio" 
+            name="hora_inicio"
+            class="franja-input"
+            min="00:00" 
+            max="23:59" 
+            step="60" 
+            inputmode="numeric"
+            value="{{ user.hora_inicio|default:'' }}"
+          >
+
+          <label for="hora_fin" class="franja-label">Hasta:</label>
+          <input 
+            type="time" 
+            id="hora_fin" 
+            name="hora_fin"
+            class="franja-input"
+            min="00:00" 
+            max="23:59" 
+            step="60" 
+            inputmode="numeric"
+            value="{{ user.hora_fin|default:'' }}"
+          >
+        </div>
+
+        <!-- Alerta por Correo -->
         <div class="config-option {% if user.Alarma_Correo %}is-active{% endif %}">
           <span>📧 Alerta por Correo</span>
           <label class="switch">
@@ -31,11 +62,20 @@
           </label>
         </div>
 
+        <!-- Alerta por Telegram -->
         <div class="config-option {% if user.Alarma_Telegram %}is-active{% endif %}">
           <span>💬 Alerta por Telegram</span>
           <label class="switch">
-            <input type="checkbox" name="Alarma_Telegram" {% if user.Alarma_Telegram %}checked{% endif %}>
+            <input type="checkbox" id="toggleTelegram" name="Alarma_Telegram" {% if user.Alarma_Telegram %}checked{% endif %}>
           </label>
+        </div>
+
+        <!-- 🖼️ Imagen QR (solo visible si Telegram está activado) -->
+        <div id="qrTelegram" class="{% if not user.Alarma_Telegram %}hidden{% endif %}">
+          <div class="qr-container">
+            <img src="{% static 'img/qr-code (3).png' %}" alt="Código QR Telegram" class="qr-image">
+            <p class="qr-text">Escanea este código para vincular tu cuenta de Telegram</p>
+          </div>
         </div>
       </div>
 
@@ -47,5 +87,6 @@
   </div>
 </div>
 
-<!-- JS del modal -->
+<!-- CSS y JS -->
+<link rel="stylesheet" href="{% static 'css/config_notificaciones.css' %}?v={% now 'U' %}">
 <script defer src="{% static 'js/config_notificaciones_modal.js' %}?v={% now 'U' %}"></script>

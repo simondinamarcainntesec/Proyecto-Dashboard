@@ -29,8 +29,8 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY=os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-#DEBUG = False
 DEBUG = True
+#DEBUG = False
 
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.Argon2PasswordHasher',
@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     'accounts',
     'soar_dashboard',
     'soar_incidents',
+    'home',
 ]
 
 MIDDLEWARE = [
@@ -238,27 +239,31 @@ AUTHENTICATION_BACKENDS = [
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "formatters": {
-        "simple": {"format": "[%(levelname)s] %(name)s: %(message)s"},
-        "verbose": {"format": "[%(asctime)s] %(levelname)s %(name)s %(module)s:%(lineno)d — %(message)s"},
-    },
+
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "stream": sys.stdout,
-            "formatter": "simple",
-            "level": "DEBUG",
         },
     },
-    "loggers": {
-        # Tus módulos donde pusimos logger = logging.getLogger(__name__)
-        "tenants.middleware": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
-        "tenants.authbackends": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
-        "tenants.decorators": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
-        "auth.views": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
 
-        # (Opcional) raíz para ver otros logs
-        # "": {"handlers": ["console"], "level": "INFO"},
+    "root": {  # logger raíz
+        "handlers": ["console"],
+        "level": "INFO",  # 👈 esto permite ver logger.info()
+    },
+
+    "loggers": {
+        # Logger específico para tu app 'home'
+        "home": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        # Si quieres ser bien explícito con el módulo:
+        "home.views": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
     },
 }
 

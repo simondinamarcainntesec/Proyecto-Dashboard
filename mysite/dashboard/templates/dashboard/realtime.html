@@ -31,15 +31,27 @@
     <nav class="nav">
       {# Ítems visibles SOLO si hay servicio #}
       {% if tenant.alarms_one_id %}
-        <a class="nav-item {% if request.resolver_match.url_name == 'dashboard_alarmsone' %}is-active{% endif %}"
-           href="{% url 'dashboard:dashboard_alarmsone' %}">
-          <span class="nav-ico">🏠</span>Alarmas
-        </a>
+        <!-- ===== Alarmas (colapsable con Dashboard + Tiempo Real) ===== -->
+        <details class="tenant-dropdown nav-dropdown"
+                 {% if request.resolver_match.url_name == 'dashboard_alarmsone' or request.resolver_match.url_name == 'dashboard_realtime' %}open{% endif %}>
+          <summary class="nav-item {% if request.resolver_match.url_name == 'dashboard_alarmsone' or request.resolver_match.url_name == 'dashboard_realtime' %}is-active{% endif %}">
+            <span class="nav-ico">🏠</span>Alarmas
+            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
+          </summary>
 
-        <a class="nav-item {% if request.resolver_match.url_name == 'dashboard_realtime' %}is-active{% endif %}"
-           href="{% url 'dashboard:dashboard_realtime' %}">
-          <span class="nav-ico">⏱️</span>Tiempo Real
-        </a>
+          <div class="tenant-list nav-submenu">
+            <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'dashboard_alarmsone' %}is-active{% endif %}"
+               href="{% url 'dashboard:dashboard_alarmsone' %}">
+              Dashboard
+            </a>
+            <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'dashboard_realtime' %}is-active{% endif %}"
+               href="{% url 'dashboard:dashboard_realtime' %}">
+              Tiempo Real
+            </a>
+          </div>
+        </details>
 
         <!-- SOAR -->
         <details class="tenant-dropdown nav-dropdown"
@@ -53,11 +65,11 @@
           <div class="tenant-list nav-submenu">
             <a class="tenant-option nav-subitem {% if request.resolver_match.app_name == 'soar_dashboard' %}is-active{% endif %}"
                href="{% url 'soar_dashboard:dashboard' %}">
-              SOAR Dashboard
+              Dashboard
             </a>
             <a class="tenant-option nav-subitem {% if request.resolver_match.app_name == 'soar_incidents' %}is-active{% endif %}"
                href="{% url 'soar_incidents:list' %}">
-              Detalles
+              Eventos
             </a>
           </div>
         </details>
@@ -69,7 +81,6 @@
         <summary id="settingsSummary"
                  class="nav-item {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}">
           <span class="nav-ico">⚙️</span>Configuración
-          <span id="hintDotConfig" class="coachmark-dot" aria-hidden="true"></span>
           <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
           </svg>
@@ -222,6 +233,7 @@
         <div class="card table card--table">
           <div class="card-head between">
             <h3>Dispositivos recientes</h3>
+            <!-- Botón agregado para abrir modal por dispositivo seleccionado -->
           </div>
           <div class="table-wrap">
             <table class="datatable" id="device-table">

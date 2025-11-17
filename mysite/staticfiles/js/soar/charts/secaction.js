@@ -1,6 +1,7 @@
 import { AXIS, GRID } from "/static/js/soar/theme.js";
 import { actions, getState } from "/static/js/soar/state.js";
 import { selectSecActionPayload } from "/static/js/soar/selectors.js";
+import { ensureHeaderButton, collectAlarmIdsForCurrentFilter, showAlarms } from "/static/js/soar/helpers/alarms-helper.js";
 
 let chart; const norm=(s)=>String(s??"").trim().toLowerCase();
 
@@ -42,19 +43,35 @@ export function renderSecAction(){
       const els = chart.getElementsAtEventForMode(evt,"nearest",{intersect:true},true);
       if(!els.length) return; const idx=els[0].index; actions.toggleAction?.(labels[idx]);
     };
+
+    // botón uniforme (helper)
+    ensureHeaderButton(ctx.canvas, "btn-see-alarms-actions", () => {
+      const ids = collectAlarmIdsForCurrentFilter();
+      showAlarms(ids);
+    });
+
     chart.$static={labels:labels.slice(), values:values.slice()};
     return;
   }
 
-  const sameLabels=Array.isArray(chart.$static?.labels)&&chart.$static.labels.length===labels.length&&chart.$static.labels.every((v,i)=>v===labels[i]);
-  const sameValues=Array.isArray(chart.$static?.values)&&chart.$static.values.length===values.length&&chart.$static.values.every((v,i)=>Number(v)===Number(values[i]));
+  const sameLabels = Array.isArray(chart.$static?.labels)
+    && chart.$static.labels.length===labels.length
+    && chart.$static.labels.every((v,i)=>v===labels[i]);
+  const sameValues = Array.isArray(chart.$static?.values)
+    && chart.$static.values.length===values.length
+    && chart.$static.values.every((v,i)=>Number(v)===Number(values[i]));
+
   if(sameLabels && sameValues){
-    const ds=chart.data.datasets[0]; ds.backgroundColor=backgroundColors; ds.data=values;
+    const ds=chart.data.datasets[0];
+    ds.backgroundColor=backgroundColors; ds.data=values;
     chart.options.scales.x.ticks.callback=(_v,i)=>labels[i]??_v;
     chart.update("none");
   }else{
-    chart.data.labels=labels; chart.data.datasets[0].data=values; chart.data.datasets[0].backgroundColor=backgroundColors;
-    chart.options.scales.x.ticks.callback=(_v,i)=>labels[i]??_v; chart.$static={labels:labels.slice(), values:values.slice()};
+    chart.data.labels=labels;
+    chart.data.datasets[0].data=values;
+    chart.data.datasets[0].backgroundColor=backgroundColors;
+    chart.options.scales.x.ticks.callback=(_v,i)=>labels[i]??_v;
+    chart.$static={labels:labels.slice(), values:values.slice()};
     chart.update();
   }
 }

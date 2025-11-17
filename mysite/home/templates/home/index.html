@@ -1,0 +1,448 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portal Clientes – Home</title>
+
+  <!-- Usa los mismos estilos del dashboard -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/user_dropdown.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/coachmark.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/config_notificaciones_modal.css' %}?v={% now 'U' %}">
+  <!-- CSS específico para la modal de IP -->
+  <link rel="stylesheet" href="{% static 'css/ip_search_modal.css' %}?v={% now 'U' %}">
+  <link rel="icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
+  <link rel="shortcut icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
+</head>
+
+<body class="layout" data-username="{{ request.user.username|default:'anon' }}">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="{% static 'img/inntesec CSS negro 1.avif' %}" alt="Logo Inntesec" />
+    </div>
+
+    <nav class="nav">
+      <!-- Home -->
+      <a class="nav-item {% if request.resolver_match.app_name == 'home' %}is-active{% endif %}"
+        href="{% url 'home:index' %}">
+        <span class="nav-ico">🏠</span>Home
+      </a>
+
+      <!-- Alarmas -->
+      <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.url_name in 'dashboard_alarmsone dashboard_realtime' %}open{% endif %}>
+        <summary
+          class="nav-item {% if request.resolver_match.url_name in 'dashboard_alarmsone dashboard_realtime' %}is-active{% endif %}">
+          <span class="nav-ico">📊</span>Alarmas
+          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+        </summary>
+        <div class="tenant-list nav-submenu">
+          <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'dashboard_alarmsone' %}is-active{% endif %}"
+            href="{% url 'dashboard:dashboard_alarmsone' %}">
+            Dashboard
+          </a>
+          <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'dashboard_realtime' %}is-active{% endif %}"
+            href="{% url 'dashboard:dashboard_realtime' %}">
+            Tiempo Real
+          </a>
+        </div>
+      </details>
+
+      <!-- SOAR -->
+      <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.app_name in 'soar_dashboard soar_incidents' %}open{% endif %}>
+        <summary
+          class="nav-item {% if request.resolver_match.app_name in 'soar_dashboard soar_incidents' %}is-active{% endif %}">
+          <span class="nav-ico">🚨</span>SOAR
+          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+        </summary>
+        <div class="tenant-list nav-submenu">
+          <a class="tenant-option nav-subitem {% if request.resolver_match.app_name == 'soar_dashboard' %}is-active{% endif %}"
+            href="{% url 'soar_dashboard:dashboard' %}">
+            Dashboard
+          </a>
+          <a class="tenant-option nav-subitem {% if request.resolver_match.app_name == 'soar_incidents' %}is-active{% endif %}"
+            href="{% url 'soar_incidents:list' %}">
+            Eventos
+          </a>
+        </div>
+      </details>
+
+      <!-- Configuración -->
+      <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.url_name == 'cambiar_contrasena' %}open{% endif %}>
+        <summary class="nav-item {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}">
+          <span class="nav-ico">⚙️</span>Configuración
+          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+        </summary>
+        <div class="tenant-list nav-submenu">
+          <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}"
+            href="{% url 'cambiar_contrasena' %}">🔒 Cambiar contraseña</a>
+          <a class="tenant-option nav-subitem" href="#" onclick="toggleConfigModal(true)">🔔 Notificaciones</a>
+        </div>
+      </details>
+    </nav>
+  </aside>
+
+  <!-- Main -->
+  <div class="content">
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="top-left">
+        <h1 class="top-title">
+          Tenant:
+          {% if request.user.tenant.name|lower == "inntesec" %}
+          <details class="tenant-dropdown">
+            <summary class="tenant-summary">
+              {{ tenant.name }}
+              <span class="caret">▼</span>
+            </summary>
+            <div class="tenant-list">
+              {% for t in all_tenants %}
+              <form method="post" action="{% url 'dashboard:switch_tenant' t.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit" class="tenant-option {% if tenant.id == t.id %}is-active{% endif %}">
+                  {{ t.name }}
+                </button>
+              </form>
+              {% endfor %}
+            </div>
+          </details>
+          {% else %}
+          <span class="top-tenant">{{ tenant.name }}</span>
+          {% endif %}
+        </h1>
+      </div>
+
+      <div class="top-right">
+        <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
+        <button class="btn ghost" title="Exportar">⬇︎</button>
+
+        <!-- Usuario -->
+        <div class="user-menu" id="userMenu">
+          <button type="button" id="userButton" class="user-button">
+            <div class="user-avatar">
+              {{ request.user.username|default:"U"|slice:":1"|upper }}
+            </div>
+            <div class="user-name">
+              {{ request.user.get_full_name|default:request.user.username }}
+            </div>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
+          </button>
+          <div class="dropdown-menu">
+            <form action="{% url 'logout' %}" method="post">
+              {% csrf_token %}
+              <button type="submit">🚪 Cerrar sesión</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- KPIs -->
+    <section class="grid grid-kpis">
+      <div class="card kpi">
+        <div class="kpi-label">Alarmas </div>
+        <div class="kpi-value">{{ alarms_total|default:"0" }}</div>
+      </div>
+
+      <div class="card kpi">
+        <div class="kpi-label">Alarmas críticas</div>
+        <div class="kpi-value" style="color:#ef4444">{{ alarms_critical_total|default:"0" }}</div>
+      </div>
+
+      <div class="card kpi">
+        <div class="kpi-label">SOAR – Incidentes</div>
+        <div class="kpi-value">{{ soar_total|default:"0" }}</div>
+      </div>
+
+      <div class="card kpi">
+        <div class="kpi-label">Telegram – Solicitudes</div>
+        <div class="kpi-value">{{ telegram_total|default:"0" }}</div>
+      </div>
+    </section>
+
+    <!-- Buscadores de IP -->
+    <section class="grid grid-kpis" style="margin-top: 1.5rem;">
+      <!-- Blacklist -->
+      <div class="card kpi ip-search-card">
+        <div class="kpi-label">Buscar IP en Blacklist</div>
+
+        <form method="get" class="ip-search-form">
+          <input type="search" name="blacklist_q" placeholder="Ej: 80.64.18.80, 167.94.146.61"
+            value="{{ blacklist_q|default:'' }}" class="ip-input" />
+          <button type="submit" class="btn btn-primary ip-search-btn">
+            🔍 Buscar
+          </button>
+        </form>
+      </div>
+
+      <!-- Whitelist -->
+      <div class="card kpi ip-search-card">
+        <div class="kpi-label">Buscar IP en Whitelist</div>
+
+        <form method="get" class="ip-search-form">
+          <input type="search" name="whitelist_q" placeholder="Ej: 10.0.0.5, 10.0.0.6"
+            value="{{ whitelist_q|default:'' }}" class="ip-input" />
+          <button type="submit" class="btn btn-primary ip-search-btn">
+            🔍 Buscar
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Modal de resultados de búsqueda de IP -->
+    <div id="ipSearchModal" class="modal-overlay {% if blacklist_q or whitelist_q %}{% else %}hidden{% endif %}"
+      aria-hidden="{% if blacklist_q or whitelist_q %}false{% else %}true{% endif %}">
+      <div class="modal-card">
+        <!-- Cabecera general de la modal -->
+        <div class="modal-head">
+          <h3>Resultados de búsqueda de IP</h3>
+          <button class="close-btn" type="button" aria-label="Cerrar" onclick="toggleIpModal(false)">
+            ×
+          </button>
+        </div>
+
+        <!-- Cuerpo -->
+        <div class="modal-body ip-modal-body">
+          {# ====== BLACKLIST ====== #}
+          {% if blacklist_q %}
+          <section class="ip-modal-section">
+            <h4 class="ip-modal-title">Blacklist</h4>
+            <p class="ip-search-meta">
+              Búsqueda: <strong>{{ blacklist_q }}</strong>
+            </p>
+
+            {% if blacklist_results %}
+            <ul class="ip-results-list">
+              {% for ip in blacklist_results %}
+              <li class="ip-result-item">
+                <div class="ip-detail-card">
+                  <!-- ENCABEZADO -->
+                  <div class="block ip-section-block">
+                    <h4>ENCABEZADO</h4>
+                    <ul class="stacked">
+                      <li><strong>IP:</strong> {{ ip.ip }}</li>
+                      <li><strong>País:</strong> {{ ip.pais|default:"No disponible" }}</li>
+                      <li><strong>Usuario:</strong> {{ ip.usuario|default:"-" }}</li>
+                      <li><strong>Dispositivo:</strong> {{ ip.dispositivo|default:"-" }}</li>
+                      <li><strong>Fecha creación:</strong> {{ ip.fecha_creacion|date:"Y-m-d H:i:s" }}</li>
+                      <li><strong>Fecha actualización:</strong> {{ ip.fecha_actualizacion|date:"Y-m-d H:i:s" }}</li>
+                    </ul>
+                  </div>
+
+                  <!-- RIESGO DETECTADO -->
+                  <div class="block ip-section-block">
+                    <h4>RIESGO DETECTADO</h4>
+                    <p class="muted">
+                      {{ ip.log_description|default:"Sin descripción desde el log." }}
+                    </p>
+                  </div>
+
+                  <!-- CLASIFICACIÓN -->
+                  <div class="block ip-section-block">
+                    <h4>CLASIFICACIÓN</h4>
+                    <p class="muted">
+                      {{ ip.mensaje|default:"Sin mensaje de clasificación disponible." }}
+                    </p>
+                  </div>
+
+                  <!-- ACCIONES RECOMENDADAS -->
+                  <div class="block ip-section-block">
+                    <h4>ACCIONES RECOMENDADAS</h4>
+                    <p class="muted">
+                      Revisar la actividad asociada a la IP y actualizar reglas de filtrado en el perímetro.
+                    </p>
+                  </div>
+                </div>
+              </li>
+              {% endfor %}
+            </ul>
+            {% else %}
+            <p class="ip-empty-text">
+              No se encontraron coincidencias en la blacklist.
+            </p>
+            {% endif %}
+          </section>
+          {% endif %}
+
+          {# ====== WHITELIST ====== #}
+          {% if whitelist_q %}
+          <section class="ip-modal-section">
+            <h4 class="ip-modal-title">Whitelist</h4>
+            <p class="ip-search-meta">
+              Búsqueda: <strong>{{ whitelist_q }}</strong>
+            </p>
+
+            {% if whitelist_results or whitelist_not_found_terms %}
+            {# --- Coincidencias existentes en whitelist --- #}
+            {% if whitelist_results %}
+            <p class="ip-subtitle">Coincidencias en whitelist:</p>
+            <ul class="ip-results-list">
+              {% for ip in whitelist_results %}
+              <li class="ip-result-item">
+                <article class="ip-detail-card">
+                  <!-- Encabezado estilo tarjeta -->
+                  <header class="ip-detail-header">
+                    <div>
+                      <div class="ip-detail-label">IP</div>
+                      <div class="ip-detail-ip">{{ ip.ip }}</div>
+                    </div>
+                    {% if ip.pais %}
+                    <div class="ip-detail-country">
+                      <span class="ip-detail-label">País</span>
+                      <span class="ip-detail-value">{{ ip.pais }}</span>
+                    </div>
+                    {% endif %}
+                  </header>
+
+                  <!-- Detalles -->
+                  <section class="ip-detail-section">
+                    <h5 class="ip-section-title">Detalle</h5>
+                    <dl class="ip-detail-list">
+                      {% if ip.log_description %}
+                      <div class="detail-row">
+                        <dt>log_description</dt>
+                        <dd>{{ ip.log_description }}</dd>
+                      </div>
+                      {% endif %}
+
+                      {% if ip.mensaje %}
+                      <div class="detail-row">
+                        <dt>Mensaje</dt>
+                        <dd>{{ ip.mensaje }}</dd>
+                      </div>
+                      {% endif %}
+
+                      {% if ip.usuario %}
+                      <div class="detail-row">
+                        <dt>Usuario</dt>
+                        <dd>{{ ip.usuario }}</dd>
+                      </div>
+                      {% endif %}
+
+                      {% if ip.dispositivo %}
+                      <div class="detail-row">
+                        <dt>Dispositivo</dt>
+                        <dd>{{ ip.dispositivo }}</dd>
+                      </div>
+                      {% endif %}
+                    </dl>
+                  </section>
+
+                  <!-- Fechas -->
+                  <section class="ip-detail-section">
+                    <h5 class="ip-section-title">Fechas</h5>
+                    <dl class="ip-detail-list">
+                      {% if ip.fecha_creacion %}
+                      <div class="detail-row">
+                        <dt>Creación</dt>
+                        <dd>{{ ip.fecha_creacion|date:"Y-m-d H:i:s" }}</dd>
+                      </div>
+                      {% endif %}
+                      {% if ip.fecha_actualizacion %}
+                      <div class="detail-row">
+                        <dt>Última actualización</dt>
+                        <dd>{{ ip.fecha_actualizacion|date:"Y-m-d H:i:s" }}</dd>
+                      </div>
+                      {% endif %}
+                    </dl>
+                  </section>
+
+                  <!-- Footer acciones -->
+                  <footer class="ip-detail-footer">
+                    <form method="post" action="{% url 'home:whitelist_create_ticket' %}" class="ip-remove-form">
+                      {% csrf_token %}
+                      <input type="hidden" name="ip" value="{{ ip.ip }}">
+                      {% if whitelist_q %}
+                      <input type="hidden" name="whitelist_q_original" value="{{ whitelist_q }}">
+                      {% endif %}
+                      {% if whitelist_removed %}
+                      <input type="hidden" name="whitelist_removed_original" value="{{ whitelist_removed }}">
+                      {% endif %}
+                      <button type="submit" class="btn btn-success btn-xs">
+                        ➕ Solicitud añadir a whitelist
+                      </button>
+                    </form>
+                  </footer>
+                </article>
+              </li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+
+            {# --- IPs buscadas que NO están en la whitelist --- #}
+            {% if whitelist_not_found_terms %}
+            <p class="ip-subtitle" style="margin-top:0.75rem;">
+              IPs no encontradas (puedes añadirlas a la whitelist):
+            </p>
+            <ul class="ip-results-list">
+              {% for ip in whitelist_not_found_terms %}
+              <li class="ip-result-item">
+                <span class="ip-pill">{{ ip }}</span>
+
+                <!-- Botón para AÑADIR esta IP a la whitelist vía webhook -->
+                <form method="post" action="{% url 'home:whitelist_create_ticket' %}" class="ip-remove-form">
+                  {% csrf_token %}
+                  <input type="hidden" name="ip" value="{{ ip }}">
+                  {% if whitelist_q %}
+                  <input type="hidden" name="whitelist_q_original" value="{{ whitelist_q }}">
+                  {% endif %}
+                  {% if whitelist_removed %}
+                  <input type="hidden" name="whitelist_removed_original" value="{{ whitelist_removed }}">
+                  {% endif %}
+                  <button type="submit" class="btn btn-primary btn-xs">
+                    ➕ Añadir a whitelist
+                  </button>
+                </form>
+              </li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+            {% else %}
+            <p class="ip-empty-text">
+              No se encontraron coincidencias en la whitelist.
+            </p>
+            {% endif %}
+          </section>
+          {% endif %}
+
+          {% if not blacklist_q and not whitelist_q %}
+          <p class="ip-empty-text">
+            No has realizado ninguna búsqueda todavía.
+          </p>
+          {% endif %}
+        </div>
+
+        <!-- Pie -->
+        <div class="modal-foot">
+          <button type="button" class="btn ghost" onclick="toggleIpModal(false)">
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footnote">Última actualización: ahora</footer>
+  </div>
+
+  <!-- JS globales -->
+  <script defer src="{% static 'js/alarms_one/page-loader-universal.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/onboarding_hints.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/resultados_modal.js' %}?v={% now 'U' %}"></script>
+  {% include 'partials/config_notificaciones_modal.html' %}
+</body>
+
+</html>

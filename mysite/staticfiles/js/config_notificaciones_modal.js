@@ -65,7 +65,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-
   // Cerrar modal clicando fuera
   const overlay = document.getElementById("configModal");
   overlay?.addEventListener("click", (ev) => {
@@ -73,4 +72,33 @@ document.addEventListener("DOMContentLoaded", () => {
       toggleConfigModal(false);
     }
   });
+
+  // 🔹 Mostrar/ocultar campos de hora según el estado del checkbox de teléfono
+  const toggleTelefono = document.getElementById("toggleTelefono");
+  const franja = document.getElementById("franjaHoraria");
+
+  if (toggleTelefono && franja) {
+    function updateFranja() {
+      franja.classList.toggle("hidden", !toggleTelefono.checked);
+    }
+
+    toggleTelefono.addEventListener("change", updateFranja);
+    updateFranja(); // Inicializa al cargar
+  }
 });
+
+// Mostrar/ocultar QR cuando se activa Telegram
+document.addEventListener("DOMContentLoaded", () => {
+  const toggleTelegram = document.getElementById("toggleTelegram");
+  const qrContainer = document.getElementById("qrTelegram");
+
+  if (toggleTelegram && qrContainer) {
+    function updateQR() {
+      qrContainer.classList.toggle("hidden", !toggleTelegram.checked);
+    }
+
+    toggleTelegram.addEventListener("change", updateQR);
+    updateQR(); // inicializa
+  }
+});
+
