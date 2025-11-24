@@ -1,0 +1,52 @@
+:root{
+      --bg:#0b1220;      /* mismo fondo del portal */
+      --panel:#0f1d35;
+      --border:#1e293b;
+      --text:#e5e7eb;
+      --muted:#94a3b8;
+      --brand:#3b82f6;
+      --radius:16px;
+      --shadow:0 20px 50px rgba(2,6,23,.45);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:'Inter',system-ui,Segoe UI,Roboto,Arial,sans-serif;
+      background:var(--bg); color:var(--text);
+      display:flex; align-items:center; justify-content:center; padding:24px;
+    }
+    .card{
+      width:96%; max-width:520px;
+      background:var(--panel); border:1px solid var(--border);
+      border-radius:var(--radius); box-shadow:var(--shadow);
+      padding:22px 22px 18px;
+    }
+    .logo{display:flex; align-items:center; justify-content:center; margin-bottom:16px;}
+    .logo img{max-width:320px; height:auto;} /* logo grande */
+    h1{margin:0 0 4px; font-size:1.05rem; text-align:center; font-weight:800;}
+    p.sub{margin:0 0 18px; color:var(--muted); text-align:center; font-size:.9rem;}
+    .err{
+      background:#311a1a; border:1px solid #7f1d1d; color:#fecaca;
+      border-radius:12px; padding:10px 12px; margin:0 0 14px; font-size:.92rem;
+    }
+    label{
+      display:block; font-size:.80rem;        /* ← más pequeño */
+      color:var(--muted); margin:8px 2px 6px; line-height:1.2;
+    }
+    input{
+      width:100%; background:#0f172a; color:var(--text);
+      border:1px solid var(--border); border-radius:12px;
+      padding:12px 12px; font-size:1rem;
+    }
+    .actions{
+      display:flex; justify-content:center;   /* ← botón centrado */
+      margin-top:16px;
+    }
+    .btn{
+      appearance:none; border:1px solid var(--border); background:#132449; color:var(--text);
+      padding:10px 16px; border-radius:12px; cursor:pointer; font-weight:700;
+    }
+    .btn:hover{background:#19305f}
+    .btn-primary{background:var(--brand); border-color:transparent; color:white}
+    .btn-primary:hover{filter:brightness(0.95)}
+    .hint{margin-top:10px; color:var(--muted); font-size:.8rem; text-align:center}

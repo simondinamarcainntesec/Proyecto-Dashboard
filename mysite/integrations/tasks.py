@@ -50,7 +50,7 @@ def tarea_ingesta_api():
         now = datetime.now(tz)
 
         # Eliminar alarmas con más de un mes
-        limite = now - timedelta(days=30)
+        limite = now - timedelta(days=60)
         eliminadas, _ = Alarm.objects.filter(event_time__lt=limite).delete()
         logging.info(f"🧹 Alarmas antiguas eliminadas: {eliminadas}")
 

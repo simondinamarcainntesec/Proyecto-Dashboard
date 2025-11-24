@@ -20,9 +20,24 @@ export function renderCountries() {
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
 
-  const labels = (payload.labels || []).slice();
-  const values = (payload.data   || []).slice();
-  const active = norm(getState().countryFilter || "");
+  // Datos originales
+  const rawLabels = (payload.labels || []).slice();
+  const rawValues = (payload.data   || []).slice();
+
+  // Filtrar "N/A" / "n/a" y "Reserved"
+  const labels = [];
+  const values = [];
+  for (let i = 0; i < rawLabels.length; i++) {
+    const lbl = rawLabels[i];
+    const n = norm(lbl);
+    if (n === "n/a" || n === "reserved") continue; // << ocultar N/A y Reserved
+    labels.push(lbl);
+    values.push(rawValues[i]);
+  }
+
+  // Si el filtro activo es "n/a"/"reserved" o ya no existe tras filtrar, no lo usamos
+  const activeRaw = norm(getState().countryFilter || "");
+  const active = labels.some(l => norm(l) === activeRaw) ? activeRaw : "";
 
   const backgroundColors = labels.map((lbl, i) => {
     const base = PALETTE[i % PALETTE.length];
@@ -30,7 +45,7 @@ export function renderCountries() {
   });
 
   const titleText = active
-    ? `País: ${labels.find((l) => norm(l) === active) ?? active}`
+    ? `País: ${labels.find((l) => norm(l) === active)}`
     : "Top países de origen";
 
   const conf = {
@@ -102,4 +117,3 @@ export function renderCountries() {
     chart.update();
   }
 }
-

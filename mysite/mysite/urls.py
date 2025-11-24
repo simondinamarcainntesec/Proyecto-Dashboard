@@ -6,6 +6,7 @@ from accounts.views import registro_cliente
 from accounts import views as accounts_views
 from tenants import views
 from django.contrib.auth import views as auth_views
+from home import views as home_views
 
 # === HOME ===
 def home_view(request):
@@ -48,5 +49,7 @@ urlpatterns = [
     path("auth/reset/done/", auth_views.PasswordResetCompleteView.as_view(
         template_name="auth/password_reset_complete.html"
     ), name="password_reset_complete"),
-    path("home/", include("home.urls", namespace="home")),
+    path("home_prueba_inntesec/", include("home.urls")),  # tu sección de portal
+    path("blacklist", home_views.blacklist_txt, name="blacklist_download_root_root"),
+    path("siem/", include("siem.urls", namespace="siem")),
 ]

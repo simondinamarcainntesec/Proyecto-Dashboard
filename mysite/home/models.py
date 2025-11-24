@@ -74,9 +74,23 @@ class IPBlacklist(models.Model):
 
 class IPWhitelist(models.Model):
     ip = models.CharField("IP", max_length=255, primary_key=True)
+    pais = models.CharField(max_length=255, null=True, blank=True)
+    fecha_creacion = models.DateTimeField(null=True, blank=True)
+    fecha_actualizacion = models.DateTimeField(null=True, blank=True)
+    region = models.TextField(null=True, blank=True)
+    ciudad = models.TextField(null=True, blank=True)
+    isp = models.TextField(null=True, blank=True)
+    organizacion = models.TextField(null=True, blank=True)   # ← aquí guardaremos el tenant
+    cliente = models.TextField(null=True, blank=True)        # ← aquí el usuario/correo
+    mobile = models.TextField(null=True, blank=True)
+    tenant_id = models.IntegerField(null=True, blank=True)
+
+    # NUEVO
+    motivo = models.TextField(null=True, blank=True)
 
     class Meta:
         managed = False
+        # Forma segura para referenciar esquema + tabla
         db_table = 'agent"."ip_whitelist'
         verbose_name = "IP Whitelist"
         verbose_name_plural = "IP Whitelist"

@@ -116,7 +116,7 @@ export function ensureHeaderButton(containerEl, btnId, onClick) {
   btn.style.gap = "6px";
   btn.style.fontWeight = "700";
   btn.style.padding = "6px 10px";
-  btn.innerHTML = `<span aria-hidden="true">📁</span> Ver `;
+  btn.innerHTML = `<span aria-hidden="true">📁</span> Ver Alarmas `;
   btn.addEventListener("click", onClick);
 
   wrap.appendChild(btn);

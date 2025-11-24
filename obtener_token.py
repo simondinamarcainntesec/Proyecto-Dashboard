@@ -71,7 +71,7 @@ def main():
         tokens = collect_tokens(data)
         if tokens:
             # si hay 2 o más, siempre el segundo; si no, el único
-            chosen = tokens[1] if len(tokens) >= 2 else tokens[0]
+            chosen = tokens[0] if len(tokens) >= 2 else tokens[0]
             try:
                 TOKEN_FILE.write_text(chosen, encoding="utf-8")
             except Exception as e:

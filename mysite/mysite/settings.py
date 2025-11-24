@@ -69,6 +69,7 @@ INSTALLED_APPS = [
     'soar_dashboard',
     'soar_incidents',
     'home',
+    'siem',
 ]
 
 MIDDLEWARE = [
