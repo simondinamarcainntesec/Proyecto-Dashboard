@@ -10,7 +10,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/user_dropdown.css' %}?v={% now 'U' %}">
-  <!-- CSS principal del coachmark / tour -->
   <link rel="stylesheet" href="{% static 'css/coachmark.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/config_notificaciones_modal.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/ip_search_modal.css' %}?v={% now 'U' %}">
@@ -18,8 +17,7 @@
 
   <link rel="icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
   <link rel="shortcut icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
-
-  <!-- Chart.js + gráfico de Alarmas -->
+  <!-- Chart.js (defer desde CDN; si quieres evitar mensaje de Tracking Prevention, mueve a static local) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
   <script defer src="{% static 'js/home_alarms_chart.js' %}?v={% now 'U' %}"></script>
 </head>
@@ -34,19 +32,15 @@
 
     <nav class="nav">
       {% if can_view_monitoring %}
-      <!-- HOME con id y dot -->
-      <a id="homeNav"
-         class="nav-item {% if request.resolver_match.app_name == 'home' %}is-active{% endif %}"
-         href="{% url 'home:index' %}">
+      <a id="homeNav" class="nav-item {% if request.resolver_match.app_name == 'home' %}is-active{% endif %}"
+        href="{% url 'home:index' %}">
         <span class="nav-ico">🏠</span>Home
         <span id="coachDotHome" class="coachmark-dot hidden"></span>
       </a>
 
-      <!-- ALARMAS -->
-      <details class="tenant-dropdown nav-dropdown"
-               {% if request.resolver_match.url_name in 'dashboard_alarmsone dashboard_realtime' %}open{% endif %}>
+      <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.url_name in 'dashboard_alarmsone dashboard_realtime' %}open{% endif %}>
         <summary id="alarmsSummary"
-                 class="nav-item {% if request.resolver_match.url_name in 'dashboard_alarmsone dashboard_realtime' %}is-active{% endif %}">
+          class="nav-item {% if request.resolver_match.url_name in 'dashboard_alarmsone dashboard_realtime' %}is-active{% endif %}">
           <span class="nav-ico">📊</span>Alarmas
           <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
@@ -55,17 +49,15 @@
         </summary>
         <div class="tenant-list nav-submenu">
           <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'dashboard_alarmsone' %}is-active{% endif %}"
-             href="{% url 'dashboard:dashboard_alarmsone' %}">Dashboard</a>
+            href="{% url 'dashboard:dashboard_alarmsone' %}">Dashboard</a>
           <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'dashboard_realtime' %}is-active{% endif %}"
-             href="{% url 'dashboard:dashboard_realtime' %}">Tiempo Real</a>
+            href="{% url 'dashboard:dashboard_realtime' %}">Tiempo Real</a>
         </div>
       </details>
 
-      <!-- SOAR -->
-      <details class="tenant-dropdown nav-dropdown"
-               {% if request.resolver_match.app_name in 'soar_dashboard soar_incidents' %}open{% endif %}>
+      <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.app_name in 'soar_dashboard soar_incidents' %}open{% endif %}>
         <summary id="soarSummary"
-                 class="nav-item {% if request.resolver_match.app_name in 'soar_dashboard soar_incidents' %}is-active{% endif %}">
+          class="nav-item {% if request.resolver_match.app_name in 'soar_dashboard soar_incidents' %}is-active{% endif %}">
           <span class="nav-ico">🚨</span>SOAR
           <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
@@ -74,18 +66,15 @@
         </summary>
         <div class="tenant-list nav-submenu">
           <a class="tenant-option nav-subitem {% if request.resolver_match.app_name == 'soar_dashboard' %}is-active{% endif %}"
-             href="{% url 'soar_dashboard:dashboard' %}">Dashboard</a>
+            href="{% url 'soar_dashboard:dashboard' %}">Dashboard</a>
           <a class="tenant-option nav-subitem {% if request.resolver_match.app_name == 'soar_incidents' %}is-active{% endif %}"
-             href="{% url 'soar_incidents:list' %}">Eventos</a>
+            href="{% url 'soar_incidents:list' %}">Eventos</a>
         </div>
       </details>
-      {% endif %}
 
-      <!-- CONFIG -->
-      <details class="tenant-dropdown nav-dropdown"
-               {% if request.resolver_match.url_name == 'cambiar_contrasena' %}open{% endif %}>
+      <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.url_name == 'cambiar_contrasena' %}open{% endif %}>
         <summary id="settingsSummary"
-                 class="nav-item {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}">
+          class="nav-item {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}">
           <span class="nav-ico">⚙️</span>Configuración
           <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
@@ -94,15 +83,16 @@
         </summary>
         <div class="tenant-list nav-submenu">
           <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}"
-             href="{% url 'cambiar_contrasena' %}">🔒 Cambiar contraseña</a>
+            href="{% url 'cambiar_contrasena' %}">🔒 Cambiar contraseña</a>
           <a class="tenant-option nav-subitem" href="#" onclick="toggleCredModal(true)">🔑 Credenciales</a>
           <a class="tenant-option nav-subitem" href="#" onclick="toggleConfigModal(true)">🔔 Notificaciones</a>
         </div>
       </details>
+      {% endif %}
     </nav>
   </aside>
 
-  <!-- Main -->
+  <!-- Main content -->
   <div class="content {% if not can_view_monitoring %}content--empty{% endif %}">
     <!-- Topbar -->
     <header class="topbar">
@@ -137,13 +127,14 @@
         <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
         <button class="btn ghost" title="Exportar">⬇︎</button>
 
+        <!-- Guía rápida botón -->
+        <button id="showCoachBtn" class="btn ghost" title="Mostrar guía rápida">💡 Guía rápida</button>
+
         <div class="user-menu" id="userMenu">
           <button type="button" id="userButton" class="user-button">
             <div class="user-avatar">{{ request.user.username|default:"U"|slice:":1"|upper }}</div>
             <div class="user-name">{{ request.user.get_full_name|default:request.user.username }}</div>
-            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24">
-              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
-            </svg>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" /></svg>
           </button>
           <div class="dropdown-menu">
             <form action="{% url 'logout' %}" method="post">{% csrf_token %}
@@ -159,9 +150,7 @@
     <section class="grid grid-kpis">
       <div class="card kpi">
         <div class="kpi-header">
-          <div class="kpi-icon kpi-icon--alarms">
-            <span>⚠️</span>
-          </div>
+          <div class="kpi-icon kpi-icon--alarms"><span>⚠️</span></div>
           <div class="kpi-label">Alarmas</div>
         </div>
         <div class="kpi-value">{{ alarms_total|default:"0" }}</div>
@@ -169,9 +158,7 @@
 
       <div class="card kpi">
         <div class="kpi-header">
-          <div class="kpi-icon kpi-icon--critical">
-            <span>⛔</span>
-          </div>
+          <div class="kpi-icon kpi-icon--critical"><span>⛔</span></div>
           <div class="kpi-label">Alarmas críticas</div>
         </div>
         <div class="kpi-value">{{ alarms_critical_total|default:"0" }}</div>
@@ -179,9 +166,7 @@
 
       <div class="card kpi">
         <div class="kpi-header">
-          <div class="kpi-icon kpi-icon--soar">
-            <span>🛡️</span>
-          </div>
+          <div class="kpi-icon kpi-icon--soar"><span>🛡️</span></div>
           <div class="kpi-label">SOAR – Incidentes</div>
         </div>
         <div class="kpi-value">{{ soar_total|default:"0" }}</div>
@@ -189,16 +174,14 @@
 
       <div class="card kpi">
         <div class="kpi-header">
-          <div class="kpi-icon kpi-icon--telegram">
-            <span>💬</span>
-          </div>
+          <div class="kpi-icon kpi-icon--telegram"><span>💬</span></div>
           <div class="kpi-label">Telegram – Solicitudes</div>
         </div>
         <div class="kpi-value">{{ telegram_total|default:"0" }}</div>
       </div>
     </section>
 
-    <!-- Gráfico + severidad -->
+    <!-- Charts & severity -->
     <section class="grid grid-main home-chart-section no-dashboard-gap">
       <div class="card chart-card home-chart-card">
         <div class="card-head">
@@ -208,8 +191,8 @@
         <div class="card-body">
           <div class="chart-wrapper">
             <canvas id="alarmsTrendChart" data-labels='{{ alarms_daily_labels_json|default:"[]" }}'
-                    data-total-series='{{ alarms_daily_total_json|default:"[]" }}'
-                    data-critical-series='{{ alarms_daily_critical_json|default:"[]" }}'>
+              data-total-series='{{ alarms_daily_total_json|default:"[]" }}'
+              data-critical-series='{{ alarms_daily_critical_json|default:"[]" }}'>
             </canvas>
           </div>
         </div>
@@ -227,15 +210,7 @@
             <li class="severity-item">
               <div class="severity-main">
                 <span class="severity-ico sev-ico-{{ sev.key }}">
-                  {% if sev.key == "critical" %}
-                  ⛔
-                  {% elif sev.key == "high" %}
-                  ⚠️
-                  {% elif sev.key == "medium" %}
-                  🔶
-                  {% else %}
-                  ❔
-                  {% endif %}
+                  {% if sev.key == "critical" %}⛔{% elif sev.key == "high" %}⚠️{% elif sev.key == "medium" %}🔶{% else %}❔{% endif %}
                 </span>
                 <span class="pill {{ sev.css_class }}">{{ sev.label }}</span>
               </div>
@@ -251,7 +226,6 @@
     <!-- Buscadores IP -->
     <section class="home-ip-section">
       <div class="home-ip-grid">
-        <!-- Blacklist -->
         <div class="home-ip-card">
           <div class="home-ip-header">
             <div class="home-ip-icon home-ip-icon--blacklist">⛔</div>
@@ -261,11 +235,8 @@
           <form method="get" action="{% url 'home:index' %}" class="home-ip-form">
             <div class="home-ip-input-row">
               <input type="search" name="blacklist_q" placeholder="Ej: 80.64.18.80, 167.94.146.61"
-                     value="{{ blacklist_q|default:'' }}" class="home-ip-input" />
-              <button type="submit" class="home-ip-btn">
-                <span class="home-ip-btn-icon">🔍</span>
-                <span>Buscar</span>
-              </button>
+                value="{{ blacklist_q|default:'' }}" class="home-ip-input" />
+              <button type="submit" class="home-ip-btn"><span class="home-ip-btn-icon">🔍</span><span>Buscar</span></button>
             </div>
 
             <div class="home-ip-examples">
@@ -276,7 +247,6 @@
           </form>
         </div>
 
-        <!-- Whitelist -->
         <div class="home-ip-card">
           <div class="home-ip-header">
             <div class="home-ip-icon home-ip-icon--whitelist">🟢</div>
@@ -286,11 +256,8 @@
           <form method="get" action="{% url 'home:index' %}" class="home-ip-form">
             <div class="home-ip-input-row">
               <input type="search" name="whitelist_q" placeholder="Ej: 10.0.0.5, 10.0.0.6"
-                     value="{{ whitelist_q|default:'' }}" class="home-ip-input" />
-              <button type="submit" class="home-ip-btn">
-                <span class="home-ip-btn-icon">🔍</span>
-                <span>Buscar</span>
-              </button>
+                value="{{ whitelist_q|default:'' }}" class="home-ip-input" />
+              <button type="submit" class="home-ip-btn"><span class="home-ip-btn-icon">🔍</span><span>Buscar</span></button>
             </div>
 
             <div class="home-ip-examples">
@@ -303,82 +270,50 @@
       </div>
     </section>
 
-    <!-- MODAL Blacklist + Whitelist NO ENCONTRADAS -->
+    <!-- IP Search Modal -->
     <div id="ipSearchModal"
-         class="modal-overlay {% if blacklist_q or whitelist_q and show_whitelist_modal %}{% else %}hidden{% endif %}"
-         aria-hidden="{% if blacklist_q or whitelist_q and show_whitelist_modal %}false{% else %}true{% endif %}">
+      class="modal-overlay {% if blacklist_q or whitelist_q and show_whitelist_modal %}{% else %}hidden{% endif %}"
+      aria-hidden="{% if blacklist_q or whitelist_q and show_whitelist_modal %}false{% else %}true{% endif %}">
       <div class="modal-card">
         <div class="modal-head">
           <h3>Resultados de búsqueda de IP</h3>
-          <button class="close-btn" type="button" aria-label="Cerrar" onclick="toggleIpModal(false)">
-            ×
-          </button>
+          <button class="close-btn" type="button" aria-label="Cerrar" onclick="toggleIpModal(false)">×</button>
         </div>
 
         <div class="modal-body ip-modal-body">
-          {# BLACKLIST #}
           {% if blacklist_q %}
           <section class="ip-modal-section">
             <h4 class="ip-modal-title">Blacklist</h4>
-            <p class="ip-search-meta">
-              Búsqueda: <strong>{{ blacklist_q }}</strong>
-            </p>
+            <p class="ip-search-meta">Búsqueda: <strong>{{ blacklist_q }}</strong></p>
 
             {% if blacklist_results %}
             <ul class="ip-results-list">
               {% for ip in blacklist_results %}
               <li class="ip-result-item">
+                <!-- detalle IP (igual que antes) -->
                 <div class="ip-detail-card">
                   <div class="block ip-section-block">
                     <h4>ENCABEZADO</h4>
                     <ul class="stacked">
-                      <li>
-                        <strong>IP:</strong>
-                        <span class="mono">{{ ip.ip }}</span>
-                      </li>
-                      <li>
-                        <strong>País:</strong>
-                        {{ ip.pais|default:"No disponible" }}
-                      </li>
-                      <li>
-                        <strong>Usuario:</strong>
-                        {{ ip.usuario|default:"No registrado" }}
-                      </li>
+                      <li><strong>IP:</strong> <span class="mono">{{ ip.ip }}</span></li>
+                      <li><strong>País:</strong> {{ ip.pais|default:"No disponible" }}</li>
+                      <li><strong>Usuario:</strong> {{ ip.usuario|default:"No registrado" }}</li>
                     </ul>
                   </div>
-
                   <div class="block ip-section-block">
                     <h4>DETALLE DEL LOG</h4>
-                    <ul class="stacked">
-                      <li>
-                        <strong>Log ID:</strong>
-                        {{ ip.logid|default:"-" }}
-                      </li>
-                    </ul>
-                    <p class="muted" style="margin-top:.4rem;">
-                      <strong>Descripción del log:</strong><br>
-                      {{ ip.log_description|default:"Sin descripción disponible desde el log." }}
-                    </p>
+                    <ul class="stacked"><li><strong>Log ID:</strong> {{ ip.logid|default:"-" }}</li></ul>
+                    <p class="muted" style="margin-top:.4rem;"><strong>Descripción del log:</strong><br>{{ ip.log_description|default:"Sin descripción disponible desde el log." }}</p>
                   </div>
-
                   <div class="block ip-section-block">
                     <h4>CLASIFICACIÓN</h4>
-                    <p class="muted">
-                      {{ ip.mensaje|default:"Sin mensaje de clasificación disponible." }}
-                    </p>
+                    <p class="muted">{{ ip.mensaje|default:"Sin mensaje de clasificación disponible." }}</p>
                   </div>
-
                   <div class="block ip-section-block">
                     <h4>FECHAS</h4>
                     <ul class="stacked">
-                      <li>
-                        <strong>Fecha creación:</strong>
-                        {{ ip.fecha_creacion|date:"Y-m-d H:i:s"|default:"-" }}
-                      </li>
-                      <li>
-                        <strong>Fecha actualización:</strong>
-                        {{ ip.fecha_actualizacion|date:"Y-m-d H:i:s"|default:"-" }}
-                      </li>
+                      <li><strong>Fecha creación:</strong> {{ ip.fecha_creacion|date:"Y-m-d H:i:s"|default:"-" }}</li>
+                      <li><strong>Fecha actualización:</strong> {{ ip.fecha_actualizacion|date:"Y-m-d H:i:s"|default:"-" }}</li>
                     </ul>
                   </div>
                 </div>
@@ -386,86 +321,58 @@
               {% endfor %}
             </ul>
             {% else %}
-            <p class="ip-empty-text">
-              No se encontraron coincidencias en la blacklist.
-            </p>
+            <p class="ip-empty-text">No se encontraron coincidencias en la blacklist.</p>
             {% endif %}
           </section>
           {% endif %}
 
-          {# WHITELIST NO ENCONTRADAS #}
           {% if whitelist_q and show_whitelist_modal %}
           <section class="ip-modal-section">
             <h4 class="ip-modal-title">Whitelist</h4>
-            <p class="ip-search-meta">
-              Búsqueda: <strong>{{ whitelist_q }}</strong>
-            </p>
-
+            <p class="ip-search-meta">Búsqueda: <strong>{{ whitelist_q }}</strong></p>
             {% if whitelist_not_found_terms %}
-            <p class="ip-subtitle" style="margin-top:0.75rem;">
-              IPs no encontradas en la whitelist (usa el botón de abajo para solicitar añadirlas).
-            </p>
+            <p class="ip-subtitle" style="margin-top:0.75rem;">IPs no encontradas en la whitelist (usa el botón de abajo para solicitar añadirlas).</p>
             <ul class="ip-results-list">
               {% for ip in whitelist_not_found_terms %}
-              <li class="ip-result-item">
-                <span class="ip-pill">{{ ip }}</span>
-              </li>
+              <li class="ip-result-item"><span class="ip-pill">{{ ip }}</span></li>
               {% endfor %}
             </ul>
             {% else %}
-            <p class="ip-empty-text">
-              Todas las IPs buscadas ya están en la whitelist del tenant.
-            </p>
+            <p class="ip-empty-text">Todas las IPs buscadas ya están en la whitelist del tenant.</p>
             {% endif %}
           </section>
           {% endif %}
 
           {% if not blacklist_q and not whitelist_q and not show_whitelist_modal %}
-          <p class="ip-empty-text">
-            No has realizado ninguna búsqueda todavía.
-          </p>
+          <p class="ip-empty-text">No has realizado ninguna búsqueda todavía.</p>
           {% endif %}
         </div>
 
         <div class="modal-foot">
           {% if blacklist_results %}
-          <form method="post" action="{% url 'home:blacklist_create_ticket' %}" class="ip-footer-form">
-            {% csrf_token %}
+          <form method="post" action="{% url 'home:blacklist_create_ticket' %}" class="ip-footer-form">{% csrf_token %}
             <input type="hidden" name="ip" value="{{ blacklist_results.0.ip }}">
-            {% if blacklist_q %}
-            <input type="hidden" name="blacklist_q_original" value="{{ blacklist_q }}">
-            {% endif %}
-            {% if blacklist_removed %}
-            <input type="hidden" name="blacklist_removed_original" value="{{ blacklist_removed }}">
-            {% endif %}
-            <button type="submit" class="btn btn-danger">
-              🗑 Solicitar eliminación de blacklist
-            </button>
+            {% if blacklist_q %}<input type="hidden" name="blacklist_q_original" value="{{ blacklist_q }}">{% endif %}
+            {% if blacklist_removed %}<input type="hidden" name="blacklist_removed_original" value="{{ blacklist_removed }}">{% endif %}
+            <button type="submit" class="btn btn-danger">🗑 Solicitar eliminación de blacklist</button>
           </form>
           {% endif %}
 
           {% if whitelist_q and show_whitelist_modal and whitelist_not_found_terms %}
-          <form method="post" action="{% url 'home:whitelist_create_ticket' %}" class="ip-footer-form">
-            {% csrf_token %}
+          <form method="post" action="{% url 'home:whitelist_create_ticket' %}" class="ip-footer-form">{% csrf_token %}
             <input type="hidden" name="ip" value="{{ whitelist_not_found_terms.0 }}">
             <input type="hidden" name="whitelist_q_original" value="{{ whitelist_q }}">
-            {% if whitelist_removed %}
-            <input type="hidden" name="whitelist_removed_original" value="{{ whitelist_removed }}">
-            {% endif %}
-            <button type="submit" class="btn btn-primary">
-              ➕ Añadir a whitelist
-            </button>
+            {% if whitelist_removed %}<input type="hidden" name="whitelist_removed_original" value="{{ whitelist_removed }}">{% endif %}
+            <button type="submit" class="btn btn-primary">➕ Añadir a whitelist</button>
           </form>
           {% endif %}
 
-          <button type="button" class="btn ghost" onclick="toggleIpModal(false)">
-            Cerrar
-          </button>
+          <button type="button" class="btn ghost" onclick="toggleIpModal(false)">Cerrar</button>
         </div>
       </div>
     </div>
 
-    <!-- WHITELIST POR TENANT -->
+    <!-- Whitelist table -->
     <section class="home-whitelist-section">
       <div class="home-whitelist-card">
         <div class="home-whitelist-head">
@@ -473,12 +380,7 @@
             <div class="home-whitelist-title-icon">🛡️</div>
             <div class="home-whitelist-title-text">
               <h2>Whitelist</h2>
-              <p class="home-whitelist-subtitle">
-                Tenant: <strong>{{ tenant.name }}</strong>
-                {% if whitelist_q %}
-                · filtro: <code>{{ whitelist_q }}</code>
-                {% endif %}
-              </p>
+              <p class="home-whitelist-subtitle">Tenant: <strong>{{ tenant.name }}</strong>{% if whitelist_q %} · filtro: <code>{{ whitelist_q }}</code>{% endif %}</p>
             </div>
           </div>
         </div>
@@ -486,16 +388,7 @@
         {% if whitelist_results %}
         <div class="home-whitelist-table-wrapper">
           <table class="home-whitelist-table">
-            <thead>
-              <tr>
-                <th>IP</th>
-                <th>Cliente</th>
-                <th>Organización</th>
-                <th>Motivo</th>
-                <th>Fecha creación</th>
-                <th>Última actualización</th>
-              </tr>
-            </thead>
+            <thead><tr><th>IP</th><th>Cliente</th><th>Organización</th><th>Motivo</th><th>Fecha creación</th><th>Última actualización</th></tr></thead>
             <tbody>
               {% for ip in whitelist_results %}
               <tr>
@@ -511,155 +404,66 @@
           </table>
         </div>
         {% else %}
-        <p class="home-whitelist-empty">
-          <span class="home-whitelist-empty-icon">🛡️</span>
-          <span>
-            {% if whitelist_q %}
-            No se encontraron IPs en la whitelist para ese criterio en este tenant.
-            {% else %}
-            No hay IPs en la whitelist para este tenant.
-            {% endif %}
-          </span>
-        </p>
+        <p class="home-whitelist-empty"><span class="home-whitelist-empty-icon">🛡️</span><span>{% if whitelist_q %}No se encontraron IPs en la whitelist para ese criterio en este tenant.{% else %}No hay IPs en la whitelist para este tenant.{% endif %}</span></p>
         {% endif %}
       </div>
     </section>
 
     {% else %}
-    <!-- Estado vacío centrado cuando el tenant no tiene monitoreo -->
     <section class="empty-state">
       <div class="empty-card">
         <h2>Servicio no disponible</h2>
-        <p>
-          La empresa <strong>{{ tenant.name|default:"—" }}</strong> no tiene el servicio de alarmas contratado.
-        </p>
+        <p>La empresa <strong>{{ tenant.name|default:"—" }}</strong> no tiene el servicio de alarmas contratado.</p>
         <p>Por favor, contacte con un administrador.</p>
       </div>
     </section>
     {% endif %}
 
-    <!-- MODAL Credenciales -->
+    <!-- Credenciales modal -->
     <div id="credModal" class="cred-overlay hidden" aria-hidden="true">
       <div class="cred-card">
-        <div class="cred-head">
-          <h3>Credenciales</h3>
-          <button class="cred-close" type="button" aria-label="Cerrar" onclick="toggleCredModal(false)">×</button>
-        </div>
-
+        <div class="cred-head"><h3>Credenciales</h3><button class="cred-close" type="button" aria-label="Cerrar" onclick="toggleCredModal(false)">×</button></div>
         <div class="cred-body">
-          <div class="cred-tenant-line">
-            <span class="muted">Tenant</span><strong>{{ tenant.name }}</strong>
-          </div>
-
+          <div class="cred-tenant-line"><span class="muted">Tenant</span><strong>{{ tenant.name }}</strong></div>
           {% if cred %}
           <div class="cred-block">
-            <input id="cred-url" type="text" class="cred-input"
-                   value="{{ request.scheme }}://{{ request.get_host }}/blacklist" readonly>
-
-            <div class="cred-actions">
-              <button type="button" class="cred-copy" onclick="copyBlockInput(this)">Copiar</button>
-              <button type="button" class="cred-toggle" onclick="openDownloadPage()">Ir</button>
-            </div>
-            <p class="cred-hint">
-              Se solicitarán credenciales <strong>en cada descarga</strong>.
-            </p>
+            <input id="cred-url" type="text" class="cred-input" value="{{ request.scheme }}://{{ request.get_host }}/blacklist" readonly>
+            <div class="cred-actions"><button type="button" class="cred-copy" onclick="copyBlockInput(this)">Copiar</button><button type="button" class="cred-toggle" onclick="openDownloadPage()">Ir</button></div>
+            <p class="cred-hint">Se solicitarán credenciales <strong>en cada descarga</strong>.</p>
           </div>
-
-          <div class="cred-block">
-            <label class="cred-label">Usuario</label>
-            <input id="cred-user" type="password" class="cred-input" value="{{ cred.username }}" readonly>
-            <div class="cred-actions">
-              <button type="button" class="cred-toggle" onclick="toggleBlockInput(this)">Ver</button>
-              <button type="button" class="cred-copy" onclick="copyBlockInput(this)">Copiar</button>
-            </div>
-          </div>
-
-          <div class="cred-block">
-            <label class="cred-label">Contraseña</label>
-            <input id="cred-pass" type="password" class="cred-input" value="{{ cred.password }}" readonly>
-            <div class="cred-actions">
-              <button type="button" class="cred-toggle" onclick="toggleBlockInput(this)">Ver</button>
-              <button type="button" class="cred-copy" onclick="copyBlockInput(this)">Copiar</button>
-            </div>
-          </div>
+          <div class="cred-block"><label class="cred-label">Usuario</label><input id="cred-user" type="password" class="cred-input" value="{{ cred.username }}" readonly><div class="cred-actions"><button type="button" class="cred-toggle" onclick="toggleBlockInput(this)">Ver</button><button type="button" class="cred-copy" onclick="copyBlockInput(this)">Copiar</button></div></div>
+          <div class="cred-block"><label class="cred-label">Contraseña</label><input id="cred-pass" type="password" class="cred-input" value="{{ cred.password }}" readonly><div class="cred-actions"><button type="button" class="cred-toggle" onclick="toggleBlockInput(this)">Ver</button><button type="button" class="cred-copy" onclick="copyBlockInput(this)">Copiar</button></div></div>
           {% else %}
           <div class="cred-empty">No hay credenciales configuradas para este tenant.</div>
           {% endif %}
         </div>
-
-        <div class="cred-foot">
-          <button class="btn" type="button" onclick="toggleCredModal(false)">Cerrar</button>
-        </div>
+        <div class="cred-foot"><button class="btn" type="button" onclick="toggleCredModal(false)">Cerrar</button></div>
       </div>
     </div>
 
-    <!-- Loader local para creación de tickets -->
-    <div id="ticketLoadingOverlay" class="ticket-loading-overlay hidden" aria-hidden="true">
-      <div class="ticket-loading-card">
-        <div class="spinner" aria-hidden="true"></div>
-        <div class="ticket-loading-text">Creando ticket…</div>
-      </div>
-    </div>
-
-    <!-- MODAL de confirmación de ticket (éxito / error) -->
-    <div id="ticketDialog" class="ticket-dialog-overlay hidden" aria-hidden="true">
-      <div class="ticket-dialog-card">
-        <div id="ticketDialogIcon" class="ticket-dialog-icon is-success">
-          <span id="ticketDialogIconChar">✔</span>
-        </div>
-        <h2 class="ticket-dialog-title" id="ticketDialogTitle">Solicitud enviada</h2>
-        <p class="ticket-dialog-text" id="ticketDialogText">
-          Se procesó la solicitud.
-        </p>
-        <div class="ticket-dialog-actions">
-          <button type="button" id="ticketDialogOkBtn" class="ticket-dialog-btn">
-            OK
-          </button>
-        </div>
-      </div>
-    </div>
+    <!-- Ticket loader/dialog -->
+    <div id="ticketLoadingOverlay" class="ticket-loading-overlay hidden" aria-hidden="true"><div class="ticket-loading-card"><div class="spinner" aria-hidden="true"></div><div class="ticket-loading-text">Creando ticket…</div></div></div>
+    <div id="ticketDialog" class="ticket-dialog-overlay hidden" aria-hidden="true"><div class="ticket-dialog-card"><div id="ticketDialogIcon" class="ticket-dialog-icon is-success"><span id="ticketDialogIconChar">✔</span></div><h2 class="ticket-dialog-title" id="ticketDialogTitle">Solicitud enviada</h2><p class="ticket-dialog-text" id="ticketDialogText">Se procesó la solicitud.</p><div class="ticket-dialog-actions"><button type="button" id="ticketDialogOkBtn" class="ticket-dialog-btn">OK</button></div></div></div>
 
   </div> <!-- /content -->
 
-  <!-- Coachmark Onboarding (fuera de .content para que no se bluree) -->
+  <!-- Coachmark elements (outside .content) -->
   <div id="coachmarkBackdrop" class="coachmark-backdrop hidden"></div>
-
-  <div id="coachmarkGeneric" class="coachmark hidden">
+  <div id="coachmarkGeneric" class="coachmark hidden" role="dialog" aria-modal="true">
     <h3 class="coachmark-title">Guía rápida</h3>
     <p class="coachmark-text"></p>
-    <div class="coachmark-actions">
-      <button type="button" class="btn-ok" data-coachmark-close>Entendido</button>
-    </div>
+    <div class="coachmark-actions"><button type="button" id="coachmarkCloseBtn" class="btn btn-ok primary" data-coachmark-close>Entendido</button></div>
   </div>
 
+  <!-- App scripts (defer ok) -->
   <script defer src="{% static 'js/home_portal.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/home_ip_tickets.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/menus_dropdowns.js' %}?v={% now 'U' %}"></script>
 
-  <!-- JS del tour (sin defer) -->
-  <script src="{% static 'js/onboarding_hints.js' %}?v={% now 'U' %}"></script>
-  <!-- Bootstrap mínimo para lanzar el tour -->
-  <script>
-    console.log('[coach] inline bootstrap cargado');
+  <!-- onboarding: ambos scripts desde static (sin inline JS) -->
+  <!-- onboarding_hints.js debe exponer window.initSidebarOnboarding -->
+  <script defer src="{% static 'js/coach_allinone.js' %}?v={% now 'U' %}"></script>
 
-    window.addEventListener('load', function () {
-      console.log('[coach] window load; existe initSidebarOnboarding =', typeof window.initSidebarOnboarding);
-
-      // Fuerza reset de contador sólo para pruebas
-      Object.keys(localStorage).forEach(function (k) {
-        if (k.startsWith('inntesec:coach:')) {
-          console.log('[coach] borrando key', k);
-          localStorage.removeItem(k);
-        }
-      });
-
-      if (window.initSidebarOnboarding) {
-        window.initSidebarOnboarding();
-      } else {
-        console.log('[coach] NO se encontró window.initSidebarOnboarding');
-      }
-    });
-  </script>
 </body>
-</html>
 
+</html>

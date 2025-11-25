@@ -45,7 +45,7 @@ ALLOWED_HOSTS = ['ia.inntesec.com', 'www.ia.inntesec.com', '127.0.0.1:8001','127
 CSRF_TRUSTED_ORIGINS = ['https://ia.inntesec.com', 'https://www.ia.inntesec.com', 'http://127.0.0.1:8001','http://127.0.0.1:8000']
 
 LOGIN_URL = "login"
-LOGIN_REDIRECT_URL = "dashboard/"
+LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "login"
 ALARMSONE_ACCESS_TOKEN = os.getenv("ALARMSONE_ACCESS_TOKEN")
 

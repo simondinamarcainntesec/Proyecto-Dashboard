@@ -6,7 +6,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const userButton = document.getElementById("userButton");
 
   // === TODOS los <details> que actúan como dropdowns (topbar y/o sidebar) ===
-  const detailDropdowns = Array.from(document.querySelectorAll("details.tenant-dropdown"));
+  const detailDropdowns = Array.from(
+    document.querySelectorAll("details.tenant-dropdown")
+  );
+  // Solo los del sidebar (tienen nav-dropdown)
+  const navDropdowns = detailDropdowns.filter((dd) =>
+    dd.classList.contains("nav-dropdown")
+  );
 
   // Utilidad: cerrar todo excepto el que indiquemos como "exceptEl"
   const closeAllExcept = (exceptEl = null) => {
@@ -16,9 +22,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     // Cierra todos los <details> si no son la excepción
     detailDropdowns.forEach((dd) => {
-      if (dd !== exceptEl) dd.removeAttribute("open");
+      if (dd !== exceptEl) {
+        dd.removeAttribute("open");
+      }
     });
   };
+
+  // ---------- ESTADO INICIAL: todo CERRADO ----------
+  navDropdowns.forEach((dd) => dd.removeAttribute("open"));
+  // (si alguno viene con `open` desde el template, lo cerramos igual)
+  // --------------------------------------------------
 
   // --- Click en el botón del usuario ---
   if (userButton && userMenu) {
@@ -26,8 +39,8 @@ document.addEventListener("DOMContentLoaded", () => {
       e.stopPropagation();
       const willOpen = !userMenu.classList.contains("dropdown-open");
 
-      // Si se va a abrir el usuario, cierra los demás primero
       if (willOpen) {
+        // Si se va a abrir el usuario, cierra los demás primero
         closeAllExcept(userMenu);
         userMenu.classList.add("dropdown-open");
       } else {

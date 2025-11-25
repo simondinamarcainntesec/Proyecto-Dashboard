@@ -31,70 +31,73 @@
     <nav class="nav">
       {# Ítems visibles SOLO si hay servicio #}
       {% if tenant.alarms_one_id %}
-        <!-- ===== Alarmas (colapsable con Dashboard + Tiempo Real) ===== -->
+
+        <a id="homeNav"
+           class="nav-item {% if request.resolver_match.app_name == 'home' %}is-active{% endif %}"
+           href="{% url 'home:index' %}">
+          <span class="nav-ico">🏠</span>Home
+          <span id="coachDotHome" class="coachmark-dot hidden"></span>
+        </a>
+
+        {# ===== Alarmas (Dashboard + Tiempo Real) ===== #}
+        {% with url_name=request.resolver_match.url_name %}
         <details class="tenant-dropdown nav-dropdown"
-                 {% if request.resolver_match.url_name == 'dashboard_alarmsone' or request.resolver_match.url_name == 'dashboard_realtime' %}open{% endif %}>
-          <summary class="nav-item {% if request.resolver_match.url_name == 'dashboard_alarmsone' or request.resolver_match.url_name == 'dashboard_realtime' %}is-active{% endif %}">
-            <span class="nav-ico">🏠</span>Alarmas
+                 {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}open{% endif %}>
+          <summary id="alarmsSummary"
+            class="nav-item {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}is-active{% endif %}">
+            <span class="nav-ico">📊</span>Alarmas
             <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
             </svg>
+            <span id="coachDotAlarms" class="coachmark-dot hidden"></span>
           </summary>
-
           <div class="tenant-list nav-submenu">
-            <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'dashboard_alarmsone' %}is-active{% endif %}"
-               href="{% url 'dashboard:dashboard_alarmsone' %}">
-              Dashboard
-            </a>
-            <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'dashboard_realtime' %}is-active{% endif %}"
-               href="{% url 'dashboard:dashboard_realtime' %}">
-              Tiempo Real
-            </a>
+            <a class="tenant-option nav-subitem {% if url_name == 'dashboard_alarmsone' %}is-active{% endif %}"
+               href="{% url 'dashboard:dashboard_alarmsone' %}">Dashboard</a>
+            <a class="tenant-option nav-subitem {% if url_name == 'dashboard_realtime' %}is-active{% endif %}"
+               href="{% url 'dashboard:dashboard_realtime' %}">Tiempo Real</a>
           </div>
         </details>
+        {% endwith %}
 
-        <!-- SOAR -->
+        {# ===== SOAR ===== #}
+        {% with app_name=request.resolver_match.app_name %}
         <details class="tenant-dropdown nav-dropdown"
-                 {% if request.resolver_match.app_name == 'soar_dashboard' or request.resolver_match.app_name == 'soar_incidents' %}open{% endif %}>
-          <summary class="nav-item {% if request.resolver_match.app_name == 'soar_dashboard' or request.resolver_match.app_name == 'soar_incidents' %}is-active{% endif %}">
+                 {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' %}open{% endif %}>
+          <summary id="soarSummary"
+            class="nav-item {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' %}is-active{% endif %}">
             <span class="nav-ico">🚨</span>SOAR
             <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
             </svg>
+            <span id="coachDotSoar" class="coachmark-dot hidden"></span>
           </summary>
           <div class="tenant-list nav-submenu">
-            <a class="tenant-option nav-subitem {% if request.resolver_match.app_name == 'soar_dashboard' %}is-active{% endif %}"
-               href="{% url 'soar_dashboard:dashboard' %}">
-              Dashboard
-            </a>
-            <a class="tenant-option nav-subitem {% if request.resolver_match.app_name == 'soar_incidents' %}is-active{% endif %}"
-               href="{% url 'soar_incidents:list' %}">
-              Eventos
-            </a>
+            <a class="tenant-option nav-subitem {% if app_name == 'soar_dashboard' %}is-active{% endif %}"
+               href="{% url 'soar_dashboard:dashboard' %}">Dashboard</a>
+            <a class="tenant-option nav-subitem {% if app_name == 'soar_incidents' %}is-active{% endif %}"
+               href="{% url 'soar_incidents:list' %}">Eventos</a>
           </div>
         </details>
+        {% endwith %}
       {% endif %}
 
-      <!-- Configuración (SIEMPRE visible) -->
+      {# ===== Configuración (SIEMPRE visible) ===== #}
       <details class="tenant-dropdown nav-dropdown"
                {% if request.resolver_match.url_name == 'cambiar_contrasena' %}open{% endif %}>
         <summary id="settingsSummary"
-                 class="nav-item {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}">
+          class="nav-item {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}">
           <span class="nav-ico">⚙️</span>Configuración
-          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24">
             <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
           </svg>
+          <span id="coachDotConfig" class="coachmark-dot hidden"></span>
         </summary>
         <div class="tenant-list nav-submenu">
           <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}"
-             href="{% url 'cambiar_contrasena' %}">
-            🔒 Cambiar contraseña
-          </a>
-          <a class="tenant-option nav-subitem"
-             href="#"
-             onclick="toggleConfigModal(true)">
-            🔔 Notificaciones
-          </a>
+             href="{% url 'cambiar_contrasena' %}">🔒 Cambiar contraseña</a>
+          <a class="tenant-option nav-subitem" href="#" onclick="toggleCredModal(true)">🔑 Credenciales</a>
+          <a class="tenant-option nav-subitem" href="#" onclick="toggleConfigModal(true)">🔔 Notificaciones</a>
         </div>
       </details>
     </nav>

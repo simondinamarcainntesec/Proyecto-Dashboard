@@ -17,12 +17,32 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==============================
   // DROPDOWNS <details> (sidebar + tenant)
   // ==============================
-  // Todos los <details> con clase tenant-dropdown (sidebar + selector de tenant)
-  const allDetails = Array.from(document.querySelectorAll('details.tenant-dropdown'));
-  // Solo los de la sidebar (tienen además la clase nav-dropdown)
-  const navDropdowns = Array.from(document.querySelectorAll('details.tenant-dropdown.nav-dropdown'));
+  const allDetails   = Array.from(document.querySelectorAll('details.tenant-dropdown'));
+  const navDropdowns = Array.from(
+    document.querySelectorAll('details.tenant-dropdown.nav-dropdown')
+  );
 
-  // Cerrar otros dropdowns de la sidebar cuando uno se abre
+  // ---------- ESTADO INICIAL (acordeón al cargar) ----------
+  if (navDropdowns.length > 0) {
+    // buscamos el dropdown cuyo summary tenga .nav-item.is-active
+    const activeDropdown = navDropdowns.find((det) =>
+      det.querySelector('summary.nav-item.is-active')
+    );
+
+    if (activeDropdown) {
+      navDropdowns.forEach((det) => {
+        det.open = (det === activeDropdown);
+      });
+    } else {
+      // si ninguno está activo, los cerramos todos
+      navDropdowns.forEach((det) => {
+        det.open = false;
+      });
+    }
+  }
+  // ---------------------------------------------------------
+
+  // Cerrar otros dropdowns de la sidebar cuando uno se abre (modo acordeón)
   navDropdowns.forEach((dropdown) => {
     dropdown.addEventListener('toggle', () => {
       if (dropdown.open) {
@@ -59,11 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==============================
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
-      // Cerrar menú usuario
-      if (userMenu) {
-        userMenu.classList.remove('is-open');
-      }
-      // Cerrar todos los details
+      if (userMenu) userMenu.classList.remove('is-open');
       allDetails.forEach((det) => {
         if (det.open) det.open = false;
       });

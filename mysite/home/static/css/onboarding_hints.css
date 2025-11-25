@@ -97,3 +97,50 @@ body.coachmark-open #soarSummary {
   display: none;
 }
 .hint-dot:not(.hidden) { display: block; }
+/* Asegurar que el nav item actúe como contenedor posicionado */
+.nav .nav-item,
+summary.nav-item {
+  position: relative;
+}
+
+/* Dot (usa la clase coachmark-dot que incluimos en el HTML) */
+.coachmark-dot {
+  position: absolute;
+  right: 12px;            /* lo pone a la derecha */
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 0 6px rgba(245,158,11,0.12);
+  z-index: 9999;
+  display: none;
+}
+
+/* mostrado sólo cuando el JS activa is-on */
+.coachmark-dot.is-on { display: inline-block; }
+
+/* Si quieres animación tipo pulso */
+@keyframes coachmark-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(245,158,11,.7); }
+  70% { box-shadow: 0 0 0 10px rgba(245,158,11,0); }
+  100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); }
+}
+.coachmark-dot.is-on { animation: coachmark-pulse 1.4s ease-in-out infinite; }
+
+/* Tooltip / botón OK - forzar azul sobre el tema general (mayor especificidad) */
+#coachmarkGeneric .btn-ok,
+.coachmark .btn-ok {
+  background: #3b82f6 !important;
+  color: #fff !important;
+  border: 0 !important;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(59,130,246,0.18);
+}
+
+/* Asegurar el tooltip esté encima del nav highlight */
+#coachmarkGeneric { z-index: 9900; }

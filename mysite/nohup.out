@@ -16474,3 +16474,29 @@ RuntimeError: No se pudo obtener el token desde obtener_token.py
 [2025-11-24 16:05:01,565: INFO/ForkPoolWorker-1] 📊 Total alarmas recibidas hoy: 367
 [2025-11-24 16:05:01,892: INFO/ForkPoolWorker-1] ✅ Ingesta diaria completada. Nuevas filas insertadas: 7
 [2025-11-24 16:05:01,893: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_ingesta_api[473f428f-e4a0-40ec-9979-e1b3dfb910c4] succeeded in 1.8911210600053892s: None
+[2025-11-24 17:00:00,000: INFO/MainProcess] Scheduler: Sending due task obtener-token-cada-hora (integrations.tasks.tarea_obtener_token)
+[2025-11-24 17:00:00,003: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[b252fde0-1d27-4d8c-ae2d-d0442e455163] received
+[2025-11-24 17:00:00,003: INFO/ForkPoolWorker-1] 🔑 Solicitando nuevo token desde la API...
+[2025-11-24 17:00:00,805: WARNING/ForkPoolWorker-1] ✅ Token obtenido correctamente: 1000.7e567...
+[2025-11-24 17:00:00,805: INFO/ForkPoolWorker-1] ✅ Token guardado correctamente.
+[2025-11-24 17:00:00,806: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_obtener_token[b252fde0-1d27-4d8c-ae2d-d0442e455163] succeeded in 0.8025469940621406s: '1000.7e567ee0d3031a49a7227cf243611f0f.dbd00e52b88c99fd7d63a1d146cb400a'
+[2025-11-24 17:05:00,000: INFO/MainProcess] Scheduler: Sending due task ingesta-api-cada-65-min (integrations.tasks.tarea_ingesta_api)
+[2025-11-24 17:05:00,002: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[f1242bf3-c529-449d-b3fa-de2e29d5649c] received
+[2025-11-24 17:05:00,002: INFO/ForkPoolWorker-1] 🚀 Inicio de ingesta diaria de API
+[2025-11-24 17:05:00,022: INFO/ForkPoolWorker-1] 🧹 Alarmas antiguas eliminadas: 0
+[2025-11-24 17:05:00,022: INFO/ForkPoolWorker-1] 📅 Trayendo alarmas desde 2025-11-24 00:00:00-03:00 hasta 2025-11-24 14:05:00.002883-03:00 (ms: 1763953200000 → 1764003900002)
+[2025-11-24 17:05:00,970: WARNING/ForkPoolWorker-1] ✅ Token obtenido correctamente: 1000.b3a16...
+[2025-11-24 17:05:01,282: INFO/ForkPoolWorker-1] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1763953200000&toDate=1764003900002&filter=all&size=200&from=0 "HTTP/1.1 200 "
+[2025-11-24 17:05:01,360: INFO/ForkPoolWorker-1] 📦 Página 1, 200 alarmas cargadas (total: 200)
+[2025-11-24 17:05:01,611: INFO/ForkPoolWorker-1] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1763953200000&toDate=1764003900002&filter=all&size=200&from=200 "HTTP/1.1 200 "
+[2025-11-24 17:05:01,646: INFO/ForkPoolWorker-1] 📦 Página 1, 184 alarmas cargadas (total: 384)
+[2025-11-24 17:05:01,647: INFO/ForkPoolWorker-1] 📊 Total alarmas recibidas hoy: 384
+[2025-11-24 17:05:02,011: INFO/ForkPoolWorker-1] ✅ Ingesta diaria completada. Nuevas filas insertadas: 17
+[2025-11-24 17:05:02,013: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_ingesta_api[f1242bf3-c529-449d-b3fa-de2e29d5649c] succeeded in 2.0104603490326554s: None
+[2025-11-24 18:00:00,000: INFO/MainProcess] Scheduler: Sending due task obtener-token-cada-hora (integrations.tasks.tarea_obtener_token)
+[2025-11-24 18:00:00,002: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[3ae192eb-f5bf-4887-a5b0-a0f0e4fadc77] received
+[2025-11-24 18:00:00,003: INFO/ForkPoolWorker-1] 🔑 Solicitando nuevo token desde la API...
+[2025-11-24 18:00:00,855: WARNING/ForkPoolWorker-1] ✅ Token obtenido correctamente: 1000.b3a16...
+[2025-11-24 18:00:00,855: INFO/ForkPoolWorker-1] ✅ Token guardado correctamente.
+[2025-11-24 18:00:00,856: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_obtener_token[3ae192eb-f5bf-4887-a5b0-a0f0e4fadc77] succeeded in 0.85267406294588s: '1000.b3a16a49d1c5e881c3597546438dc647.15895a12a87d24b1204ad52866cd6a2e'
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             

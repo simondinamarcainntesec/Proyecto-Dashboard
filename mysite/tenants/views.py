@@ -20,6 +20,9 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 # ========================== LOGIN ==========================
+# imports necesarios (agrega esto donde estén tus otros imports)
+from django.views.decorators.cache import never_cache
+
 @never_cache
 def tenant_login_view(request):
     """
@@ -119,7 +122,7 @@ def tenant_login_view(request):
                 messages.warning(request, "Inicio de sesión sin tenant asociado.")
 
             # ✅ Redirigir inmediatamente para evitar reenvíos o tokens antiguos
-            return redirect("dashboard:dashboard")
+            return redirect("/home/")
 
         # --- Credenciales inválidas ---
         messages.error(request, "Credenciales inválidas.")
