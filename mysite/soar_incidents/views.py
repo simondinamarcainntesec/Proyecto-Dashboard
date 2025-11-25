@@ -1,4 +1,4 @@
-# soar_incidents/views.py
+# soar_incidents/views.py 
 from __future__ import annotations
 from datetime import datetime, timedelta
 import logging
@@ -16,6 +16,9 @@ from tenants.models import Tenant
 from urllib.parse import urlparse
 
 from .models import IncidenteSOAR
+
+# 👇 NUEVO: credenciales de blacklist/portal
+from home.models import TenantCredentials  # noqa
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +100,16 @@ def incidents_list(request):
     paginator = Paginator(qs, 25)
     page_obj = paginator.get_page(request.GET.get("page"))
 
+    # 👇 NUEVO: obtener credenciales activas del tenant (para el modal)
+    cred = None
+    try:
+        if tenant:
+            cred = TenantCredentials.get_active_for_tenant(
+                int(getattr(tenant, "id", 0))
+            )
+    except Exception as e:
+        logger.exception("[SOAR_INCIDENTS] Error obteniendo credenciales del tenant: %s", e)
+
     # === Selector solo visible si el usuario pertenece a Inntesec ===
     tenants_list = []
     user_tenant = getattr(request.user, "tenant", None)
@@ -111,6 +124,7 @@ def incidents_list(request):
         "to_date_str": to_q.strftime("%Y-%m-%d"),
         "tenant": tenant,
         "all_tenants": tenants_list,
+        "cred": cred,  # 👈 para el partial de credenciales
     }
     return render(request, "soar_incidents/list.html", context)
 

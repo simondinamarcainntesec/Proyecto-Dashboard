@@ -16499,4 +16499,93 @@ RuntimeError: No se pudo obtener el token desde obtener_token.py
 [2025-11-24 18:00:00,855: WARNING/ForkPoolWorker-1] ✅ Token obtenido correctamente: 1000.b3a16...
 [2025-11-24 18:00:00,855: INFO/ForkPoolWorker-1] ✅ Token guardado correctamente.
 [2025-11-24 18:00:00,856: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_obtener_token[3ae192eb-f5bf-4887-a5b0-a0f0e4fadc77] succeeded in 0.85267406294588s: '1000.b3a16a49d1c5e881c3597546438dc647.15895a12a87d24b1204ad52866cd6a2e'
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+[2025-11-25 15:12:24,315: INFO/MainProcess] beat: Starting...
+ 
+ -------------- celery@ia-customer-portal v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-1014-azure-x86_64-with-glibc2.39 2025-11-25 15:12:24
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         mysite:0x7ee58b6b46b0
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 1 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> default          exchange=default(direct) key=default
+                
+
+[tasks]
+  . integrations.tasks.ingesta_mensual_ciclica
+  . integrations.tasks.tarea_ingesta_api
+  . integrations.tasks.tarea_obtener_token
+  . mysite.celery.debug_task
+
+[2025-11-25 15:12:24,407: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-11-25 15:12:24,410: INFO/MainProcess] mingle: searching for neighbors
+[2025-11-25 15:12:25,418: INFO/MainProcess] mingle: all alone
+[2025-11-25 15:12:25,427: INFO/MainProcess] celery@ia-customer-portal ready.
+[2025-11-25 16:00:00,001: INFO/MainProcess] Scheduler: Sending due task obtener-token-cada-hora (integrations.tasks.tarea_obtener_token)
+[2025-11-25 16:00:00,008: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[92829e57-d173-4c9d-b596-fcf80fce8350] received
+[2025-11-25 16:00:00,010: INFO/ForkPoolWorker-1] 🔑 Solicitando nuevo token desde la API...
+[2025-11-25 16:00:00,853: WARNING/ForkPoolWorker-1] ✅ Token obtenido correctamente: 1000.2d29c...
+[2025-11-25 16:00:00,854: INFO/ForkPoolWorker-1] ✅ Token guardado correctamente.
+[2025-11-25 16:00:00,857: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_obtener_token[92829e57-d173-4c9d-b596-fcf80fce8350] succeeded in 0.8472545410040766s: '1000.2d29cf191837dfaa03e46899a20a6406.613d8ed4e656afc931524544585f03d3'
+[2025-11-25 16:05:00,000: INFO/MainProcess] Scheduler: Sending due task ingesta-api-cada-65-min (integrations.tasks.tarea_ingesta_api)
+[2025-11-25 16:05:00,002: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[83c5fb36-d7d7-4f16-92f6-14fe0655fa2f] received
+[2025-11-25 16:05:00,002: INFO/ForkPoolWorker-1] 🚀 Inicio de ingesta diaria de API
+[2025-11-25 16:05:00,025: INFO/ForkPoolWorker-1] 🧹 Alarmas antiguas eliminadas: 0
+[2025-11-25 16:05:00,025: INFO/ForkPoolWorker-1] 📅 Trayendo alarmas desde 2025-11-25 00:00:00-03:00 hasta 2025-11-25 13:05:00.003080-03:00 (ms: 1764039600000 → 1764086700003)
+[2025-11-25 16:05:00,936: WARNING/ForkPoolWorker-1] ✅ Token obtenido correctamente: 1000.02222...
+[2025-11-25 16:05:01,275: INFO/ForkPoolWorker-1] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1764039600000&toDate=1764086700003&filter=all&size=200&from=0 "HTTP/1.1 200 "
+[2025-11-25 16:05:01,375: INFO/ForkPoolWorker-1] 📦 Página 1, 200 alarmas cargadas (total: 200)
+[2025-11-25 16:05:01,767: INFO/ForkPoolWorker-1] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1764039600000&toDate=1764086700003&filter=all&size=200&from=200 "HTTP/1.1 200 "
+[2025-11-25 16:05:01,815: INFO/ForkPoolWorker-1] 📦 Página 2, 200 alarmas cargadas (total: 400)
+[2025-11-25 16:05:02,048: INFO/ForkPoolWorker-1] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1764039600000&toDate=1764086700003&filter=all&size=200&from=400 "HTTP/1.1 200 "
+[2025-11-25 16:05:02,050: INFO/ForkPoolWorker-1] 📦 Página 2, 65 alarmas cargadas (total: 465)
+[2025-11-25 16:05:02,050: INFO/ForkPoolWorker-1] 📊 Total alarmas recibidas hoy: 465
+[2025-11-25 16:05:03,999: INFO/ForkPoolWorker-1] ✅ Ingesta diaria completada. Nuevas filas insertadas: 465
+[2025-11-25 16:05:04,001: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_ingesta_api[83c5fb36-d7d7-4f16-92f6-14fe0655fa2f] succeeded in 3.9986969900055556s: None
+[2025-11-25 17:00:00,000: INFO/MainProcess] Scheduler: Sending due task obtener-token-cada-hora (integrations.tasks.tarea_obtener_token)
+[2025-11-25 17:00:00,002: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[9491954b-a406-45da-be83-681308a335d7] received
+[2025-11-25 17:00:00,002: INFO/ForkPoolWorker-1] 🔑 Solicitando nuevo token desde la API...
+[2025-11-25 17:00:00,990: WARNING/ForkPoolWorker-1] ✅ Token obtenido correctamente: 1000.02222...
+[2025-11-25 17:00:00,990: INFO/ForkPoolWorker-1] ✅ Token guardado correctamente.
+[2025-11-25 17:00:00,991: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_obtener_token[9491954b-a406-45da-be83-681308a335d7] succeeded in 0.9887955730082467s: '1000.022225cb55f9f3cecbac0b01cf1d3fed.76eac9aaaf5cf78e6756f5fc0029ed52'
+[2025-11-25 17:05:00,000: INFO/MainProcess] Scheduler: Sending due task ingesta-api-cada-65-min (integrations.tasks.tarea_ingesta_api)
+[2025-11-25 17:05:00,001: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[afd67e8f-cc17-4fe2-ba06-4778503f9ddd] received
+[2025-11-25 17:05:00,002: INFO/ForkPoolWorker-1] 🚀 Inicio de ingesta diaria de API
+[2025-11-25 17:05:00,015: INFO/ForkPoolWorker-1] 🧹 Alarmas antiguas eliminadas: 0
+[2025-11-25 17:05:00,016: INFO/ForkPoolWorker-1] 📅 Trayendo alarmas desde 2025-11-25 00:00:00-03:00 hasta 2025-11-25 14:05:00.002712-03:00 (ms: 1764039600000 → 1764090300002)
+[2025-11-25 17:05:00,954: WARNING/ForkPoolWorker-1] ✅ Token obtenido correctamente: 1000.8c705...
+[2025-11-25 17:05:01,393: INFO/ForkPoolWorker-1] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1764039600000&toDate=1764090300002&filter=all&size=200&from=0 "HTTP/1.1 200 "
+[2025-11-25 17:05:01,461: INFO/ForkPoolWorker-1] 📦 Página 1, 200 alarmas cargadas (total: 200)
+[2025-11-25 17:05:01,720: INFO/ForkPoolWorker-1] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1764039600000&toDate=1764090300002&filter=all&size=200&from=200 "HTTP/1.1 200 "
+[2025-11-25 17:05:01,761: INFO/ForkPoolWorker-1] 📦 Página 2, 200 alarmas cargadas (total: 400)
+[2025-11-25 17:05:01,977: INFO/ForkPoolWorker-1] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1764039600000&toDate=1764090300002&filter=all&size=200&from=400 "HTTP/1.1 200 "
+[2025-11-25 17:05:02,009: INFO/ForkPoolWorker-1] 📦 Página 2, 85 alarmas cargadas (total: 485)
+[2025-11-25 17:05:02,009: INFO/ForkPoolWorker-1] 📊 Total alarmas recibidas hoy: 485
+[2025-11-25 17:05:02,452: INFO/ForkPoolWorker-1] ✅ Ingesta diaria completada. Nuevas filas insertadas: 20
+[2025-11-25 17:05:02,453: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_ingesta_api[afd67e8f-cc17-4fe2-ba06-4778503f9ddd] succeeded in 2.4510443860053783s: None
+[2025-11-25 18:00:00,000: INFO/MainProcess] Scheduler: Sending due task obtener-token-cada-hora (integrations.tasks.tarea_obtener_token)
+[2025-11-25 18:00:00,002: INFO/MainProcess] Task integrations.tasks.tarea_obtener_token[7a363f5b-cd34-4636-a676-26438f5ca034] received
+[2025-11-25 18:00:00,002: INFO/ForkPoolWorker-1] 🔑 Solicitando nuevo token desde la API...
+[2025-11-25 18:00:00,844: WARNING/ForkPoolWorker-1] ✅ Token obtenido correctamente: 1000.8c705...
+[2025-11-25 18:00:00,845: INFO/ForkPoolWorker-1] ✅ Token guardado correctamente.
+[2025-11-25 18:00:00,846: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_obtener_token[7a363f5b-cd34-4636-a676-26438f5ca034] succeeded in 0.8434313649922842s: '1000.8c7059330168a345fdba274a12049a46.4231626627b89931d23179f548d16691'
+[2025-11-25 18:05:00,000: INFO/MainProcess] Scheduler: Sending due task ingesta-api-cada-65-min (integrations.tasks.tarea_ingesta_api)
+[2025-11-25 18:05:00,002: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[e627aad0-453c-4865-a599-cc128244c41d] received
+[2025-11-25 18:05:00,002: INFO/ForkPoolWorker-1] 🚀 Inicio de ingesta diaria de API
+[2025-11-25 18:05:00,015: INFO/ForkPoolWorker-1] 🧹 Alarmas antiguas eliminadas: 0
+[2025-11-25 18:05:00,016: INFO/ForkPoolWorker-1] 📅 Trayendo alarmas desde 2025-11-25 00:00:00-03:00 hasta 2025-11-25 15:05:00.002730-03:00 (ms: 1764039600000 → 1764093900002)
+[2025-11-25 18:05:00,987: WARNING/ForkPoolWorker-1] ✅ Token obtenido correctamente: 1000.282af...
+[2025-11-25 18:05:01,427: INFO/ForkPoolWorker-1] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1764039600000&toDate=1764093900002&filter=all&size=200&from=0 "HTTP/1.1 200 "
+[2025-11-25 18:05:01,496: INFO/ForkPoolWorker-1] 📦 Página 1, 200 alarmas cargadas (total: 200)
+[2025-11-25 18:05:01,849: INFO/ForkPoolWorker-1] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1764039600000&toDate=1764093900002&filter=all&size=200&from=200 "HTTP/1.1 200 "
+[2025-11-25 18:05:01,911: INFO/ForkPoolWorker-1] 📦 Página 2, 200 alarmas cargadas (total: 400)
+[2025-11-25 18:05:02,256: INFO/ForkPoolWorker-1] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1764039600000&toDate=1764093900002&filter=all&size=200&from=400 "HTTP/1.1 200 "
+[2025-11-25 18:05:02,289: INFO/ForkPoolWorker-1] 📦 Página 2, 96 alarmas cargadas (total: 496)
+[2025-11-25 18:05:02,290: INFO/ForkPoolWorker-1] 📊 Total alarmas recibidas hoy: 496
+[2025-11-25 18:05:02,736: INFO/ForkPoolWorker-1] ✅ Ingesta diaria completada. Nuevas filas insertadas: 11
+[2025-11-25 18:05:02,738: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_ingesta_api[e627aad0-453c-4865-a599-cc128244c41d] succeeded in 2.735637482997845s: None

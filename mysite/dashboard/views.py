@@ -14,6 +14,10 @@ from urllib.parse import urlparse
 from tenants.decorators import tenant_required
 from tenants.models import Tenant
 from django.http import HttpResponseRedirect
+
+# <<< NUEVO: importamos las credenciales del portal
+from home.models import TenantCredentials  # noqa
+
 from .charts import (
     build_trend_data,
     build_trend_by_device,
@@ -126,57 +130,103 @@ def dashboard_view(request):
 
         # === datasets y KPIs ===
         trend = build_trend_data(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
-        trend_dev = build_trend_by_device(dt_from_utc, dt_to_utc_exclusive, top_n=10, qs_base=qs_base)
-        trend_act = build_trend_by_action(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
-        severity_counts = build_donut_data(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
+        trend_dev = build_trend_by_device(
+            dt_from_utc, dt_to_utc_exclusive, top_n=10, qs_base=qs_base
+        )
+        trend_act = build_trend_by_action(
+            dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base
+        )
+        severity_counts = build_donut_data(
+            dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base
+        )
         device_counts_top, device_by_sev, device_by_sev_full = build_device_bar_data(
             dt_from_utc, dt_to_utc_exclusive, top_n=10, qs_base=qs_base
         )
         action_counts, action_by_sev, action_by_device = build_action_bar_data(
             dt_from_utc, dt_to_utc_exclusive, top_n=10, qs_base=qs_base
         )
-        device_by_action = build_device_by_action(dt_from_utc, dt_to_utc_exclusive, top_n=10, qs_base=qs_base)
+        device_by_action = build_device_by_action(
+            dt_from_utc, dt_to_utc_exclusive, top_n=10, qs_base=qs_base
+        )
         kpis = build_kpis(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
-        hour_payload = build_hour_filter_payload(dt_from_utc, dt_to_utc_exclusive, top_n=10, qs_base=qs_base)
+        hour_payload = build_hour_filter_payload(
+            dt_from_utc, dt_to_utc_exclusive, top_n=10, qs_base=qs_base
+        )
         (
             msg_severity_counts,
             device_counts_by_msg_severity,
             action_counts_by_msg_severity,
             severity_counts_by_msg_severity,
             msg_severity_counts_by_hour,
-        ) = build_msg_severity_bar_data(dt_from_utc, dt_to_utc_exclusive, top_n=10, qs_base=qs_base)
-        trend_msgsev = build_trend_by_msg_severity(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
+        ) = build_msg_severity_bar_data(
+            dt_from_utc, dt_to_utc_exclusive, top_n=10, qs_base=qs_base
+        )
+        trend_msgsev = build_trend_by_msg_severity(
+            dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base
+        )
         (
             level_counts,
             device_counts_by_level,
             action_counts_by_level,
             severity_counts_by_level,
-        ) = build_level_bar_data(dt_from_utc, dt_to_utc_exclusive, top_n=10, qs_base=qs_base)
+        ) = build_level_bar_data(
+            dt_from_utc, dt_to_utc_exclusive, top_n=10, qs_base=qs_base
+        )
         (
             subtype_counts,
             device_counts_by_subtype,
             action_counts_by_subtype,
             severity_counts_by_subtype,
-        ) = build_subtype_bar_data(dt_from_utc, dt_to_utc_exclusive, top_n=10, qs_base=qs_base)
+        ) = build_subtype_bar_data(
+            dt_from_utc, dt_to_utc_exclusive, top_n=10, qs_base=qs_base
+        )
         (
             logdesc_counts,
             device_counts_by_logdesc,
             action_counts_by_logdesc,
             severity_counts_by_logdesc,
-        ) = build_log_description_bar_data(dt_from_utc, dt_to_utc_exclusive, top_n=10, qs_base=qs_base)
-        msgsev_by_level = build_msg_severity_by_level(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
-        msgsev_by_subtype = build_msg_severity_by_subtype(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
-        trend_level = build_trend_by_level(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
-        level_by_hour = build_level_counts_by_hour(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
-        subtype_by_level = build_subtype_counts_by_level(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
-        trend_st = build_trend_by_subtype(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
-        subtype_counts_by_hour = build_subtype_counts_by_hour(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
-        level_counts_by_subtype = build_level_counts_by_subtype(dt_from_utc, dt_to_utc_exclusive, top_n=None, qs_base=qs_base)
-        level_by_msgsev = build_level_by_msg_severity(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
-        subtype_by_msgsev = build_subtype_by_msg_severity(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
-        hour_series_by_subtype = build_hour_series_by_subtype(dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base)
-        rows_all_devices = qs_base.values("device_name").annotate(total=Count("id")).order_by()
-        device_counts_all = {_norm_dev(r["device_name"]): r["total"] for r in rows_all_devices}
+        ) = build_log_description_bar_data(
+            dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base
+        )
+        msgsev_by_level = build_msg_severity_by_level(
+            dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base
+        )
+        msgsev_by_subtype = build_msg_severity_by_subtype(
+            dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base
+        )
+        trend_level = build_trend_by_level(
+            dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base
+        )
+        level_by_hour = build_level_counts_by_hour(
+            dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base
+        )
+        subtype_by_level = build_subtype_counts_by_level(
+            dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base
+        )
+        trend_st = build_trend_by_subtype(
+            dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base
+        )
+        subtype_counts_by_hour = build_subtype_counts_by_hour(
+            dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base
+        )
+        level_counts_by_subtype = build_level_counts_by_subtype(
+            dt_from_utc, dt_to_utc_exclusive, top_n=None, qs_base=qs_base
+        )
+        level_by_msgsev = build_level_by_msg_severity(
+            dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base
+        )
+        subtype_by_msgsev = build_subtype_by_msg_severity(
+            dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base
+        )
+        hour_series_by_subtype = build_hour_series_by_subtype(
+            dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base
+        )
+        rows_all_devices = (
+            qs_base.values("device_name").annotate(total=Count("id")).order_by()
+        )
+        device_counts_all = {
+            _norm_dev(r["device_name"]): r["total"] for r in rows_all_devices
+        }
 
         context = {
             "tenant": tenant,
@@ -205,7 +255,9 @@ def dashboard_view(request):
             "hour_data": hour_payload["hour_data"],
             "severity_counts_by_hour": hour_payload["severity_counts_by_hour"],
             "device_counts_by_hour": hour_payload["device_counts_by_hour"],
-            "device_counts_by_hour_full": hour_payload["device_counts_by_hour_full"],
+            "device_counts_by_hour_full": hour_payload[
+                "device_counts_by_hour_full"
+            ],
             "action_counts_by_hour": hour_payload["action_counts_by_hour"],
             "trend_labels_hour": hour_payload["trend_labels_hour"],
             "trend_by_hour": hour_payload["trend_by_hour"],
@@ -220,7 +272,9 @@ def dashboard_view(request):
             "device_counts_by_level": device_counts_by_level,
             "action_counts_by_level": action_counts_by_level,
             "severity_counts_by_level": severity_counts_by_level,
-            "subtype_counts_by_level": subtype_by_level["subtype_counts_by_level"],
+            "subtype_counts_by_level": subtype_by_level[
+                "subtype_counts_by_level"
+            ],
             "subtype_counts": subtype_counts,
             "device_counts_by_subtype": device_counts_by_subtype,
             "action_counts_by_subtype": action_counts_by_subtype,
@@ -233,16 +287,40 @@ def dashboard_view(request):
             "severity_counts_by_logdesc": severity_counts_by_logdesc,
             "level_counts_by_subtype": level_counts_by_subtype,
             "msg_severity_by_level": msgsev_by_level["msg_severity_by_level"],
-            "msg_severity_by_subtype": msgsev_by_subtype["msg_severity_by_subtype"],
+            "msg_severity_by_subtype": msgsev_by_subtype[
+                "msg_severity_by_subtype"
+            ],
             "level_by_msg_severity": level_by_msgsev["level_by_msg_severity"],
-            "subtype_by_msg_severity": subtype_by_msgsev["subtype_by_msg_severity"],
-            "hour_series_by_subtype": hour_series_by_subtype["hour_series_by_subtype"],
+            "subtype_by_msg_severity": subtype_by_msgsev[
+                "subtype_by_msg_severity"
+            ],
+            "hour_series_by_subtype": hour_series_by_subtype[
+                "hour_series_by_subtype"
+            ],
         }
 
         cache.set(_key("ctx"), context, timeout=ttl)
 
+    # <<< NUEVO: obtener credenciales activas del tenant (igual que en home_index)
+    cred = None
+    try:
+        if tenant:
+            cred = TenantCredentials.get_active_for_tenant(
+                int(getattr(tenant, "id", 0))
+            )
+    except Exception as e:
+        logger.exception(
+            "[DASHBOARD] Error obteniendo credenciales del tenant: %s", e
+        )
+
+    # Las añadimos SIEMPRE al contexto (aunque venga desde caché)
+    context["cred"] = cred
+    # >>> FIN NUEVO
+
     # ✅ Mostrar selector siempre si el usuario pertenece a Inntesec
-    user_tenant_name = getattr(getattr(request.user, "tenant", None), "name", "").lower()
+    user_tenant_name = getattr(
+        getattr(request.user, "tenant", None), "name", ""
+    ).lower()
     if user_tenant_name == "inntesec":
         context["all_tenants"] = Tenant.objects.all().order_by("name")
 
@@ -285,17 +363,25 @@ def switch_tenant(request, tenant_id):
     # --- Actualizar tenant activo en sesión ---
     request.session["tenant_id"] = tenant.id
     request.session["tenant_name"] = tenant.name
-    logger.info("[SwitchTenant] %s cambió a tenant %s", request.user.username, tenant.name)
+    logger.info(
+        "[SwitchTenant] %s cambió a tenant %s",
+        request.user.username,
+        tenant.name,
+    )
 
     # --- Limpiar caché ---
     cache.clear()
     logger.debug("[SwitchTenant] Caché limpiada tras cambio de tenant")
 
     # --- Detectar URL de origen ---
-    next_url = (request.POST.get("next") or request.META.get("HTTP_REFERER") or "").strip()
+    next_url = (
+        request.POST.get("next") or request.META.get("HTTP_REFERER") or ""
+    ).strip()
     parsed = urlparse(next_url or "")
     referer = (request.META.get("HTTP_REFERER") or "").lower()
-    logger.debug("[SwitchTenant] next_url: %s | referer: %s", next_url, referer)
+    logger.debug(
+        "[SwitchTenant] next_url: %s | referer: %s", next_url, referer
+    )
 
     # --- Si la URL es interna válida, mantener la ruta actual ---
     if parsed.path and parsed.path.startswith("/"):
@@ -322,9 +408,17 @@ def switch_tenant(request, tenant_id):
     # --- Fallback final: dashboard principal ---
     try:
         current_path = request.META.get("PATH_INFO", "")
-        origin = request.META.get("HTTP_ORIGIN") or request.build_absolute_uri("/")
-        full_path = f"{origin}{current_path}" if current_path else request.build_absolute_uri("/")
-        logger.debug(f"[SwitchTenant] Fallback: redirigiendo a la misma ruta ({full_path})")
+        origin = request.META.get("HTTP_ORIGIN") or request.build_absolute_uri(
+            "/"
+        )
+        full_path = (
+            f"{origin}{current_path}"
+            if current_path
+            else request.build_absolute_uri("/")
+        )
+        logger.debug(
+            f"[SwitchTenant] Fallback: redirigiendo a la misma ruta ({full_path})"
+        )
         return HttpResponseRedirect(full_path)
     except Exception as e:
         logger.warning(f"[SwitchTenant] Fallback al dashboard por error ({e})")

@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="{% static 'css/realtime.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/user_dropdown.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/config_notificaciones_modal.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/cred_modal.css' %}?v={% now 'U' %}">
 </head>
 
 <body class="layout">
@@ -396,7 +397,9 @@
   {% endif %}
 
   <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/home_portal.js' %}?v={% now 'U' %}"></script>
   {% include 'partials/config_notificaciones_modal.html' %}
+  {% include 'partials/cred_modal.html' %}
 </body>
 
 </html>

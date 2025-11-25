@@ -15,6 +15,9 @@ from tenants.decorators import tenant_required
 from tenants.models import Tenant
 from .models import IaSoar
 
+# 👇 NUEVO: credenciales de blacklist/portal
+from home.models import TenantCredentials  # noqa
+
 logger = logging.getLogger(__name__)
 CL_TZ = pytz.timezone("America/Santiago")
 
@@ -85,8 +88,12 @@ def dashboard_soar(request):
     q_to   = request.GET.get("to")
     f_dt, t_dt, from_date_str, to_date_str = _normalize_range(q_from, q_to)
 
-    logger.info("[SOAR] dashboard_soar | tenant=%s | from=%s to=%s",
-                getattr(tenant, "name", None), f_dt.isoformat(), t_dt.isoformat())
+    logger.info(
+        "[SOAR] dashboard_soar | tenant=%s | from=%s to=%s",
+        getattr(tenant, "name", None),
+        f_dt.isoformat(),
+        t_dt.isoformat(),
+    )
 
     rows: Iterable[dict] = []
     try:
@@ -123,6 +130,16 @@ def dashboard_soar(request):
         logger.exception("[SOAR] Error consultando IaSoar: %s", e)
         rows = []
 
+    # 👇 NUEVO: obtener credenciales activas del tenant (igual que en los otros dashboards)
+    cred = None
+    try:
+        if tenant:
+            cred = TenantCredentials.get_active_for_tenant(
+                int(getattr(tenant, "id", 0))
+            )
+    except Exception as e:
+        logger.exception("[SOAR] Error obteniendo credenciales del tenant: %s", e)
+
     tenants_list = []
     user_tenant = getattr(request.user, "tenant", None)
     if user_tenant and user_tenant.name.lower() == "inntesec":
@@ -135,5 +152,6 @@ def dashboard_soar(request):
         "from_date_str": from_date_str,
         "to_date_str": to_date_str,
         "request": request,
+        "cred": cred,  # 👈 para el modal de credenciales en dashboardsoar.html
     }
     return render(request, "soar_dashboard/dashboardsoar.html", ctx)

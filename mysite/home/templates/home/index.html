@@ -71,7 +71,9 @@
             href="{% url 'soar_incidents:list' %}">Eventos</a>
         </div>
       </details>
+      {% endif %}
 
+      {# ===== Configuración (SIEMPRE visible) ===== #}
       <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.url_name == 'cambiar_contrasena' %}open{% endif %}>
         <summary id="settingsSummary"
           class="nav-item {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}">
@@ -88,7 +90,6 @@
           <a class="tenant-option nav-subitem" href="#" onclick="toggleConfigModal(true)">🔔 Notificaciones</a>
         </div>
       </details>
-      {% endif %}
     </nav>
   </aside>
 
@@ -419,31 +420,28 @@
     </section>
     {% endif %}
 
-    <!-- Credenciales modal -->
-    <div id="credModal" class="cred-overlay hidden" aria-hidden="true">
-      <div class="cred-card">
-        <div class="cred-head"><h3>Credenciales</h3><button class="cred-close" type="button" aria-label="Cerrar" onclick="toggleCredModal(false)">×</button></div>
-        <div class="cred-body">
-          <div class="cred-tenant-line"><span class="muted">Tenant</span><strong>{{ tenant.name }}</strong></div>
-          {% if cred %}
-          <div class="cred-block">
-            <input id="cred-url" type="text" class="cred-input" value="{{ request.scheme }}://{{ request.get_host }}/blacklist" readonly>
-            <div class="cred-actions"><button type="button" class="cred-copy" onclick="copyBlockInput(this)">Copiar</button><button type="button" class="cred-toggle" onclick="openDownloadPage()">Ir</button></div>
-            <p class="cred-hint">Se solicitarán credenciales <strong>en cada descarga</strong>.</p>
-          </div>
-          <div class="cred-block"><label class="cred-label">Usuario</label><input id="cred-user" type="password" class="cred-input" value="{{ cred.username }}" readonly><div class="cred-actions"><button type="button" class="cred-toggle" onclick="toggleBlockInput(this)">Ver</button><button type="button" class="cred-copy" onclick="copyBlockInput(this)">Copiar</button></div></div>
-          <div class="cred-block"><label class="cred-label">Contraseña</label><input id="cred-pass" type="password" class="cred-input" value="{{ cred.password }}" readonly><div class="cred-actions"><button type="button" class="cred-toggle" onclick="toggleBlockInput(this)">Ver</button><button type="button" class="cred-copy" onclick="copyBlockInput(this)">Copiar</button></div></div>
-          {% else %}
-          <div class="cred-empty">No hay credenciales configuradas para este tenant.</div>
-          {% endif %}
-        </div>
-        <div class="cred-foot"><button class="btn" type="button" onclick="toggleCredModal(false)">Cerrar</button></div>
-      </div>
-    </div>
+    {# 🔑 Credenciales modal como partial reutilizable #}
+    {% include 'partials/cred_modal.html' %}
 
     <!-- Ticket loader/dialog -->
-    <div id="ticketLoadingOverlay" class="ticket-loading-overlay hidden" aria-hidden="true"><div class="ticket-loading-card"><div class="spinner" aria-hidden="true"></div><div class="ticket-loading-text">Creando ticket…</div></div></div>
-    <div id="ticketDialog" class="ticket-dialog-overlay hidden" aria-hidden="true"><div class="ticket-dialog-card"><div id="ticketDialogIcon" class="ticket-dialog-icon is-success"><span id="ticketDialogIconChar">✔</span></div><h2 class="ticket-dialog-title" id="ticketDialogTitle">Solicitud enviada</h2><p class="ticket-dialog-text" id="ticketDialogText">Se procesó la solicitud.</p><div class="ticket-dialog-actions"><button type="button" id="ticketDialogOkBtn" class="ticket-dialog-btn">OK</button></div></div></div>
+    <div id="ticketLoadingOverlay" class="ticket-loading-overlay hidden" aria-hidden="true">
+      <div class="ticket-loading-card">
+        <div class="spinner" aria-hidden="true"></div>
+        <div class="ticket-loading-text">Creando ticket…</div>
+      </div>
+    </div>
+    <div id="ticketDialog" class="ticket-dialog-overlay hidden" aria-hidden="true">
+      <div class="ticket-dialog-card">
+        <div id="ticketDialogIcon" class="ticket-dialog-icon is-success">
+          <span id="ticketDialogIconChar">✔</span>
+        </div>
+        <h2 class="ticket-dialog-title" id="ticketDialogTitle">Solicitud enviada</h2>
+        <p class="ticket-dialog-text" id="ticketDialogText">Se procesó la solicitud.</p>
+        <div class="ticket-dialog-actions">
+          <button type="button" id="ticketDialogOkBtn" class="ticket-dialog-btn">OK</button>
+        </div>
+      </div>
+    </div>
 
   </div> <!-- /content -->
 
@@ -452,7 +450,9 @@
   <div id="coachmarkGeneric" class="coachmark hidden" role="dialog" aria-modal="true">
     <h3 class="coachmark-title">Guía rápida</h3>
     <p class="coachmark-text"></p>
-    <div class="coachmark-actions"><button type="button" id="coachmarkCloseBtn" class="btn btn-ok primary" data-coachmark-close>Entendido</button></div>
+    <div class="coachmark-actions">
+      <button type="button" id="coachmarkCloseBtn" class="btn btn-ok primary" data-coachmark-close>Entendido</button>
+    </div>
   </div>
 
   <!-- App scripts (defer ok) -->

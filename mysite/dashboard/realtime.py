@@ -10,7 +10,8 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseRedirect
 from django.shortcuts import render
 
-from tenants.models import Tenant  # 👈 añadido para el selector de tenants
+from tenants.models import Tenant  # 👈 selector de tenants
+from home.models import TenantCredentials  # 👈 NUEVO: credenciales blacklist
 
 from . import views as v
 from .realtime_transform import build_realtime_context
@@ -238,14 +239,23 @@ def realtime_page(request):
         alarms = _filter_for_request_tenant(request, alarms)
         ctx = build_realtime_context(alarms, value_for_column, tzname="America/Santiago")
 
-                # Totales
+        # Totales
         kpi_total = sum(ctx.get("severity_counts", {}).values())
         # KPI “Alta Severidad” basado en msg_severity (solo críticas)
         msgsev = ctx.get("msg_severity_counts", {}) or {}
         kpi_high = int(msgsev.get("critical", 0))
         kpi_dev  = len(ctx.get("device_counts", {}))
 
-
+        # 👇 NUEVO: obtener credenciales activas del tenant (mismo patrón que dashboard_view)
+        cred = None
+        tenant = getattr(request, "tenant", None)
+        try:
+            if tenant:
+                cred = TenantCredentials.get_active_for_tenant(
+                    int(getattr(tenant, "id", 0))
+                )
+        except Exception as e:
+            logger.exception("[REALTIME] Error obteniendo credenciales del tenant: %s", e)
 
         # 👇 NUEVO: lista de tenants solo para usuarios de Inntesec
         tenants_list = []
@@ -254,13 +264,14 @@ def realtime_page(request):
             tenants_list = Tenant.objects.all().order_by("name")
 
         page_ctx = {
-            "tenant": getattr(request, "tenant", None),
+            "tenant": tenant,
             "hist_url": hist_url,
             "kpi_total": kpi_total,
             "kpi_high":  kpi_high,
             "kpi_dispositivos": kpi_dev,
-            "all_tenants": tenants_list,  # 👈 para el selector en realtime.html
-            **ctx
+            "all_tenants": tenants_list,  # selector en realtime.html
+            "cred": cred,                 # 👈 para el modal de credenciales
+            **ctx,
         }
         return render(request, "dashboard/realtime.html", page_ctx)
     except httpx.HTTPStatusError as e:
@@ -473,5 +484,5 @@ def switch_tenant(request, tenant_id: int):
 
     try:
         return HttpResponseRedirect(reverse("dashboard_realtime"))
-    except:
+    except Exception:
         return HttpResponseRedirect("/dashboard/realtime/")

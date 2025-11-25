@@ -24,15 +24,15 @@
 
                 <!-- 🔸 Mensajes del sistema -->
                 {% if messages %}
-                    {% for message in messages %}
-                        {% if message.tags == 'success' %}
-                            <div class="success-message">{{ message }}</div>
-                        {% elif message.tags == 'warning' %}
-                            <div class="warning-message">{{ message }}</div>
-                        {% else %}
-                            <div class="error-message">{{ message }}</div>
-                        {% endif %}
-                    {% endfor %}
+                {% for message in messages %}
+                {% if message.tags == 'success' %}
+                <div class="success-message">{{ message }}</div>
+                {% elif message.tags == 'warning' %}
+                <div class="warning-message">{{ message }}</div>
+                {% else %}
+                <div class="error-message">{{ message }}</div>
+                {% endif %}
+                {% endfor %}
                 {% endif %}
 
                 <label for="actual">Contraseña actual</label>
@@ -42,13 +42,16 @@
                 <input type="password" id="nueva" name="nueva" placeholder="Mínimo 8 caracteres" required>
 
                 <label for="confirmar">Confirmar nueva contraseña</label>
-                <input type="password" id="confirmar" name="confirmar" placeholder="Confirma la nueva contraseña" required>
+                <input type="password" id="confirmar" name="confirmar" placeholder="Confirma la nueva contraseña"
+                    required>
 
                 <button type="submit" id="submit-btn">Guardar cambios</button>
             </form>
 
             <div class="back-to-login">
-                <a href="{% url 'login' %}">← Volver al inicio de sesión</a>
+                <a href="#" onclick="history.back(); return false;">
+                    ← Volver
+                </a>
             </div>
         </div>
 

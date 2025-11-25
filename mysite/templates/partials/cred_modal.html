@@ -1,0 +1,74 @@
+{# templates/partials/cred_modal.html #}
+
+<div id="credModal" class="cred-overlay hidden" aria-hidden="true">
+  <div class="cred-card">
+    <div class="cred-head">
+      <h3>Credenciales</h3>
+      <button class="cred-close" type="button" aria-label="Cerrar" onclick="toggleCredModal(false)">×</button>
+    </div>
+
+    <div class="cred-body">
+      <div class="cred-tenant-line">
+        <span class="muted">Tenant</span>
+        <strong>{{ tenant.name }}</strong>
+      </div>
+
+      {% if cred %}
+        <div class="cred-block">
+          <input
+            id="cred-url"
+            type="text"
+            class="cred-input"
+            value="{{ request.scheme }}://{{ request.get_host }}/blacklist"
+            readonly
+          />
+          <div class="cred-actions">
+            <button type="button" class="cred-copy" onclick="copyBlockInput(this)">Copiar</button>
+            <button type="button" class="cred-toggle" onclick="openDownloadPage()">Ir</button>
+          </div>
+          <p class="cred-hint">
+            Se solicitarán credenciales <strong>en cada descarga</strong>.
+          </p>
+        </div>
+
+        <div class="cred-block">
+          <label class="cred-label">Usuario</label>
+          <input
+            id="cred-user"
+            type="password"
+            class="cred-input"
+            value="{{ cred.username }}"
+            readonly
+          />
+          <div class="cred-actions">
+            <button type="button" class="cred-toggle" onclick="toggleBlockInput(this)">Ver</button>
+            <button type="button" class="cred-copy" onclick="copyBlockInput(this)">Copiar</button>
+          </div>
+        </div>
+
+        <div class="cred-block">
+          <label class="cred-label">Contraseña</label>
+          <input
+            id="cred-pass"
+            type="password"
+            class="cred-input"
+            value="{{ cred.password }}"
+            readonly
+          />
+          <div class="cred-actions">
+            <button type="button" class="cred-toggle" onclick="toggleBlockInput(this)">Ver</button>
+            <button type="button" class="cred-copy" onclick="copyBlockInput(this)">Copiar</button>
+          </div>
+        </div>
+      {% else %}
+        <div class="cred-empty">
+          No hay credenciales configuradas para este tenant.
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="cred-foot">
+      <button class="btn" type="button" onclick="toggleCredModal(false)">Cerrar</button>
+    </div>
+  </div>
+</div>

@@ -307,3 +307,65 @@ body {
 }
 .coachmark .btn.primary{ padding: 6px 10px; border-radius: 10px; font-weight: 800; }
 
+/* ===== NAV DROPDOWN (sidebar) ===== */
+
+/* Iconito del nav alineado */
+.nav-ico{
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* Quitar el marcador nativo del summary dentro del sidebar */
+.nav-dropdown > summary {
+  list-style: none;
+}
+.nav-dropdown > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Convertir el <details> del sidebar en bloque completo */
+.nav-dropdown {
+  border-radius: 12px;
+}
+
+/* Chevron para los items del nav */
+.nav-item .chevron{
+  margin-left: auto;
+  opacity: .8;
+  transition: transform .18s ease, opacity .18s ease;
+}
+.nav-dropdown[open] .nav-item .chevron{
+  transform: rotate(180deg);
+  opacity: 1;
+}
+
+/* Submenú dentro del sidebar */
+.nav-submenu{
+  margin-top: 4px;
+  padding-left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-subitem{
+  display: block;
+  padding: 7px 10px;
+  border-radius: 10px;
+  font-weight: 500;
+  font-size: .9rem;
+  color: var(--muted);
+  text-decoration: none;
+  transition: background .18s ease, color .18s ease;
+}
+
+.nav-subitem:hover{
+  background: rgba(255,255,255,0.05);
+  color: #e5e7eb;
+}
+
+.nav-subitem.is-active{
+  background: #142246;
+  color: #fff;
+}

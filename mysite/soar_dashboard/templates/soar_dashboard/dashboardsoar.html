@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="{% static 'css/user_dropdown.css' %}?v={% now 'U' %}">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="{% static 'css/config_notificaciones_modal.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/cred_modal.css' %}?v={% now 'U' %}">
 </head>
 
 <body class="layout soar">
@@ -31,8 +32,7 @@
       {% if tenant.alarms_one_id %}
 
         {# ===== Home ===== #}
-        <a id="homeNav"
-           class="nav-item {% if request.resolver_match.app_name == 'home' %}is-active{% endif %}"
+        <a id="homeNav" class="nav-item {% if request.resolver_match.app_name == 'home' %}is-active{% endif %}"
            href="{% url 'home:index' %}">
           <span class="nav-ico">🏠</span>Home
           <span id="coachDotHome" class="coachmark-dot hidden"></span>
@@ -40,10 +40,9 @@
 
         {# ===== Alarmas (Dashboard + Tiempo Real) ===== #}
         {% with url_name=request.resolver_match.url_name %}
-        <details class="tenant-dropdown nav-dropdown"
-                 {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}open{% endif %}>
+        <details class="tenant-dropdown nav-dropdown" {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}open{% endif %}>
           <summary id="alarmsSummary"
-            class="nav-item {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}is-active{% endif %}">
+                   class="nav-item {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}is-active{% endif %}">
             <span class="nav-ico">📊</span>Alarmas
             <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
@@ -61,10 +60,9 @@
 
         {# ===== SOAR ===== #}
         {% with app_name=request.resolver_match.app_name %}
-        <details class="tenant-dropdown nav-dropdown"
-                 {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' %}open{% endif %}>
+        <details class="tenant-dropdown nav-dropdown" {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' %}open{% endif %}>
           <summary id="soarSummary"
-            class="nav-item {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' %}is-active{% endif %}">
+                   class="nav-item {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' %}is-active{% endif %}">
             <span class="nav-ico">🚨</span>SOAR
             <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
@@ -82,20 +80,19 @@
       {% endif %}
 
       {# ===== Configuración (SIEMPRE visible) ===== #}
-      <details class="tenant-dropdown nav-dropdown"
-               {% if request.resolver_match.url_name == 'cambiar_contrasena' %}open{% endif %}>
+      <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.url_name == 'cambiar_contrasena' %}open{% endif %}>
         <summary id="settingsSummary"
-                 class="nav-item {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}">
+          class="nav-item {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}">
           <span class="nav-ico">⚙️</span>Configuración
-          {# Mantengo tu hint especial aquí #}
-          <span id="hintDotConfig" class="coachmark-dot" aria-hidden="true"></span>
-          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24">
             <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
           </svg>
+          <span id="coachDotConfig" class="coachmark-dot hidden"></span>
         </summary>
         <div class="tenant-list nav-submenu">
           <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}"
-             href="{% url 'cambiar_contrasena' %}">🔒 Cambiar contraseña</a>
+            href="{% url 'cambiar_contrasena' %}">🔒 Cambiar contraseña</a>
+          <a class="tenant-option nav-subitem" href="#" onclick="toggleCredModal(true)">🔑 Credenciales</a>
           <a class="tenant-option nav-subitem" href="#" onclick="toggleConfigModal(true)">🔔 Notificaciones</a>
         </div>
       </details>
@@ -118,7 +115,10 @@
               <form method="post" action="{% url 'dashboard:switch_tenant' t.id %}">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="{{ request.path }}">
-                <button type="submit" class="tenant-option {% if tenant.id == t.id %}is-active{% endif %}">{{ t.name }}</button>
+                <button type="submit"
+                        class="tenant-option {% if tenant.id == t.id %}is-active{% endif %}">
+                  {{ t.name }}
+                </button>
               </form>
               {% endfor %}
             </div>
@@ -135,10 +135,15 @@
           <button type="button" id="userButton" class="user-button">
             <div class="user-avatar">{{ request.user.username|default:"U"|slice:":1"|upper }}</div>
             <div class="user-name">{{ request.user.get_full_name|default:request.user.username }}</div>
-            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/>
+            </svg>
           </button>
           <div class="dropdown-menu">
-            <form action="{% url 'logout' %}" method="post">{% csrf_token %}<button type="submit">🚪 Cerrar sesión</button></form>
+            <form action="{% url 'logout' %}" method="post">
+              {% csrf_token %}
+              <button type="submit">🚪 Cerrar sesión</button>
+            </form>
           </div>
         </div>
       </div>
@@ -215,7 +220,12 @@
             <div class="card-head between"><h3>Top dispositivos</h3></div>
             <div class="table-wrap">
               <table class="datatable" id="device-table">
-                <thead><tr><th data-sort="text">Dispositivo</th><th data-sort="number" class="is-right">Cantidad</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th data-sort="text">Dispositivo</th>
+                    <th data-sort="number" class="is-right">Cantidad</th>
+                  </tr>
+                </thead>
                 <tbody id="device-table-body"></tbody>
               </table>
             </div>
@@ -248,8 +258,9 @@
     {% else %}
       <section class="empty-state">
         <div class="empty-card">
-          <h2>Sin eventos disponibles</h2>
-          <p>No se encontraron registros para <strong>{{ tenant.name|default:"—" }}</strong> en el rango seleccionado.</p>
+          <h2>Servicio no disponible</h2>
+          <p>La empresa <strong>{{ tenant.name|default:"—" }}</strong> no tiene el servicio de alarmas contratado.</p>
+          <p>Por favor, contacte con un administrador.</p>
         </div>
       </section>
     {% endif %}
@@ -286,8 +297,12 @@
               <tbody id="si-tbody"></tbody>
             </table>
           </div>
-          <div id="si-empty" class="muted" style="display:none;padding-top:.5rem">Sin incidentes para este filtro.</div>
-          <div class="muted" style="padding-top:.35rem">* Clic en una fila para ver el detalle.</div>
+          <div id="si-empty" class="muted" style="display:none;padding-top:.5rem">
+            Sin incidentes para este filtro.
+          </div>
+          <div class="muted" style="padding-top:.35rem">
+            * Clic en una fila para ver el detalle.
+          </div>
         </div>
       </div>
     </div>
@@ -338,6 +353,9 @@
 
   <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/soar/page-loader-universal.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/home_portal.js' %}?v={% now 'U' %}"></script>
+
   {% include 'partials/config_notificaciones_modal.html' %}
+  {% include 'partials/cred_modal.html' %}
 </body>
 </html>

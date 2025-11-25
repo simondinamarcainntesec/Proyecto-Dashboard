@@ -13,6 +13,9 @@
   <link rel="stylesheet" href="{% static 'css/list.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/user_dropdown.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/config_notificaciones_modal.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/cred_modal.css' %}?v={% now 'U' %}">
+  {# CSS específico para esta página SIEM #}
+  <link rel="stylesheet" href="{% static 'css/siem_alerts.css' %}?v={% now 'U' %}">
 </head>
 
 <body class="layout">
@@ -31,39 +34,46 @@
 
     <nav class="nav">
       {% if tenant.alarms_one_id %}
+        <a id="homeNav" class="nav-item {% if request.resolver_match.app_name == 'home' %}is-active{% endif %}"
+          href="{% url 'home:index' %}">
+          <span class="nav-ico">🏠</span>Home
+          <span id="coachDotHome" class="coachmark-dot hidden"></span>
+        </a>
         <!-- ===== Alarmas (colapsable con Dashboard + Tiempo Real) ===== -->
-        <details class="tenant-dropdown nav-dropdown"
-                 {% if request.resolver_match.url_name == 'dashboard_alarmsone' or request.resolver_match.url_name == 'dashboard_realtime' %}open{% endif %}>
-          <summary class="nav-item {% if request.resolver_match.url_name == 'dashboard_alarmsone' or request.resolver_match.url_name == 'dashboard_realtime' %}is-active{% endif %}">
-            <span class="nav-ico">🏠</span>Alarmas
-            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
-            </svg>
-          </summary>
-          <div class="tenant-list nav-submenu">
-            <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'dashboard_alarmsone' %}is-active{% endif %}"
-               href="{% url 'dashboard:dashboard_alarmsone' %}">Dashboard</a>
-            <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'dashboard_realtime' %}is-active{% endif %}"
-               href="{% url 'dashboard:dashboard_realtime' %}">Tiempo Real</a>
-          </div>
+        <details class="tenant-dropdown nav-dropdown" {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}open{% endif %}>
+        <summary id="alarmsSummary"
+          class="nav-item {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}is-active{% endif %}">
+          <span class="nav-ico">📊</span>Alarmas
+          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+          <span id="coachDotAlarms" class="coachmark-dot hidden"></span>
+        </summary>
+        <div class="tenant-list nav-submenu">
+          <a class="tenant-option nav-subitem {% if url_name == 'dashboard_alarmsone' %}is-active{% endif %}"
+            href="{% url 'dashboard:dashboard_alarmsone' %}">Dashboard</a>
+          <a class="tenant-option nav-subitem {% if url_name == 'dashboard_realtime' %}is-active{% endif %}"
+            href="{% url 'dashboard:dashboard_realtime' %}">Tiempo Real</a>
+        </div>
         </details>
 
         <!-- ▼ SOAR como menú desplegable -->
-        <details class="tenant-dropdown nav-dropdown"
-                 {% if request.resolver_match.app_name == 'soar_dashboard' or request.resolver_match.app_name == 'soar_incidents' %}open{% endif %}>
-          <summary class="nav-item {% if request.resolver_match.app_name == 'soar_dashboard' or request.resolver_match.app_name == 'soar_incidents' %}is-active{% endif %}">
-            <span class="nav-ico">🚨</span>SOAR
-            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
-            </svg>
-          </summary>
-          <div class="tenant-list nav-submenu">
-            <a class="tenant-option nav-subitem {% if request.resolver_match.app_name == 'soar_dashboard' %}is-active{% endif %}"
-               href="{% url 'soar_dashboard:dashboard' %}">Dashboard</a>
-            <a class="tenant-option nav-subitem {% if request.resolver_match.app_name == 'soar_incidents' %}is-active{% endif %}"
-               href="{% url 'soar_incidents:list' %}">Eventos</a>
-          </div>
-        </details>
+        <details class="tenant-dropdown nav-dropdown" {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' %}open{% endif %}>
+        <summary id="soarSummary"
+          class="nav-item {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' %}is-active{% endif %}">
+          <span class="nav-ico">🚨</span>SOAR
+          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+          <span id="coachDotSoar" class="coachmark-dot hidden"></span>
+        </summary>
+        <div class="tenant-list nav-submenu">
+          <a class="tenant-option nav-subitem {% if app_name == 'soar_dashboard' %}is-active{% endif %}"
+            href="{% url 'soar_dashboard:dashboard' %}">Dashboard</a>
+          <a class="tenant-option nav-subitem {% if app_name == 'soar_incidents' %}is-active{% endif %}"
+            href="{% url 'soar_incidents:list' %}">Eventos</a>
+        </div>
+      </details>
       {% endif %}
 
       {# Nuevo item SIEM #}
@@ -73,19 +83,19 @@
       </a>
 
       <!-- ▼ Configuración con engranaje (siempre visible) -->
-      <details class="tenant-dropdown nav-dropdown"
-               {% if request.resolver_match.url_name == 'cambiar_contrasena' %}open{% endif %}>
+      <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.url_name == 'cambiar_contrasena' %}open{% endif %}>
         <summary id="settingsSummary"
-                 class="nav-item {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}">
+          class="nav-item {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}">
           <span class="nav-ico">⚙️</span>Configuración
-          <span id="hintDotConfig" class="coachmark-dot" aria-hidden="true"></span>
-          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24">
             <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
           </svg>
+          <span id="coachDotConfig" class="coachmark-dot hidden"></span>
         </summary>
         <div class="tenant-list nav-submenu">
           <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}"
-             href="{% url 'cambiar_contrasena' %}">🔒 Cambiar contraseña</a>
+            href="{% url 'cambiar_contrasena' %}">🔒 Cambiar contraseña</a>
+          <a class="tenant-option nav-subitem" href="#" onclick="toggleCredModal(true)">🔑 Credenciales</a>
           <a class="tenant-option nav-subitem" href="#" onclick="toggleConfigModal(true)">🔔 Notificaciones</a>
         </div>
       </details>
@@ -151,9 +161,8 @@
       </div>
     </header>
 
-    {# 🔹 AHORA usamos service_enabled, no has_siem #}
     {% if not service_enabled %}
-      <!-- ======= SIN SERVICIO: oculta filtros/tabla y muestra mensaje ======= -->
+      <!-- ======= SIN SERVICIO ======= -->
       <section class="empty-state">
         <div class="empty-card">
           <h2>Servicio SIEM no disponible</h2>
@@ -170,7 +179,7 @@
         <form id="filters-form" method="get" class="toolbar-row" role="search">
           <div class="tb-left">
             <input type="search" name="q" id="q" value="{{ q|default:'' }}" placeholder="Buscar en las alertas…"
-                  autocomplete="off" />
+                   autocomplete="off" />
             <button class="btn ghost-sm" type="submit" id="btn-search-live">Buscar</button>
           </div>
 
@@ -196,13 +205,6 @@
       <section class="wrap">
         <div class="card">
           <div class="card-body">
-            <div class="meta" style="margin-bottom: 8px;">
-              Rango consultado (UTC): {{ start_time }} → {{ end_time }}<br>
-              Total de alertas: {{ total }}
-              {% if siem_account_id %}
-                <br>Account ID SIEM: {{ siem_account_id }}
-              {% endif %}
-            </div>
 
             {% if error %}
               <div class="error">
@@ -217,67 +219,73 @@
                     <tr>
                       <th>Fecha/Hora</th>
                       <th>Severidad</th>
-                      <th>Perfil</th>
                       <th>IP Origen</th>
                       <th>IP Destino</th>
                       <th>País Origen</th>
-                      <th>País Destino</th>
-                      <th>Categorías Threat</th>
-                      <th>Reputación</th>
-                      <th>Servicio / App</th>
-                      <th>Acción</th>
-                      <th>Log Source</th>
-                      <th>Mensaje</th>
+                      <th>Dispositivo</th>
                     </tr>
                   </thead>
                   <tbody>
                     {% for a in page_obj %}
-                      <tr class="alert-row"
-                          data-time="{{ a|get_item:'Time'|default:'' }}"
-                          data-severity="{{ a|get_item:'Alert Severity'|default:'' }}"
-                          data-profile="{{ a|get_item:'Profile Name'|default:'' }}"
-                          data-srcip="{{ a|get_item:'Source IP'|default:'' }}"
-                          data-dstip="{{ a|get_item:'Destination IP'|default:'' }}"
-                          data-country-src="{{ a|get_item:'Source Country'|default:'' }}"
-                          data-country-dst="{{ a|get_item:'Destination Country'|default:'' }}"
-                          data-service="{{ a|get_item:'Service'|default:'' }}"
-                          data-app="{{ a|get_item:'Application Details'|default:'' }}"
-                          data-action="{{ a|get_item:'Action'|default:'' }}"
-                          data-logsrc="{{ a|get_item:'Log Source'|default:'' }}"
-                          data-message="{{ a|get_item:'Message'|escapejs }}">
-                        <td class="mono nowrap">{{ a|get_item:"Time"|default:"-" }}</td>
+                      {% with sev=a|get_item:"Alert Severity"|default_if_none:"" %}
+                        {% with sev_lower=sev|lower %}
+                          <tr class="alert-row"
+                              data-time="{{ a|get_item:'Time'|default:'' }}"
+                              data-severity="{{ sev }}"
+                              data-profile="{{ a|get_item:'Profile Name'|default:'' }}"
+                              data-srcip="{{ a|get_item:'Source IP'|default:'' }}"
+                              data-dstip="{{ a|get_item:'Destination IP'|default:'' }}"
+                              data-country-src="{{ a|get_item:'Source Country'|default:'' }}"
+                              data-country-dst="{{ a|get_item:'Destination Country'|default:'' }}"
+                              data-service="{{ a|get_item:'Service'|default:'' }}"
+                              data-app="{{ a|get_item:'Application Details'|default:'' }}"
+                              data-action="{{ a|get_item:'Action'|default:'' }}"
+                              data-logsrc="{{ a|get_item:'Log Source'|default:'' }}"
+                              data-device="{{ a|get_item:'__device_label__'|default:'' }}"
+                              data-raw="{{ a|get_item:'__raw_json__'|default:'' }}">
 
-                        {% if a|get_item:"Alert Severity"|default_if_none:""|lower == "critical" %}
-                          <td class="severity-critical">{{ a|get_item:"Alert Severity" }}</td>
-                        {% elif a|get_item:"Alert Severity"|default_if_none:""|lower == "trouble" %}
-                          <td class="severity-trouble">{{ a|get_item:"Alert Severity" }}</td>
-                        {% elif a|get_item:"Alert Severity"|default_if_none:""|lower == "attention" %}
-                          <td class="severity-attention">{{ a|get_item:"Alert Severity" }}</td>
-                        {% elif a|get_item:"Alert Severity"|default_if_none:""|lower == "success" %}
-                          <td class="severity-success">{{ a|get_item:"Alert Severity" }}</td>
-                        {% else %}
-                          <td>{{ a|get_item:"Alert Severity"|default:"" }}</td>
-                        {% endif %}
+                            <!-- Fecha/Hora -->
+                            <td class="mono nowrap">{{ a|get_item:"Time"|default:"-" }}</td>
 
-                        <td class="w-240" title="{{ a|get_item:'Profile Name'|default:'' }}">
-                          {{ a|get_item:"Profile Name"|default:"-" }}
-                        </td>
-                        <td class="mono">{{ a|get_item:"Source IP"|default:"-" }}</td>
-                        <td class="mono">{{ a|get_item:"Destination IP"|default:"-" }}</td>
-                        <td>{{ a|get_item:"Source Country"|default:"-" }}</td>
-                        <td>{{ a|get_item:"Destination Country"|default:"-" }}</td>
-                        <td class="w-320">{{ a|get_item:"Threat Categories"|default:"-" }}</td>
-                        <td>{{ a|get_item:"Threat Reputation"|default:"-" }}</td>
-                        <td>
-                          <div>{{ a|get_item:"Service"|default:"-" }}</div>
-                          <div style="font-size:11px;color:#9ca3af;">
-                            {{ a|get_item:"Application Details"|default:"" }}
-                          </div>
-                        </td>
-                        <td>{{ a|get_item:"Action"|default:"-" }}</td>
-                        <td class="mono">{{ a|get_item:"Log Source"|default:"-" }}</td>
-                        <td class="msg">{{ a|get_item:"Message"|default:"" }}</td>
-                      </tr>
+                            <!-- Severidad con pill de colores -->
+                            <td>
+                              {% if sev %}
+                                {% if sev_lower == "critical" %}
+                                  <span class="pill sev-critical">{{ sev }}</span>
+                                {% elif sev_lower == "high" or sev_lower == "trouble" %}
+                                  <span class="pill sev-high">{{ sev }}</span>
+                                {% elif sev_lower == "medium" or sev_lower == "attention" %}
+                                  <span class="pill sev-medium">{{ sev }}</span>
+                                {% elif sev_lower == "low" or sev_lower == "success" %}
+                                  <span class="pill sev-low">{{ sev }}</span>
+                                {% elif sev_lower == "info" or sev_lower == "information" %}
+                                  <span class="pill sev-info">{{ sev }}</span>
+                                {% elif sev_lower == "n/a" or sev_lower == "na" %}
+                                  <span class="pill sev-na">{{ sev }}</span>
+                                {% else %}
+                                  <span class="pill sev-na">{{ sev }}</span>
+                                {% endif %}
+                              {% else %}
+                                -
+                              {% endif %}
+                            </td>
+
+                            <!-- IP Origen -->
+                            <td class="mono">{{ a|get_item:"Source IP"|default:"-" }}</td>
+
+                            <!-- IP Destino -->
+                            <td class="mono">{{ a|get_item:"Destination IP"|default:"-" }}</td>
+
+                            <!-- País Origen -->
+                            <td>{{ a|get_item:"Source Country"|default:"-" }}</td>
+
+                            <!-- Dispositivo -->
+                            <td class="mono">
+                              {{ a|get_item:"__device_label__"|default:"-" }}
+                            </td>
+                          </tr>
+                        {% endwith %}
+                      {% endwith %}
                     {% endfor %}
                   </tbody>
                 </table>
@@ -309,6 +317,7 @@
               {% endif %}
             {% endif %}
           </div>
+
         </div>
       </section>
     {% endif %}
@@ -317,11 +326,10 @@
   <!-- Modal Detalle SIEM -->
   <div id="siemModal" class="modal hidden" aria-hidden="true">
     <div class="modal-backdrop"></div>
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="siem-title">
+    <div class="modal-card modal-card-wide" role="dialog" aria-modal="true" aria-labelledby="siem-title">
       <div class="modal-header">
         <div>
           <h3 id="siem-title" class="alert-title">🔔 Detalle de alerta</h3>
-          <p id="siem-subtitle" class="modal-subtitle"></p>
         </div>
         <button class="modal-close" type="button" data-close>&times;</button>
       </div>
@@ -336,22 +344,13 @@
             <li><span class="muted">IP Destino:</span> <span id="siem-meta-dst"></span></li>
             <li><span class="muted">Acción:</span> <span id="siem-meta-action"></span></li>
             <li><span class="muted">Servicio/App:</span> <span id="siem-meta-service"></span></li>
+            <li><span class="muted">Dispositivo:</span> <span id="siem-meta-device"></span></li>
           </ul>
         </div>
 
         <div class="block">
-          <h4>Resumen rápido</h4>
-          <div>
-            <span class="chip"><strong>Sev</strong> <span id="siem-chip-sev"></span></span>
-            <span class="chip"><strong>Src IP</strong> <span id="siem-chip-srcip"></span></span>
-            <span class="chip"><strong>Dst IP</strong> <span id="siem-chip-dstip"></span></span>
-            <span class="chip"><strong>Acción</strong> <span id="siem-chip-action"></span></span>
-          </div>
-        </div>
-
-        <div class="block">
-          <h4>Mensaje completo</h4>
-          <pre id="siem-message" class="mono" style="white-space: pre-wrap; font-size: 11px;"></pre>
+          <h4>Detalles</h4>
+          <div id="siem-raw-container" class="details-container"></div>
         </div>
       </div>
     </div>
@@ -361,6 +360,9 @@
   <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/page-loader-universal.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/siem_alerts.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/home_portal.js' %}?v={% now 'U' %}"></script>
   {% include 'partials/config_notificaciones_modal.html' %}
+  {% include 'partials/cred_modal.html' %}
 </body>
 </html>
+

@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="{% static 'css/coachmark.css' %}?v={% now 'U' %}">
   <link rel="icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
   <link rel="shortcut icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
-  <link rel="stylesheet" href="{% static 'css/config_notificaciones_modal.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/cred_modal.css' %}?v={% now 'U' %}">
 </head>
 
 <body class="layout" data-username="{{ request.user.username|default:'anon' }}">
@@ -377,8 +377,9 @@
   {% endif %}
 
   <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
-  <script defer src="{% static 'js/onboarding_hints.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/home_portal.js' %}?v={% now 'U' %}"></script>
   {% include 'partials/config_notificaciones_modal.html' %}
+  {% include 'partials/cred_modal.html' %}
 </body>
 
 </html>
