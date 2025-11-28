@@ -52,6 +52,50 @@
   color: #fff;
 }
 
+/* ============================
+   Threat Reputation pills (tabla)
+   ============================ */
+.rep-band-1 {
+  /* 1–20  rojo (más peligroso) */
+  background: #dc262633;
+  border: 1px solid #dc2626aa;
+  color: #fff;
+}
+
+.rep-band-2 {
+  /* 21–40  naranjo */
+  background: #f9731633;
+  border: 1px solid #f97316aa;
+  color: #fff;
+}
+
+.rep-band-3 {
+  /* 41–60  amarillo */
+  background: #eab30833;
+  border: 1px solid #eab308aa;
+  color: #fff;
+}
+
+.rep-band-4 {
+  /* 61–80  verde claro */
+  background: #22c55e33;
+  border: 1px solid #22c55eaa;
+  color: #fff;
+}
+
+.rep-band-5 {
+  /* 81–100 verde */
+  background: #16a34a33;
+  border: 1px solid #16a34aaa;
+  color: #fff;
+}
+
+.rep-band-na {
+  background: #6b728033;
+  border: 1px solid #6b7280aa;
+  color: #fff;
+}
+
 /* === Modal SIEM más ancha === */
 .modal-card.modal-card-wide {
   max-width: 960px;
@@ -83,4 +127,120 @@
   text-align: left;
   white-space: nowrap;
   font-weight: 600;
+}
+
+/* ============================
+   Header del modal + widget Reputation
+   ============================ */
+
+/* contenedor título + barra compacta */
+.modal-header-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Widget base */
+.rep-widget {
+  margin-top: 10px;
+}
+
+.rep-value {
+  font-weight: 700;
+}
+
+/* Versión compacta que va en el header, al lado del título */
+.rep-widget.rep-widget-header {
+  display: flex;
+  flex-direction: column;       /* barra arriba, valor debajo */
+  align-items: flex-start;
+  gap: 4px;
+  margin-top: 0;
+}
+
+/* Barra compacta en el header */
+.rep-widget-header .rep-bar {
+  position: relative;
+  display: flex;
+  border-radius: 999px;
+  overflow: visible;            /* se ve la flecha por fuera */
+  height: 14px;                 /* cambia esto si quieres más/menos altura */
+  width: 220px;
+  border: 1px solid rgba(15, 23, 42, 0.9);
+  margin-top: 0;
+}
+
+/* segmentos de color (mismos rangos que en las pills) */
+.rep-seg {
+  flex: 1;
+}
+
+/* sólidos */
+.rep-seg-1 { background: #dc2626; }  /* 1–20  rojo */
+.rep-seg-2 { background: #f97316; }  /* 21–40 naranjo */
+.rep-seg-3 { background: #eab308; }  /* 41–60 amarillo */
+.rep-seg-4 { background: #22c55e; }  /* 61–80 verde claro */
+.rep-seg-5 { background: #16a34a; }  /* 81–100 verde */
+
+/* Flechita que indica el valor, saliendo desde ABAJO de la barra */
+.rep-pointer {
+  position: absolute;
+  bottom: -8px;                      /* abajo de la barra */
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 10px solid #e5e7eb; /* triangulito apuntando hacia arriba */
+  transform: translateX(-50%);
+}
+
+/* Número de reputation debajo del triangulo */
+.rep-value-header {
+  position: absolute;
+  top: calc(100% + 12px);             /* margen entre triángulo y número */
+  font-size: 12px;
+  font-weight: 700;
+  transform: translateX(-50%);
+}
+
+/* No usamos header/legend grandes en la versión compacta */
+.rep-header {
+  display: none;
+}
+
+.rep-legend {
+  display: none;
+}
+
+/* ============================
+   Tarjeta "Últimas 50 alertas"
+   ============================ */
+
+.alerts-summary {
+  padding: 8px 0 14px;
+}
+
+.alerts-summary-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border, #1e293b);
+  background: var(--card, #0f1d35);
+  color: var(--text, #e5e7eb);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.45);
+}
+
+.alerts-summary-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #22c55e;
+}
+
+.alerts-summary-text {
+  white-space: nowrap;
 }

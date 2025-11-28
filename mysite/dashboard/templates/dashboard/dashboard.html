@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="{% static 'css/user_dropdown.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/coachmark.css' %}?v={% now 'U' %}">
   <link rel="icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
+  <link rel="stylesheet" href="{% static 'css/config_notificaciones_modal.css' %}?v={% now 'U' %}">
   <link rel="shortcut icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
   <link rel="stylesheet" href="{% static 'css/cred_modal.css' %}?v={% now 'U' %}">
 </head>
@@ -78,6 +79,17 @@
             href="{% url 'soar_incidents:list' %}">Eventos</a>
         </div>
       </details>
+      {% endwith %}
+      {# ===== SIEM (solo si el servicio está habilitado para el tenant) ===== #}
+      {% with raw_siem_id=tenant.logs360siem_id|default_if_none:"" %}
+      {% with siem_id=raw_siem_id|stringformat:"s" %}
+      {% if siem_id and siem_id != "0" and siem_id != "null" and siem_id != "NULL" and siem_id != "None" %}
+      <a class="nav-item {% if request.resolver_match.app_name == 'siem' %}is-active{% endif %}"
+        href="{% url 'siem:alerts_logs360' %}">
+        <span class="nav-ico">🧠</span>SIEM
+      </a>
+      {% endif %}
+      {% endwith %}
       {% endwith %}
       {% endif %}
 

@@ -94,45 +94,126 @@ def _get_client_ip(request) -> str:
 # ──────────────────────────────────────────────────────────────────────────────
 # Upsert a agent.ip_whitelist al descargar: registra IP/cliente/tenant y fechas
 # ──────────────────────────────────────────────────────────────────────────────
-def _upsert_whitelist_from_download(request) -> None:
+def _upsert_whitelist_from_download(
+    request,
+    creds: TenantCredentials | None = None,
+) -> None:
     """
     Crea o actualiza un registro en agent.ip_whitelist:
-      - ip                -> IP pública del cliente
-      - cliente           -> correo/username del usuario autenticado
-      - organizacion      -> nombre del tenant
-      - motivo            -> 'ip_whitelist automatizada' (solo al crear)
-      - fecha_creacion    -> now (solo al crear)
+      - ip                  -> IP pública del cliente
+      - cliente             -> NOMBRE DEL TENANT que descarga
+      - organizacion        -> NOMBRE DEL TENANT (igual que cliente)
+      - motivo              -> 'ip_whitelist automatizada' (solo al crear)
+      - fecha_creacion      -> now (solo al crear)
       - fecha_actualizacion -> now (siempre en descarga)
-      - tenant_id         -> id del tenant actual
-    Si la IP ya existe, solo se actualiza fecha_actualizacion (no se tocan otros campos).
+      - tenant_id           -> id del tenant actual (si se puede resolver)
     """
-    ip = _get_client_ip(request)
-    if not ip:
-        return
+    try:
+        logger.info(
+            "[WHITELIST UPSERT] Iniciando upsert. creds_pk=%s",
+            getattr(creds, "pk", None),
+        )
 
-    user = getattr(request, "user", None)
-    email = (getattr(user, "email", None) or getattr(user, "username", None) or "").strip()
+        ip = _get_client_ip(request)
+        logger.info("[WHITELIST UPSERT] IP detectada: %s", ip)
 
-    tenant_obj = getattr(request, "tenant", None) or getattr(user, "tenant", None)
-    tenant_name = (getattr(tenant_obj, "name", None) or "").strip()
+        if not ip:
+            logger.warning("[WHITELIST UPSERT] No se pudo obtener IP del request, abortando.")
+            return
 
-    now = dj_timezone.now()
+        user = getattr(request, "user", None)
+        logger.info(
+            "[WHITELIST UPSERT] Usuario en request: %s",
+            getattr(user, "username", None),
+        )
 
-    obj, created = IPWhitelist.objects.get_or_create(
-        ip=ip,
-        defaults={
-            "cliente": email,
-            "organizacion": tenant_name,
-            "fecha_creacion": now,
-            "fecha_actualizacion": now,
-            "motivo": "ip_whitelist automatizada",
-            "tenant_id": getattr(tenant_obj, "id", None),
-        },
-    )
+        # 1) Intentar sacar el tenant desde las credenciales (lo ideal)
+        tenant_obj = None
+        if creds is not None:
+            tenant_obj = getattr(creds, "tenant", None)
+            logger.info(
+                "[WHITELIST UPSERT] Tenant desde creds.tenant: %s",
+                getattr(tenant_obj, "name", None),
+            )
 
-    if not created:
-        # Solo toca fecha_actualizacion
-        IPWhitelist.objects.filter(pk=ip).update(fecha_actualizacion=now)
+        # 2) Fallback a request.tenant o user.tenant
+        if tenant_obj is None:
+            tenant_from_request = getattr(request, "tenant", None)
+            tenant_from_user = getattr(user, "tenant", None)
+            logger.info(
+                "[WHITELIST UPSERT] Tenant desde request.tenant: %s | user.tenant: %s",
+                getattr(tenant_from_request, "name", None),
+                getattr(tenant_from_user, "name", None),
+            )
+            tenant_obj = tenant_from_request or tenant_from_user
+
+        tenant_name = (getattr(tenant_obj, "name", "") or "").strip() if tenant_obj else ""
+        tenant_id = getattr(tenant_obj, "id", None) if tenant_obj else None
+
+        logger.info(
+            "[WHITELIST UPSERT] Tenant resuelto: name='%s', id=%s",
+            tenant_name,
+            tenant_id,
+        )
+
+        # Por requerimiento: cliente = nombre del tenant
+        if not tenant_name:
+            # Si no logramos resolver el tenant, al menos no dejamos cliente vacío
+            tenant_name = "Tenant desconocido"
+
+        now = dj_timezone.now()
+
+        logger.info(
+            "[WHITELIST UPSERT] Antes de get_or_create: ip=%s, cliente='%s', tenant_id=%s",
+            ip,
+            tenant_name,
+            tenant_id,
+        )
+
+        # get_or_create por IP (la IP debería ser única en la tabla)
+        obj, created = IPWhitelist.objects.get_or_create(
+            ip=ip,
+            defaults={
+                "cliente": tenant_name,
+                "fecha_creacion": now,
+                "fecha_actualizacion": now,
+                "motivo": "Automatizado",
+                # Django acepta tenant_id aunque el campo sea ForeignKey('Tenant')
+                "tenant_id": tenant_id,
+            },
+        )
+
+        logger.info(
+            "[WHITELIST UPSERT] get_or_create ejecutado. created=%s, obj_pk=%s",
+            created,
+            getattr(obj, "pk", None),
+        )
+
+        if not created:
+            # Si ya existía la IP, actualizamos datos clave
+            update_kwargs = {
+                "fecha_actualizacion": now,
+                "cliente": tenant_name,
+                "organizacion": tenant_name,
+            }
+            if tenant_id is not None:
+                update_kwargs["tenant_id"] = tenant_id
+
+            logger.info(
+                "[WHITELIST UPSERT] Actualizando registro existente pk=%s con %s",
+                obj.pk,
+                update_kwargs,
+            )
+            IPWhitelist.objects.filter(pk=obj.pk).update(**update_kwargs)
+
+        logger.info(
+            "[WHITELIST UPSERT] Finalizado OK para ip=%s, cliente='%s'",
+            ip,
+            tenant_name,
+        )
+
+    except Exception:
+        logger.exception("[WHITELIST UPSERT] Error inesperado durante el upsert")
 
 
 def _build_severity_summary(qs):
@@ -407,11 +488,26 @@ def home_index(request):
     # Base: whitelist del tenant (listado)
     whitelist_table = IPWhitelist.objects.all()
     if tenant:
-        whitelist_table = whitelist_table.filter(tenant_id=getattr(tenant, "id", None))
+        t_name = (getattr(tenant, "name", "") or "").strip()
+        t_id = getattr(tenant, "id", None)
+        logger.info(
+            "[HOME WHITELIST] Filtrando whitelist por tenant_id=%s o cliente/organizacion='%s'",
+            t_id,
+            t_name,
+        )
+        q = Q()
+        if t_id is not None:
+            q |= Q(tenant_id=t_id)
+        if t_name:
+            q |= Q(cliente=t_name) | Q(organizacion=t_name)
+        if q:
+            whitelist_table = whitelist_table.filter(q)
+        else:
+            whitelist_table = IPWhitelist.objects.none()
 
     if whitelist_terms:
         try:
-            # Buscar dentro del whitelist del tenant
+            # Buscar dentro del whitelist del tenant (ya filtrado arriba)
             q_wl = Q()
             for term in whitelist_terms:
                 q_wl |= Q(ip__icontains=term)
@@ -785,8 +881,11 @@ def blacklist_txt(request):
 
     auth = (request.META.get("HTTP_AUTHORIZATION") or "").strip()
 
+    logger.info("[BLACKLIST TXT] Llamada a blacklist_txt. Authorization='%s'", auth)
+
     # 1) Sin cabecera -> lanzar challenge
     if not auth.startswith("Basic "):
+        logger.info("[BLACKLIST TXT] Sin cabecera Basic. Enviando challenge.")
         return _basic_challenge()
 
     # 2) Intentar decodificar usuario:password
@@ -796,6 +895,7 @@ def blacklist_txt(request):
         username, password = userpass.split(":", 1)
         username = (username or "").strip()
         password = (password or "").strip()
+        logger.info("[BLACKLIST TXT] Credenciales recibidas username='%s'", username)
     except Exception:
         logger.exception("[BLACKLIST TXT] Error decodificando cabecera Basic")
         return _basic_challenge("Invalid authorization header")
@@ -820,10 +920,12 @@ def blacklist_txt(request):
             creds.first_login_at = now
         creds.last_login_at = now
         creds.save(update_fields=["first_login_at", "last_login_at"])
+        logger.info("[BLACKLIST TXT] Timestamps de login actualizados para creds_pk=%s", creds.pk)
     except Exception:
         logger.exception("[BLACKLIST TXT] No se pudo actualizar timestamps de login")
 
-    _upsert_whitelist_from_download(request)
+    logger.info("[BLACKLIST TXT] Llamando a _upsert_whitelist_from_download desde blacklist_txt")
+    _upsert_whitelist_from_download(request, creds)
 
     # 6) Enviar el TXT
     return _stream_blacklist_txt_response()
@@ -868,17 +970,44 @@ def _validate_creds(username: str, password: str) -> TenantCredentials | None:
     if not username or not password:
         return None
     try:
-        return TenantCredentials.objects.get(username=username, password=password, is_active=True)
+        creds = TenantCredentials.objects.get(
+            username=username,
+            password=password,
+            is_active=True,
+        )
+        logger.info(
+            "[VALIDATE CREDS] OK username='%s', creds_pk=%s, tenant_fk=%s",
+            username,
+            creds.pk,
+            getattr(creds, "tenant_id", None),
+        )
+        return creds
     except TenantCredentials.DoesNotExist:
+        logger.info(
+            "[VALIDATE CREDS] No se encontraron credenciales activas para username='%s'",
+            username,
+        )
+        return None
+    except Exception:
+        logger.exception(
+            "[VALIDATE CREDS] Error inesperado buscando credenciales para username='%s'",
+            username,
+        )
         return None
 
 
 def _has_any_service(creds: TenantCredentials) -> bool:
-    return any([
+    res = any([
         (creds.alarms_one_id or "").strip() not in ("", "0"),
         (creds.logs360siem_id or "").strip() not in ("", "0"),
         (creds.site24x7_id or "").strip() not in ("", "0"),
     ])
+    logger.info(
+        "[HAS ANY SERVICE] creds_pk=%s -> %s",
+        getattr(creds, "pk", None),
+        res,
+    )
+    return res
 
 
 def _touch_login(creds: TenantCredentials) -> None:
@@ -888,6 +1017,7 @@ def _touch_login(creds: TenantCredentials) -> None:
             creds.first_login_at = now
         creds.last_login_at = now
         creds.save(update_fields=["first_login_at", "last_login_at"])
+        logger.info("[TOUCH LOGIN] Timestamps actualizados para creds_pk=%s", creds.pk)
     except Exception:
         logger.exception("[BLACKLIST POST] No se pudo actualizar timestamps")
 
@@ -913,8 +1043,15 @@ def blacklist_download_root(request):
 
     auth = request.META.get("HTTP_AUTHORIZATION", "")
 
+    logger.info(
+        "[BLACKLIST ROOT] Llamada a blacklist_download_root. Authorization='%s', realm='%s'",
+        auth,
+        realm,
+    )
+
     # 1) Si no viene cabecera Basic -> forzamos prompt
     if not auth.startswith("Basic "):
+        logger.info("[BLACKLIST ROOT] Sin cabecera Basic. Enviando challenge inicial.")
         resp = HttpResponse("Auth required", status=401, content_type="text/plain")
         resp["WWW-Authenticate"] = f'Basic realm="{realm}"'
         resp["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
@@ -926,7 +1063,11 @@ def blacklist_download_root(request):
         raw = auth.split(" ", 1)[1]
         userpass = base64.b64decode(raw).decode("utf-8")
         username, password = userpass.split(":", 1)
+        username = (username or "").strip()
+        password = (password or "").strip()
+        logger.info("[BLACKLIST ROOT] Credenciales recibidas username='%s'", username)
     except Exception:
+        logger.exception("[BLACKLIST ROOT] Error decodificando cabecera Basic")
         resp = HttpResponse("Invalid authorization header", status=401, content_type="text/plain")
         resp["WWW-Authenticate"] = f'Basic realm="{realm}"'
         resp["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
@@ -936,6 +1077,11 @@ def blacklist_download_root(request):
     # 3) Validar credenciales contra TenantCredentials
     creds = _validate_creds(username, password)
     if not creds or not _has_any_service(creds):
+        logger.info(
+            "[BLACKLIST ROOT] Unauthorized o sin servicios. username='%s', creds_ok=%s",
+            username,
+            bool(creds),
+        )
         resp = HttpResponse("Unauthorized", status=401, content_type="text/plain")
         resp["WWW-Authenticate"] = f'Basic realm="{realm}"'
         resp["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
@@ -943,10 +1089,15 @@ def blacklist_download_root(request):
         return resp
 
     # 4) Registrar login + actualizar whitelist con la IP de quien descarga
+    logger.info(
+        "[BLACKLIST ROOT] Credenciales OK. creds_pk=%s, llamando a _touch_login + _upsert_whitelist_from_download",
+        creds.pk,
+    )
     _touch_login(creds)
-    _upsert_whitelist_from_download(request)
+    _upsert_whitelist_from_download(request, creds)
 
     # 5) Si todo OK, redirigimos a la página final
+    logger.info("[BLACKLIST ROOT] Redirigiendo a blacklist_download_page")
     return HttpResponseRedirect(reverse("home:blacklist_download_page"))
 
 
@@ -957,6 +1108,7 @@ def blacklist_download_page(request):
     Se asume que ya pasó por el Basic Auth en blacklist_download_root.
     Aquí simplemente devolvemos el TXT usando el helper existente.
     """
+    logger.info("[BLACKLIST PAGE] Descarga TXT para usuario=%s", getattr(request.user, "username", None))
     return _stream_blacklist_txt_response()
 
 
@@ -969,6 +1121,12 @@ def blacklist_download_post(request):
     username = (request.POST.get("username") or "").strip()
     password = (request.POST.get("password") or "").strip()
 
+    logger.info(
+        "[BLACKLIST POST] Llamada a blacklist_download_post username='%s' ip=%s",
+        username,
+        client_ip,
+    )
+
     creds = _validate_creds(username, password)
     if not creds or not _has_any_service(creds):
         logger.info("[BLACKLIST POST] invalid/no-service for %s ip=%s", username, client_ip)
@@ -978,9 +1136,10 @@ def blacklist_download_post(request):
             content_type="text/plain",
         )
 
-    logger.info("[BLACKLIST POST] OK download for %s ip=%s", username, client_ip)
+    logger.info("[BLACKLIST POST] OK download for %s ip=%s creds_pk=%s", username, client_ip, creds.pk)
     _touch_login(creds)
-    # 👇 registra/actualiza ip -> fecha_actualizacion
-    _upsert_whitelist_from_download(request)
+    # registra/actualiza ip -> fecha_actualizacion y tenant/nombre
+    logger.info("[BLACKLIST POST] Llamando a _upsert_whitelist_from_download desde blacklist_download_post")
+    _upsert_whitelist_from_download(request, creds)
 
     return _stream_blacklist_txt_response()

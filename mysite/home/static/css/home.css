@@ -553,7 +553,7 @@ body{
 }
 
 /* ============================
-   WHITELIST CARD / TABLA
+   WHITELIST CARD / TABLA (vista detalle)
    ============================ */
 
 .whitelist-card{
@@ -577,7 +577,7 @@ body{
   font-size:1.1rem;
 }
 
-/* Wrapper con scroll */
+/* Wrapper con scroll horizontal en la vista de whitelist general */
 .whitelist-table-wrapper {
   width: 100%;
   overflow-x: auto;
@@ -802,12 +802,16 @@ body{
   margin-top: 1.5rem;
 }
 
+/* 🔹 Card flex para permitir scroll interno en el wrapper */
 .home-whitelist-card {
   background: linear-gradient(180deg, #0e1930 0%, #0c162b 100%);
   border: 1px solid var(--border, #1e293b);
   border-radius: 16px;
   box-shadow: var(--shadow, 0 10px 28px rgba(2, 6, 23, .25));
   padding: 16px 20px 18px;
+
+  display: flex;
+  flex-direction: column;
 }
 
 .home-whitelist-head {
@@ -843,13 +847,20 @@ body{
   color: var(--muted, #94a3b8);
 }
 
-/* Tabla */
+/* 🔹 Contenedor de la tabla con altura fija + scroll vertical */
 .home-whitelist-table-wrapper {
   width: 100%;
-  overflow-x: auto;
+  margin-top: 0.5rem;
+
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 520px;          /* Ajusta para ~20 filas visibles */
+  overflow-y: auto;       /* Scroll vertical interno */
+  overflow-x: auto;       /* Scroll horizontal si hace falta */
 }
 
 .home-whitelist-table-wrapper::-webkit-scrollbar {
+  width: 6px;
   height: 6px;
 }
 .home-whitelist-table-wrapper::-webkit-scrollbar-thumb {
@@ -865,6 +876,14 @@ body{
 
 .home-whitelist-table thead {
   background: rgba(15, 23, 42, 0.9);
+}
+
+/* Header fijo al hacer scroll */
+.home-whitelist-table thead th {
+  position: sticky;
+  top: 0;
+  background: rgba(15, 23, 42, 0.96);
+  z-index: 1;
 }
 
 .home-whitelist-table th,
@@ -926,3 +945,4 @@ body{
 /* =============================================
    FIX HOME: Íconos de KPIs alineados a la izquierda
    ============================================= */
+/* (vacío por ahora) */
