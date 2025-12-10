@@ -9,8 +9,6 @@ class Alarm(models.Model):
     device_name = models.CharField(max_length=255, blank=True, help_text="Extraído del mensaje (msg_device_name)")
     action = models.TextField(blank=True)
     actions = models.TextField(blank=True)
-
-    # Nuevos campos
     level = models.CharField(max_length=100, blank=True, help_text="Level extraído de message/log_details")
     log_description = models.TextField(blank=True, help_text="Log Description extraído de message/log_details")
     subtype = models.CharField(max_length=100, blank=True, help_text="Subtype extraído de message/log_details")

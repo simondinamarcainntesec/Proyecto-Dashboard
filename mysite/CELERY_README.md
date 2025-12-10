@@ -17,6 +17,7 @@ This is the most common workflow. Run these commands from the repository root (`
 source ../venv/bin/activate
 
 # run celery pointing at the package; when run from here use the same -A mysite
+pkill -f 'celery'
 nohup celery -A mysite beat -l info &
 nohup celery -A mysite worker -l info --concurrency=1 &
 ```

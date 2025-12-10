@@ -53,7 +53,6 @@ ALARMSONE_ACCESS_TOKEN = os.getenv("ALARMSONE_ACCESS_TOKEN")
 # Application definition
 
 INSTALLED_APPS = [
-    'tenants',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -70,6 +69,8 @@ INSTALLED_APPS = [
     'soar_incidents',
     'home',
     'siem',
+    'site24x7',
+    'tenants.apps.TenantsConfig',
 ]
 
 MIDDLEWARE = [

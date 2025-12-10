@@ -1,8 +1,7 @@
 from django.db import models
-
-# Create your models here.
-# home/models.py
-from django.db import models
+from django.conf import settings
+from django.contrib.postgres.fields import ArrayField
+from tenants.models import Tenant
 
 class TelegramSolicitud(models.Model):
     id = models.IntegerField(primary_key=True, db_column='id')
@@ -123,8 +122,8 @@ class TenantCredentials(models.Model):
     is_active = models.BooleanField(default=True)
     first_login_at = models.DateTimeField(blank=True, null=True)
     last_login_at = models.DateTimeField(blank=True, null=True)
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         managed = False
@@ -150,3 +149,38 @@ class TenantCredentials(models.Model):
             return cls.objects.get(tenant_id=tenant_id, is_active=True)
         except cls.DoesNotExist:
             return None
+
+class WhitelistCountryPreference(models.Model):
+    """
+    Mapea la tabla física agent.whitelist_country_preference (creada a mano en PostgreSQL).
+    Guarda la lista de países (valores de IPWhitelist.pais) que el usuario quiere ver
+    en la whitelist, por tenant.
+    """
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="whitelist_country_prefs",
+    )
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name="whitelist_country_prefs",
+    )
+
+    paises = ArrayField(
+        base_field=models.CharField(max_length=255),
+        blank=True,
+        default=list,
+    )
+
+    updated_at = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = 'agent"."whitelist_country_preference'
+        unique_together = ("user", "tenant")
+        verbose_name = "Preferencia de países de whitelist"
+        verbose_name_plural = "Preferencias de países de whitelist"
+
+    def __str__(self):
+        return f"{self.user} · {self.tenant} · {', '.join(self.paises or [])}"

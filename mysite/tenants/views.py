@@ -1,5 +1,11 @@
 # tenants/views.py
 import logging
+import re
+import json  # ⭐ para armar input_data
+
+import requests
+from django.conf import settings
+
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib import messages
@@ -8,20 +14,266 @@ from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
-from django.http import HttpResponseRedirect
-from tenants.models import Tenant
+from django.http import HttpResponseRedirect, JsonResponse
+from tenants.models import Tenant, Client  # ⭐ añadimos Client
 from tenants.context import current_tenant, current_tenant_source
 from django.contrib.auth import update_session_auth_hash
-import re
 from django.contrib.messages import get_messages
 from utils.ms_email import enviar_correo_cambio_contrasena
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
+# ========================== API SOPORTE INNTESEC (USERS) ==========================
+
+SUPORTE_BASE_URL = "https://soporte.inntesec.com/api/v3"
+SUPORTE_USERS_ENDPOINT = f"{SUPORTE_BASE_URL}/users"
+
+
+def fetch_soporte_users(start_index: int = 1, row_count: int = 100) -> dict:
+    """
+    Llama a la API de soporte (https://soporte.inntesec.com/api/v3/users)
+    para obtener usuarios usando input_data en QUERYSTRING.
+
+    Requiere SOPORTE_AUTHTOKEN en settings.py:
+
+        SOPORTE_AUTHTOKEN = "tu_token_zoho_aqui"
+    """
+    authtoken = os.getenv("SOPORTE_AUTHTOKEN")
+    if not authtoken:
+        logger.error("[SoporteUsers] Falta settings.SOPORTE_AUTHTOKEN")
+        raise RuntimeError("Falta SOPORTE_AUTHTOKEN en settings")
+
+    headers = {
+        "authtoken": authtoken,
+    }
+
+    # ⭐ La API espera input_data como JSON en querystring
+    payload = {
+        "list_info": {
+            "sort_field": "name",
+            "sort_order": "asc",
+            "start_index": start_index,
+            "row_count": row_count,
+        }
+    }
+    params = {
+        "input_data": json.dumps(payload)
+    }
+
+    try:
+        resp = requests.get(
+            SUPORTE_USERS_ENDPOINT,
+            headers=headers,
+            params=params,
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        li = (data or {}).get("list_info", {}) or {}
+        logger.info(
+            "[SoporteUsers] OK start_index_req=%s row_count_req=%s "
+            "start_index_resp=%s row_count_resp=%s has_more=%s",
+            start_index,
+            row_count,
+            li.get("start_index"),
+            li.get("row_count"),
+            li.get("has_more_rows"),
+        )
+        return data
+    except requests.RequestException as e:
+        logger.exception(
+            "[SoporteUsers] Error llamando a %s: %s",
+            SUPORTE_USERS_ENDPOINT,
+            e,
+        )
+        raise
+
+
+def sync_soporte_clients() -> dict:
+    """
+    Recorre todas las páginas de la API de soporte y sincroniza
+    los usuarios con empresa (account != None) en la tabla Client.
+
+    - Hace update_or_create por id (que viene como string en la API).
+    - Asocia el Client al Tenant cuya name coincide con account['name'].
+    """
+    start_index = 1
+    row_count_request = 100
+    max_loops = 50  # seguridad anti-bucle
+
+    total_raw = 0
+    created = 0
+    updated = 0
+    skipped_no_account = 0
+    skipped_no_tenant = 0
+    skipped_no_email = 0
+    skipped_bad_id = 0
+
+    seen_ids = set()  # evitar duplicados por id
+
+    for loop in range(max_loops):
+        logger.info("[SoporteSync] Pidiendo página start_index=%s", start_index)
+        data = fetch_soporte_users(start_index=start_index, row_count=row_count_request)
+
+        users = (data or {}).get("users", []) or []
+        list_info = (data or {}).get("list_info", {}) or {}
+        if not users:
+            logger.info("[SoporteSync] Página sin usuarios, fin.")
+            break
+
+        total_raw += len(users)
+
+        for u in users:
+            uid = u.get("id")
+            if not uid:
+                continue
+
+            # evitar procesar el mismo id otra vez si la API repite
+            if uid in seen_ids:
+                continue
+            seen_ids.add(uid)
+
+            account = u.get("account")
+            if account is None:
+                skipped_no_account += 1
+                continue
+
+            account_name = account.get("name")
+            if not account_name:
+                skipped_no_tenant += 1
+                continue
+
+            # Buscar Tenant por nombre de empresa
+            tenant = Tenant.objects.filter(name__iexact=account_name).first()
+            if not tenant:
+                logger.warning(
+                    "[SoporteSync] No se encontró Tenant para empresa '%s' (user_id=%s)",
+                    account_name,
+                    uid,
+                )
+                skipped_no_tenant += 1
+                continue
+
+            email = u.get("email_id")
+            if not email:
+                skipped_no_email += 1
+                continue
+
+            name = u.get("name") or ""
+            phone = u.get("mobile") or u.get("phone")
+
+            # id del Client es entero
+            try:
+                client_id = int(uid)
+            except (TypeError, ValueError):
+                logger.warning(
+                    "[SoporteSync] id de usuario no numérico, se omite: %r", uid
+                )
+                skipped_bad_id += 1
+                continue
+
+            obj, created_flag = Client.objects.update_or_create(
+                id=client_id,
+                defaults={
+                    "tenant": tenant,
+                    "name": name,
+                    "email": email,
+                    "phone": phone,
+                },
+            )
+
+            if created_flag:
+                created += 1
+            else:
+                updated += 1
+
+        has_more = list_info.get("has_more_rows", False)
+        resp_start = list_info.get("start_index") or start_index
+        resp_count = list_info.get("row_count") or len(users)
+
+        logger.info(
+            "[SoporteSync] Página procesada: resp_start=%s resp_count=%s has_more=%s",
+            resp_start,
+            resp_count,
+            has_more,
+        )
+
+        if not has_more:
+            logger.info("[SoporteSync] has_more_rows=False, fin de paginación.")
+            break
+
+        if resp_count <= 0:
+            logger.warning("[SoporteSync] resp_count <= 0, se detiene para evitar bucle.")
+            break
+
+        # avanzar al siguiente bloque
+        start_index = resp_start + resp_count
+
+    summary = {
+        "total_raw": total_raw,
+        "total_unique_ids": len(seen_ids),
+        "created": created,
+        "updated": updated,
+        "skipped_no_account": skipped_no_account,
+        "skipped_no_tenant": skipped_no_tenant,
+        "skipped_no_email": skipped_no_email,
+        "skipped_bad_id": skipped_bad_id,
+    }
+    logger.info("[SoporteSync] Resumen sincronización: %s", summary)
+    return summary
+
+
+@login_required
+def soporte_usuarios_view(request):
+    """
+    Devuelve una página concreta de usuarios de soporte Inntesec (API v3) como JSON.
+
+    Endpoint de ejemplo:
+        /tenants/soporte/usuarios/?start_index=1&row_count=100
+    """
+    try:
+        start_index = int(request.GET.get("start_index", 1))
+    except ValueError:
+        start_index = 1
+
+    try:
+        row_count = int(request.GET.get("row_count", 100))
+    except ValueError:
+        row_count = 100
+
+    try:
+        data = fetch_soporte_users(start_index=start_index, row_count=row_count)
+        return JsonResponse(data, safe=False)
+    except Exception as e:
+        logger.exception("[SoporteUsersView] Error obteniendo usuarios: %s", e)
+        return JsonResponse(
+            {"error": "No se pudo obtener la lista de usuarios desde soporte."},
+            status=500,
+        )
+
+
+@login_required
+def soporte_sync_clients_view(request):
+    """
+    Endpoint para lanzar la sincronización de usuarios con empresa
+    hacia la tabla Client.
+
+    Ejemplo:
+        /tenants/soporte/sync_clients/
+    """
+    try:
+        summary = sync_soporte_clients()
+        return JsonResponse(summary, status=200)
+    except Exception as e:
+        logger.exception("[SoporteSyncView] Error sincronizando clientes: %s", e)
+        return JsonResponse(
+            {"error": "No se pudo sincronizar la tabla Client desde soporte."},
+            status=500,
+        )
+
+
 # ========================== LOGIN ==========================
-# imports necesarios (agrega esto donde estén tus otros imports)
-from django.views.decorators.cache import never_cache
 
 @never_cache
 def tenant_login_view(request):
@@ -141,7 +393,9 @@ def tenant_login_view(request):
     }
     return render(request, "auth/login.html", ctx)
 
+
 # ========================== LOGOUT ==========================
+
 @never_cache
 def logout_view(request):
     """
@@ -158,6 +412,7 @@ def logout_view(request):
 
 
 # ========================== SWITCH TENANT ==========================
+
 @login_required
 def switch_tenant(request, tenant_id):
     """
@@ -188,6 +443,7 @@ def switch_tenant(request, tenant_id):
     else:
         logger.debug("[SwitchTenant] Redirigiendo a dashboard histórico tras cambio de tenant.")
         return redirect("dashboard:dashboard")
+
 
 @login_required
 def cambiar_contraseña(request):
@@ -242,6 +498,7 @@ def cambiar_contraseña(request):
 
     return render(request, "auth/cambiar_contrasena.html")
 
+
 def csrf_failure_view(request, reason=""):
     """
     Vista personalizada para manejar fallos de verificación CSRF.
@@ -252,6 +509,7 @@ def csrf_failure_view(request, reason=""):
         "Tu sesión expiró o el formulario no es válido. Por favor, inicia sesión nuevamente."
     )
     return redirect("/login/")
+
 
 def oauth2_callback(request):
     code = request.GET.get("code")

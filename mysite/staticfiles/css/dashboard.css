@@ -145,7 +145,10 @@ body {
 
 /* ===== GRIDs ===== */
 .grid { display: grid; gap: 16px }
-.grid-kpis { grid-template-columns: repeat(4, minmax(200px, 1fr)) }
+.grid-kpis {
+  grid-template-columns: repeat(4, minmax(200px, 1fr));
+  margin-bottom: 24px; /* espacio entre KPIs y la grilla principal */
+}
 
 /* === GRID PRINCIPAL === */
 .grid-main{
@@ -369,3 +372,55 @@ body {
   background: #142246;
   color: #fff;
 }
+
+@media print {
+  body {
+    background-color: #020617 !important;
+  }
+
+  .grid-main,
+  .card {
+    page-break-inside: avoid;
+  }
+}
+
+/* === Menú de exportación (botón de descarga) === */
+.export-wrapper {
+  position: relative;
+  display: inline-block;
+  margin-right: 0.5rem;
+}
+
+.export-dropdown {
+  position: absolute;
+  right: 0;
+  top: 120%;
+  min-width: 170px;
+  background: #020617;
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+  padding: 6px 0;
+  z-index: 50;
+  display: none;
+}
+
+.export-dropdown.is-open {
+  display: block;
+}
+
+.export-dropdown button {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #e5e7eb;
+  padding: 8px 14px;
+  text-align: left;
+  font-size: 0.875rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.export-dropdown button:hover {
+  background: rgba(148, 163, 184, 0.18);
+}
+

@@ -1,6 +1,6 @@
-# soar_incidents/views.py 
 from __future__ import annotations
 from datetime import datetime, timedelta
+import csv
 import logging
 
 from django.contrib import messages
@@ -8,8 +8,8 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q, F, Value, TextField
 from django.db.models.functions import Lower, Replace, Trim, Cast
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render, redirect
-from django.http import HttpResponseRedirect, JsonResponse
 from django.views.decorators.http import require_GET
 from tenants.decorators import tenant_required
 from tenants.models import Tenant
@@ -21,6 +21,7 @@ from .models import IncidenteSOAR
 from home.models import TenantCredentials  # noqa
 
 logger = logging.getLogger(__name__)
+
 
 # ---------- helpers de fechas ----------
 def _parse_date(s):
@@ -34,40 +35,47 @@ def _parse_date(s):
         except Exception:
             return None
 
+
 # ---------- helpers de normalización ----------
 def _normalize_string_local(s: str) -> str:
     if not s:
         return ""
     out = str(s).strip()
-    for ch in ['{', '}', '[', ']', '"', "'", " "]:
+    for ch in ["{", "}", "[", "]", '"', "'", " "]:
         out = out.replace(ch, "")
     return out.lower()
+
 
 def _normalize_tenant_aotag(tenant) -> str:
     raw = getattr(tenant, "alarms_one_id", "") or ""
     return _normalize_string_local(raw)
 
+
 def _annotate_norm_aotag(qs):
     cleaned = Cast(F("aotag"), TextField())
-    for ch in ['{', '}', '[', ']', '"', "'", " "]:
+    for ch in ["{", "}", "[", "]", '"', "'", " "]:
         cleaned = Replace(cleaned, Value(ch), Value(""), output_field=TextField())
     cleaned = Trim(cleaned, output_field=TextField())
     cleaned = Lower(cleaned, output_field=TextField())
     return qs.annotate(norm_aotag=cleaned)
 
-# ---------- vista principal ----------
-@login_required
-@tenant_required
-def incidents_list(request):
+
+# ---------- helper: queryset filtrado compartido (lista + export) ----------
+def _build_incidents_queryset(request):
+    """
+    Construye el queryset de IncidenteSOAR aplicando:
+    - tenant actual
+    - rango de fechas (por defecto últimos 30 días)
+    - búsqueda libre ?q=
+    Devuelve: (qs, tenant, from_date, to_date, q_str)
+    """
     q = (request.GET.get("q") or "").strip()
 
-    # rango por defecto: últimos 30 días
     today = datetime.now().date()
     default_from = today - timedelta(days=30)
     from_q = _parse_date(request.GET.get("from")) or default_from
     to_q = _parse_date(request.GET.get("to")) or today
 
-    # base queryset
     qs = IncidenteSOAR.objects.all()
 
     # filtro por TENANT
@@ -78,8 +86,10 @@ def incidents_list(request):
     else:
         qs = qs.none()
 
-    # filtros adicionales
+    # rango de fechas
     qs = qs.filter(date__gte=from_q, date__lte=to_q)
+
+    # búsqueda libre
     if q:
         qs = qs.filter(
             Q(alarmd_id__icontains=q)
@@ -96,6 +106,94 @@ def incidents_list(request):
         )
 
     qs = qs.order_by("-date", "-time")
+    return qs, tenant, from_q, to_q, q
+
+
+# ---------- helpers export CSV ----------
+def _slugify_name(value: str | None) -> str:
+    if not value:
+        return "tenant"
+    value = value.lower()
+    out = []
+    for ch in value:
+        if ch.isalnum():
+            out.append(ch)
+        else:
+            out.append("_")
+    slug = "".join(out)
+    while "__" in slug:
+        slug = slug.replace("__", "_")
+    slug = slug.strip("_")
+    return slug or "tenant"
+
+
+def _make_incidents_csv_response(iterable, tenant, scope: str) -> HttpResponse:
+    """
+    Genera un HttpResponse CSV a partir de un iterable de IncidenteSOAR.
+    scope: 'page' o 'all' sólo para el nombre del archivo.
+    """
+    tenant_name = getattr(tenant, "name", "") or ""
+    tenant_slug = _slugify_name(tenant_name)
+    today_str = datetime.now().strftime("%Y%m%d")
+    filename = f"soar_incidentes_{tenant_slug}_{scope}_{today_str}.csv"
+
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    writer = csv.writer(response)
+    # Cabecera: enfocada en resumen, fecha/hora, severidad e ID
+    writer.writerow(
+        [
+            "Alarm ID",
+            "Fecha",
+            "Hora",
+            "Tenant",
+            "Nivel severidad",
+            "Tipo de amenaza",
+            "Dispositivo",
+            "Resumen",
+            "Descripción incidente",
+            "Riesgo detectado",
+            "Análisis criticidad",
+            "Medidas correctivas",
+            "Application",
+            "AO Tag",
+        ]
+    )
+
+    # Iteramos de forma eficiente (por si son muchos registros)
+    for it in iterable:
+        date_str = it.date.isoformat() if getattr(it, "date", None) else ""
+        time_obj = getattr(it, "time", None)
+        time_str = time_obj.strftime("%H:%M:%S") if time_obj else ""
+
+        writer.writerow(
+            [
+                getattr(it, "alarmd_id", "") or "",
+                date_str,
+                time_str,
+                tenant_name,
+                getattr(it, "nivel_de_severidad", "") or "",
+                getattr(it, "tipo_de_amenaza", "") or "",
+                getattr(it, "dispositivo", "") or "",
+                getattr(it, "resumen_humano", "") or "",
+                getattr(it, "descripcion_incidente", "") or "",
+                getattr(it, "riego_detectado", "") or "",
+                getattr(it, "analisis_criticidad", "") or "",
+                getattr(it, "medidas_correctivas", "") or "",
+                getattr(it, "application", "") or "",
+                getattr(it, "aotag", "") or "",
+            ]
+        )
+
+    return response
+
+
+# ---------- vista principal ----------
+@login_required
+@tenant_required
+def incidents_list(request):
+    qs, tenant, from_q, to_q, q = _build_incidents_queryset(request)
 
     paginator = Paginator(qs, 25)
     page_obj = paginator.get_page(request.GET.get("page"))
@@ -104,9 +202,7 @@ def incidents_list(request):
     cred = None
     try:
         if tenant:
-            cred = TenantCredentials.get_active_for_tenant(
-                int(getattr(tenant, "id", 0))
-            )
+            cred = TenantCredentials.get_active_for_tenant(int(getattr(tenant, "id", 0)))
     except Exception as e:
         logger.exception("[SOAR_INCIDENTS] Error obteniendo credenciales del tenant: %s", e)
 
@@ -127,6 +223,37 @@ def incidents_list(request):
         "cred": cred,  # 👈 para el partial de credenciales
     }
     return render(request, "soar_incidents/list.html", context)
+
+
+# ---------- export CSV: página actual ----------
+@login_required
+@tenant_required
+def export_csv_current(request):
+    """
+    Exporta a CSV sólo los incidentes que se muestran en la página actual
+    (respeta filtros de fecha y búsqueda).
+    """
+    qs, tenant, from_q, to_q, q = _build_incidents_queryset(request)
+
+    paginator = Paginator(qs, 25)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    # page_obj.object_list es un queryset/iterable con los elementos de la página
+    return _make_incidents_csv_response(page_obj.object_list, tenant, scope="page")
+
+
+# ---------- export CSV: todos los incidentes del rango ----------
+@login_required
+@tenant_required
+def export_csv_all(request):
+    """
+    Exporta a CSV todos los incidentes del rango filtrado (todas las páginas).
+    """
+    qs, tenant, from_q, to_q, q = _build_incidents_queryset(request)
+
+    # Usamos iterator() por si son muchos registros
+    return _make_incidents_csv_response(qs.iterator(), tenant, scope="all")
+
 
 # ---------- cambio de tenant ----------
 @login_required
@@ -200,6 +327,7 @@ def switch_tenant(request, tenant_id):
         logger.warning(f"[SwitchTenant] Fallback al dashboard por error ({e})")
         return redirect("dashboard:dashboard")
 
+
 # ---------- API JSON: incidentes por alarm_ids (para el modal del dashboard) ----------
 @login_required
 @tenant_required
@@ -224,21 +352,23 @@ def api_incidents_by_alarm_ids(request):
         qs = _annotate_norm_aotag(qs).filter(norm_aotag=norm_tid)
         qs = qs.filter(alarmd_id__in=alarm_ids).order_by("-date", "-time")[:1000]
 
-        data = list(qs.values(
-            "alarmd_id",
-            "aotag",
-            "dispositivo",
-            "descripcion_incidente",
-            "tipo_de_amenaza",
-            "nivel_de_severidad",
-            "medidas_correctivas",
-            "resumen_humano",
-            "riego_detectado",
-            "analisis_criticidad",
-            "date",
-            "time",
-            "application",
-        ))
+        data = list(
+            qs.values(
+                "alarmd_id",
+                "aotag",
+                "dispositivo",
+                "descripcion_incidente",
+                "tipo_de_amenaza",
+                "nivel_de_severidad",
+                "medidas_correctivas",
+                "resumen_humano",
+                "riego_detectado",
+                "analisis_criticidad",
+                "date",
+                "time",
+                "application",
+            )
+        )
         return JsonResponse(data, safe=False)
     except Exception as e:
         logger.exception("[api_by_alarm_ids] Error: %s", e)

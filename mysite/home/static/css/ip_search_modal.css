@@ -1196,3 +1196,44 @@ body.modal-open { overflow: hidden; }
 .ticket-loading-text {
   font-size: 0.95rem;
 }
+
+.export-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.export-menu {
+  position: absolute;
+  top: 120%;
+  right: 0;
+  background-color: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 6px;
+  display: none;
+  flex-direction: column;
+  min-width: 160px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  z-index: 50;
+}
+
+.export-menu.is-open {
+  display: flex;
+}
+
+.export-menu button {
+  background: none;
+  color: #e2e8f0;
+  border: none;
+  text-align: left;
+  padding: 8px 12px;
+  width: 100%;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.export-menu button:hover {
+  background-color: #1e293b;
+}

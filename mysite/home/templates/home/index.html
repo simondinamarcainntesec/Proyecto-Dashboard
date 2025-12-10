@@ -14,10 +14,11 @@
   <link rel="stylesheet" href="{% static 'css/config_notificaciones_modal.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/ip_search_modal.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/cred_modal.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/country_filter_modal.css' %}?v={% now 'U' %}">
 
   <link rel="icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
   <link rel="shortcut icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
-  <!-- Chart.js (defer desde CDN; si quieres evitar mensaje de Tracking Prevention, mueve a static local) -->
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
   <script defer src="{% static 'js/home_alarms_chart.js' %}?v={% now 'U' %}"></script>
 </head>
@@ -31,7 +32,7 @@
     </div>
 
     <nav class="nav">
-      {% if tenant.alarms_one_id %}
+      {% if tenant and tenant.alarms_one_id %}
 
       <a id="homeNav" class="nav-item {% if request.resolver_match.app_name == 'home' %}is-active{% endif %}"
         href="{% url 'home:index' %}">
@@ -78,20 +79,53 @@
         </div>
       </details>
       {% endwith %}
-      {# ===== SIEM (solo si el servicio está habilitado para el tenant) ===== #}
+
+      {# ===== SIEM ===== #}
       {% with raw_siem_id=tenant.logs360siem_id|default_if_none:"" %}
       {% with siem_id=raw_siem_id|stringformat:"s" %}
       {% if siem_id and siem_id != "0" and siem_id != "null" and siem_id != "NULL" and siem_id != "None" %}
       <a class="nav-item {% if request.resolver_match.app_name == 'siem' %}is-active{% endif %}"
         href="{% url 'siem:alerts_logs360' %}">
         <span class="nav-ico">🧠</span>SIEM
+        <span id="coachDotSiem" class="coachmark-dot hidden"></span>
       </a>
       {% endif %}
       {% endwith %}
       {% endwith %}
       {% endif %}
 
-      {# ===== Configuración (igual que antes) ===== #}
+      {# ===== Site24x7 ===== #}
+      {% if tenant %}
+      {% with raw_site_id=tenant.site24x7_id|default_if_none:"" %}
+      {% with site_id=raw_site_id|stringformat:"s" %}
+      {% if site_id and site_id != "0" and site_id != "null" and site_id != "NULL" and site_id != "None" %}
+      {% with url_name=request.resolver_match.url_name %}
+      <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.app_name == 'site24x7' %}open{% endif %}>
+        <summary class="nav-item {% if request.resolver_match.app_name == 'site24x7' %}is-active{% endif %}">
+          <span class="nav-ico">📡</span>Inn-Monitor
+          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+          <span id="coachDotInnMonitor" class="coachmark-dot hidden"></span>
+        </summary>
+        <div class="tenant-list nav-submenu">
+          <a class="tenant-option nav-subitem {% if url_name == 'monitor_status' %}is-active{% endif %}"
+            href="{% url 'site24x7:monitor_status' %}">
+            Monitores
+          </a>
+          <a class="tenant-option nav-subitem {% if url_name == 'dashboard' %}is-active{% endif %}"
+            href="{% url 'site24x7:dashboard' %}">
+            Dashboard
+          </a>
+        </div>
+      </details>
+      {% endwith %}
+      {% endif %}
+      {% endwith %}
+      {% endwith %}
+      {% endif %}
+
+      {# ===== Configuración ===== #}
       <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.url_name == 'cambiar_contrasena' %}open{% endif %}>
         <summary id="settingsSummary"
           class="nav-item {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}">
@@ -106,6 +140,9 @@
             href="{% url 'cambiar_contrasena' %}">🔒 Cambiar contraseña</a>
           <a class="tenant-option nav-subitem" href="#" onclick="toggleCredModal(true)">🔑 Credenciales</a>
           <a class="tenant-option nav-subitem" href="#" onclick="toggleConfigModal(true)">🔔 Notificaciones</a>
+          <a class="tenant-option nav-subitem" href="#" onclick="toggleCountryModal(true)">
+          🌎 Filtro países whitelist
+          </a>
         </div>
       </details>
     </nav>
@@ -143,17 +180,43 @@
       </div>
 
       <div class="top-right">
+        <!-- Botón refrescar -->
         <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
-        <button class="btn ghost" title="Exportar">⬇︎</button>
 
-        <!-- Guía rápida botón -->
-        <button id="showCoachBtn" class="btn ghost" title="Mostrar guía rápida">💡 Guía rápida</button>
+        <!-- Botón de flecha + menú desplegable -->
+        <div class="export-wrapper">
+          <button
+            type="button"
+            class="btn ghost small"
+            id="homeExportToggleBtn"
+            title="Exportar"
+            aria-haspopup="true"
+            aria-expanded="false"
+          >
+            ⬇
+          </button>
 
+          <div class="export-menu" id="homeExportMenu" role="menu">
+            <button type="button" data-export-format="pdf">📄 Exportar PDF</button>
+            <button type="button" data-export-format="csv">📊 Exportar CSV</button>
+          </div>
+        </div>
+
+
+
+        <!-- Guía rápida -->
+        <button id="showCoachBtn" class="btn ghost" title="Mostrar guía rápida" onclick="window.startInntesecCoach()">
+          💡 Guía rápida
+        </button>
+
+        <!-- Menú de usuario -->
         <div class="user-menu" id="userMenu">
           <button type="button" id="userButton" class="user-button">
             <div class="user-avatar">{{ request.user.username|default:"U"|slice:":1"|upper }}</div>
             <div class="user-name">{{ request.user.get_full_name|default:request.user.username }}</div>
-            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
           </button>
           <div class="dropdown-menu">
             <form action="{% url 'logout' %}" method="post">{% csrf_token %}
@@ -161,88 +224,102 @@
             </form>
           </div>
         </div>
+
       </div>
     </header>
 
     {% if can_view_monitoring %}
-    <!-- KPIs -->
-    <section class="grid grid-kpis">
-      <div class="card kpi">
-        <div class="kpi-header">
-          <div class="kpi-icon kpi-icon--alarms"><span>⚠️</span></div>
-          <div class="kpi-label">Alarmas</div>
-        </div>
-        <div class="kpi-value">{{ alarms_total|default:"0" }}</div>
-      </div>
 
-      <div class="card kpi">
-        <div class="kpi-header">
-          <div class="kpi-icon kpi-icon--critical"><span>⛔</span></div>
-          <div class="kpi-label">Alarmas críticas</div>
+    <!-- ========== ÁREA EXPORTABLE (KPIs + gráficos) ========== -->
+    <div id="home-export-area">
+      <!-- KPIs -->
+      <section class="grid grid-kpis" id="home-kpis"
+        data-kpi-total="{{ alarms_total|default:'0' }}"
+        data-kpi-critical="{{ alarms_critical_total|default:'0' }}"
+        data-kpi-soar="{{ soar_total|default:'0' }}"
+        data-kpi-telegram="{{ telegram_total|default:'0' }}">
+        <div class="card kpi">
+          <div class="kpi-header">
+            <div class="kpi-icon kpi-icon--alarms"><span>⚠️</span></div>
+            <div class="kpi-label">Alarmas</div>
+          </div>
+          <div class="kpi-value">{{ alarms_total|default:"0" }}</div>
         </div>
-        <div class="kpi-value">{{ alarms_critical_total|default:"0" }}</div>
-      </div>
 
-      <div class="card kpi">
-        <div class="kpi-header">
-          <div class="kpi-icon kpi-icon--soar"><span>🛡️</span></div>
-          <div class="kpi-label">SOAR – Incidentes</div>
+        <div class="card kpi">
+          <div class="kpi-header">
+            <div class="kpi-icon kpi-icon--critical"><span>⛔</span></div>
+            <div class="kpi-label">Alarmas críticas</div>
+          </div>
+          <div class="kpi-value">{{ alarms_critical_total|default:"0" }}</div>
         </div>
-        <div class="kpi-value">{{ soar_total|default:"0" }}</div>
-      </div>
 
-      <div class="card kpi">
-        <div class="kpi-header">
-          <div class="kpi-icon kpi-icon--telegram"><span>💬</span></div>
-          <div class="kpi-label">Telegram – Solicitudes</div>
+        <div class="card kpi">
+          <div class="kpi-header">
+            <div class="kpi-icon kpi-icon--soar"><span>🛡️</span></div>
+            <div class="kpi-label">SOAR – Incidentes</div>
+          </div>
+          <div class="kpi-value">{{ soar_total|default:"0" }}</div>
         </div>
-        <div class="kpi-value">{{ telegram_total|default:"0" }}</div>
-      </div>
-    </section>
 
-    <!-- Charts & severity -->
-    <section class="grid grid-main home-chart-section no-dashboard-gap">
-      <div class="card chart-card home-chart-card">
-        <div class="card-head">
-          <h2 class="card-title">Actividad de Alarmas</h2>
-          <p class="card-subtitle">Tendencia diaria de alarmas totales vs alarmas críticas.</p>
+        <div class="card kpi">
+          <div class="kpi-header">
+            <div class="kpi-icon kpi-icon--telegram"><span>💬</span></div>
+            <div class="kpi-label">Telegram – Solicitudes</div>
+          </div>
+          <div class="kpi-value">{{ telegram_total|default:"0" }}</div>
         </div>
-        <div class="card-body">
-          <div class="chart-wrapper">
-            <canvas id="alarmsTrendChart" data-labels='{{ alarms_daily_labels_json|default:"[]" }}'
-              data-total-series='{{ alarms_daily_total_json|default:"[]" }}'
-              data-critical-series='{{ alarms_daily_critical_json|default:"[]" }}'>
-            </canvas>
+      </section>
+
+      <!-- Charts & severity -->
+      <section class="grid grid-main home-chart-section no-dashboard-gap">
+        <div class="card chart-card home-chart-card">
+          <div class="card-head">
+            <h2 class="card-title">Actividad de Alarmas</h2>
+            <p class="card-subtitle">Tendencia diaria de alarmas totales vs alarmas críticas.</p>
+          </div>
+          <div class="card-body">
+            <div class="chart-wrapper">
+              <canvas id="alarmsTrendChart" data-labels='{{ alarms_daily_labels_json|default:"[]" }}'
+                data-total-series='{{ alarms_daily_total_json|default:"[]" }}'
+                data-critical-series='{{ alarms_daily_critical_json|default:"[]" }}'>
+              </canvas>
+            </div>
           </div>
         </div>
-      </div>
 
-      {% if severity_summary %}
-      <aside class="card severity-card">
-        <div class="card-head">
-          <h2 class="card-title">Severidad de Alarmas</h2>
-          <p class="card-subtitle">Distribución por tipo para el tenant actual.</p>
-        </div>
-        <div class="card-body severity-body">
-          <ul class="severity-list">
-            {% for sev in severity_summary %}
-            <li class="severity-item">
-              <div class="severity-main">
-                <span class="severity-ico sev-ico-{{ sev.key }}">
-                  {% if sev.key == "critical" %}⛔{% elif sev.key == "high" %}⚠️{% elif sev.key == "medium" %}🔶{% else %}❔{% endif %}
-                </span>
-                <span class="pill {{ sev.css_class }}">{{ sev.label }}</span>
-              </div>
-              <span class="severity-count">{{ sev.count }}</span>
-            </li>
-            {% endfor %}
-          </ul>
-        </div>
-      </aside>
-      {% endif %}
-    </section>
+        {% if severity_summary %}
+        <aside class="card severity-card">
+          <div class="card-head">
+            <h2 class="card-title">Severidad de Alarmas</h2>
+            <p class="card-subtitle">Distribución por tipo para el tenant actual.</p>
+          </div>
+          <div class="card-body severity-body">
+            <ul class="severity-list">
+              {% for sev in severity_summary %}
+              <li class="severity-item"
+                  data-key="{{ sev.key }}"
+                  data-label="{{ sev.label }}"
+                  data-count="{{ sev.count }}"
+                  data-percent="{{ sev.percent }}">
+                <div class="severity-main">
+                  <span class="severity-ico sev-ico-{{ sev.key }}">
+                    {% if sev.key == "critical" %}⛔{% elif sev.key == "high" %}⚠️{% elif sev.key == "medium" %}🔶{% else %}❔{% endif %}
+                  </span>
+                  <span class="pill {{ sev.css_class }}">{{ sev.label }}</span>
+                </div>
+                <span class="severity-count">{{ sev.count }}</span>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </aside>
+        {% endif %}
+      </section>
+    </div>
+    <!-- ========== /ÁREA EXPORTABLE ========== -->
 
-    <!-- Buscadores IP -->
+    <!-- Buscadores IP (NO se exportan) -->
     <section class="home-ip-section">
       <div class="home-ip-grid">
         <div class="home-ip-card">
@@ -255,7 +332,9 @@
             <div class="home-ip-input-row">
               <input type="search" name="blacklist_q" placeholder="Ej: 80.64.18.80, 167.94.146.61"
                 value="{{ blacklist_q|default:'' }}" class="home-ip-input" />
-              <button type="submit" class="home-ip-btn"><span class="home-ip-btn-icon">🔍</span><span>Buscar</span></button>
+              <button type="submit" class="home-ip-btn">
+                <span class="home-ip-btn-icon">🔍</span><span>Buscar</span>
+              </button>
             </div>
 
             <div class="home-ip-examples">
@@ -276,7 +355,9 @@
             <div class="home-ip-input-row">
               <input type="search" name="whitelist_q" placeholder="Ej: 10.0.0.5, 10.0.0.6"
                 value="{{ whitelist_q|default:'' }}" class="home-ip-input" />
-              <button type="submit" class="home-ip-btn"><span class="home-ip-btn-icon">🔍</span><span>Buscar</span></button>
+              <button type="submit" class="home-ip-btn">
+                <span class="home-ip-btn-icon">🔍</span><span>Buscar</span>
+              </button>
             </div>
 
             <div class="home-ip-examples">
@@ -309,7 +390,6 @@
             <ul class="ip-results-list">
               {% for ip in blacklist_results %}
               <li class="ip-result-item">
-                <!-- detalle IP (igual que antes) -->
                 <div class="ip-detail-card">
                   <div class="block ip-section-block">
                     <h4>ENCABEZADO</h4>
@@ -321,8 +401,13 @@
                   </div>
                   <div class="block ip-section-block">
                     <h4>DETALLE DEL LOG</h4>
-                    <ul class="stacked"><li><strong>Log ID:</strong> {{ ip.logid|default:"-" }}</li></ul>
-                    <p class="muted" style="margin-top:.4rem;"><strong>Descripción del log:</strong><br>{{ ip.log_description|default:"Sin descripción disponible desde el log." }}</p>
+                    <ul class="stacked">
+                      <li><strong>Log ID:</strong> {{ ip.logid|default:"-" }}</li>
+                    </ul>
+                    <p class="muted" style="margin-top:.4rem;">
+                      <strong>Descripción del log:</strong><br>
+                      {{ ip.log_description|default:"Sin descripción disponible desde el log." }}
+                    </p>
                   </div>
                   <div class="block ip-section-block">
                     <h4>CLASIFICACIÓN</h4>
@@ -350,7 +435,9 @@
             <h4 class="ip-modal-title">Whitelist</h4>
             <p class="ip-search-meta">Búsqueda: <strong>{{ whitelist_q }}</strong></p>
             {% if whitelist_not_found_terms %}
-            <p class="ip-subtitle" style="margin-top:0.75rem;">IPs no encontradas en la whitelist (usa el botón de abajo para solicitar añadirlas).</p>
+            <p class="ip-subtitle" style="margin-top:0.75rem;">
+              IPs no encontradas en la whitelist (usa el botón de abajo para solicitar añadirlas).
+            </p>
             <ul class="ip-results-list">
               {% for ip in whitelist_not_found_terms %}
               <li class="ip-result-item"><span class="ip-pill">{{ ip }}</span></li>
@@ -369,7 +456,8 @@
 
         <div class="modal-foot">
           {% if blacklist_results %}
-          <form method="post" action="{% url 'home:blacklist_create_ticket' %}" class="ip-footer-form">{% csrf_token %}
+          <form method="post" action="{% url 'home:blacklist_create_ticket' %}" class="ip-footer-form">
+            {% csrf_token %}
             <input type="hidden" name="ip" value="{{ blacklist_results.0.ip }}">
             {% if blacklist_q %}<input type="hidden" name="blacklist_q_original" value="{{ blacklist_q }}">{% endif %}
             {% if blacklist_removed %}<input type="hidden" name="blacklist_removed_original" value="{{ blacklist_removed }}">{% endif %}
@@ -378,7 +466,8 @@
           {% endif %}
 
           {% if whitelist_q and show_whitelist_modal and whitelist_not_found_terms %}
-          <form method="post" action="{% url 'home:whitelist_create_ticket' %}" class="ip-footer-form">{% csrf_token %}
+          <form method="post" action="{% url 'home:whitelist_create_ticket' %}" class="ip-footer-form">
+            {% csrf_token %}
             <input type="hidden" name="ip" value="{{ whitelist_not_found_terms.0 }}">
             <input type="hidden" name="whitelist_q_original" value="{{ whitelist_q }}">
             {% if whitelist_removed %}<input type="hidden" name="whitelist_removed_original" value="{{ whitelist_removed }}">{% endif %}
@@ -391,7 +480,7 @@
       </div>
     </div>
 
-    <!-- Whitelist table -->
+    <!-- Whitelist table (NO se exporta) -->
     <section class="home-whitelist-section">
       <div class="home-whitelist-card">
         <div class="home-whitelist-head">
@@ -399,7 +488,10 @@
             <div class="home-whitelist-title-icon">🛡️</div>
             <div class="home-whitelist-title-text">
               <h2>Whitelist</h2>
-              <p class="home-whitelist-subtitle">Tenant: <strong>{{ tenant.name }}</strong>{% if whitelist_q %} · filtro: <code>{{ whitelist_q }}</code>{% endif %}</p>
+              <p class="home-whitelist-subtitle">
+                Tenant: <strong>{{ tenant.name }}</strong>
+                {% if whitelist_q %} · filtro: <code>{{ whitelist_q }}</code>{% endif %}
+              </p>
             </div>
           </div>
         </div>
@@ -407,7 +499,16 @@
         {% if whitelist_results %}
         <div class="home-whitelist-table-wrapper">
           <table class="home-whitelist-table">
-            <thead><tr><th>IP</th><th>Cliente</th><th>ISP</th><th>Motivo</th><th>Fecha creación</th><th>Última actualización</th></tr></thead>
+            <thead>
+              <tr>
+                <th>IP</th>
+                <th>Cliente</th>
+                <th>ISP</th>
+                <th>Motivo</th>
+                <th>Fecha creación</th>
+                <th>Última actualización</th>
+              </tr>
+            </thead>
             <tbody>
               {% for ip in whitelist_results %}
               <tr>
@@ -423,7 +524,16 @@
           </table>
         </div>
         {% else %}
-        <p class="home-whitelist-empty"><span class="home-whitelist-empty-icon">🛡️</span><span>{% if whitelist_q %}No se encontraron IPs en la whitelist para ese criterio en este tenant.{% else %}No hay IPs en la whitelist para este tenant.{% endif %}</span></p>
+        <p class="home-whitelist-empty">
+          <span class="home-whitelist-empty-icon">🛡️</span>
+          <span>
+            {% if whitelist_q %}
+              No se encontraron IPs en la whitelist para ese criterio en este tenant.
+            {% else %}
+              No hay IPs en la whitelist para este tenant.
+            {% endif %}
+          </span>
+        </p>
         {% endif %}
       </div>
     </section>
@@ -463,7 +573,7 @@
 
   </div> <!-- /content -->
 
-  <!-- Coachmark elements (outside .content) -->
+  <!-- Coachmark elements (legacy, por si los usas en otras vistas) -->
   <div id="coachmarkBackdrop" class="coachmark-backdrop hidden"></div>
   <div id="coachmarkGeneric" class="coachmark hidden" role="dialog" aria-modal="true">
     <h3 class="coachmark-title">Guía rápida</h3>
@@ -473,17 +583,23 @@
     </div>
   </div>
 
-  <!-- App scripts (defer ok) -->
+  <!-- App scripts -->
   <script defer src="{% static 'js/home_portal.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/home_ip_tickets.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/menus_dropdowns.js' %}?v={% now 'U' %}"></script>
 
-  <!-- onboarding: ambos scripts desde static (sin inline JS) -->
-  <!-- onboarding_hints.js debe exponer window.initSidebarOnboarding -->
   <script defer src="{% static 'js/alarms_one/page-loader-universal.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/coach_allinone.js' %}?v={% now 'U' %}"></script>
   <script src="{% static 'js/home_whitelist_scroll.js' %}?v={% now 'U' %}"></script>
+
+  <!-- Librerías para exportar Home -->
+  <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script defer src="{% static 'js/home_export.js' %}?v={% now 'U' %}"></script>
+  <script src="{% static 'js/country_filter_modal.js' %}?v={% now 'U' %}"></script>
+
   {% include 'partials/config_notificaciones_modal.html' %}
+  {% include "partials/_country_filter_modal.html" %}
 </body>
 
 </html>

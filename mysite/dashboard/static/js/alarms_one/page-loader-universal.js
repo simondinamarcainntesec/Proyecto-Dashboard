@@ -1,5 +1,7 @@
+// static/js/alarms_one/page-loader-universal.js
 (function () {
-  // Crea o reutiliza el overlay, pero usando el HTML que depende del CSS externo
+  let hideTimer = null;
+
   const ensureOverlay = () => {
     let ov = document.getElementById('loading-overlay');
     if (!ov) {
@@ -21,56 +23,87 @@
     const ov = ensureOverlay();
     const txt = ov.querySelector('.loading-text');
     if (txt) txt.textContent = msg;
-    ov.classList.add('is-active'); // usa tu clase CSS
+    ov.classList.add('is-active');
+
+    // Safety: si algo sale mal, se apaga solo
+    if (hideTimer) clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => {
+      const current = document.getElementById('loading-overlay');
+      if (current) current.classList.remove('is-active');
+    }, 8000);
   };
 
   const hide = () => {
+    if (hideTimer) {
+      clearTimeout(hideTimer);
+      hideTimer = null;
+    }
     const ov = document.getElementById('loading-overlay');
     if (!ov) return;
     ov.classList.remove('is-active');
   };
 
+  // Observa la modal de IP: cuando se haga visible, apagamos el loader
+  const watchIpModal = () => {
+    const ipModal = document.getElementById('ipSearchModal');
+    if (!ipModal) return;
+
+    const checkVisible = () => {
+      const isHiddenClass = ipModal.classList.contains('hidden');
+      const ariaHidden = ipModal.getAttribute('aria-hidden');
+      // Visible cuando NO tiene "hidden" y aria-hidden es "false" o null
+      if (!isHiddenClass && ariaHidden !== 'true') {
+        hide();
+      }
+    };
+
+    // Check inicial (por si ya se renderiza visible desde el backend)
+    checkVisible();
+
+    // Observamos cambios de clase / aria-hidden
+    const observer = new MutationObserver(checkVisible);
+    observer.observe(ipModal, {
+      attributes: true,
+      attributeFilter: ['class', 'aria-hidden'],
+    });
+  };
+
   const bindHandlers = () => {
+    // Al cargar la página actual, empezamos con el overlay apagado
     hide();
 
-    // --- click en enlaces (navegación clásica) ---
-    document.addEventListener('click', (e) => {
-      const a = e.target.closest('a');
-      if (!a) return;
+    // --- BÚSQUEDA DE IP (formularios .home-ip-form) ---
+    document.addEventListener('submit', (e) => {
+      const form = e.target;
+      if (form && form.matches('.home-ip-form')) {
+        // Da igual si es AJAX o navegación normal, mostramos loader
+        show('Buscando IP…');
+      }
+    });
 
-      // evitar modificadores o externos
-      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-      if (a.target && a.target !== '' && a.target !== '_self') return;
-      const href = a.getAttribute('href') || '';
-      if (href.startsWith('#') || href.startsWith('javascript:')) return;
+    // --- Botón Actualizar ---
+    const refreshBtn = document.getElementById('btn-refresh');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', (e) => {
+        // Si otro script cancela el click, igual mostramos loader
+        show('Actualizando datos…');
+      });
+    }
 
-      // === fuerza repintado antes del cambio ===
+    // --- Navegaciones genéricas ---
+    window.addEventListener('beforeunload', () => {
       show();
-      const start = performance.now();
-      while (performance.now() - start < 35) {} // ~35 ms
     });
 
-    // --- formularios ---
-    document.addEventListener('submit', () => show(), true);
+    window.addEventListener('pageshow', () => hide());
+    window.addEventListener('load', () => hide());
 
-    // --- botones con data-loading ---
-    document.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-loading="instant"]');
-      if (btn) show('Actualizando datos…');
-    });
-
-    // --- F5 / Ctrl+R ---
-    window.addEventListener('keydown', (e) => {
-      const isF5 = e.key === 'F5';
-      const isReloadCombo = (e.key === 'r' || e.key === 'R') && (e.ctrlKey || e.metaKey);
-      if (isF5 || isReloadCombo) show('Recargando…');
-    });
-
-    // --- beforeunload / pageshow ---
-    window.addEventListener('beforeunload', () => show());
-    window.addEventListener('pageshow', hide);
-    window.addEventListener('load', hide);
+    // Vigilar la modal de resultados de IP
+    watchIpModal();
   };
+
+  // Exponer helpers por si otro JS quiere usarlos
+  window.PageLoader = { show, hide };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', bindHandlers);

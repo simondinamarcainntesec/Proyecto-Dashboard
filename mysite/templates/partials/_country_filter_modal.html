@@ -1,0 +1,54 @@
+{# templates/partials/_country_filter_modal.html #}
+
+<div id="countryModal" class="modal-overlay hidden" onclick="backdropClickCountry(event)">
+  <div class="modal-card">
+    {# Toast interno para feedback al guardar #}
+    <div id="countrySaveToast" class="save-toast hidden">
+      Preferencias de países guardadas
+    </div>
+
+    <div class="modal-head">
+      <h3>Filtro de países para Whitelist</h3>
+      <button type="button" class="close-btn" onclick="toggleCountryModal(false)">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <p class="modal-desc">
+        Selecciona los países cuyos rangos de IP quieres visualizar en la whitelist.
+      </p>
+
+      <div class="country-grid">
+        {# Recorremos todos los países entregados por el view #}
+        {% for c in whitelist_countries %}
+          <label
+            class="country-pill {% if c.name in selected_paises %}is-selected{% endif %}">
+            <input
+              type="checkbox"
+              class="country-checkbox"
+              value="{{ c.code }}"
+              {% if c.name in selected_paises %}checked{% endif %}
+            >
+            <span>{{ c.name }}</span>
+          </label>
+        {% empty %}
+          <p class="modal-hint">
+            No hay países disponibles para seleccionar.
+          </p>
+        {% endfor %}
+      </div>
+
+      <p class="modal-hint">
+        Si no seleccionas ningún país, se mostrarán todas las IPs disponibles.
+      </p>
+    </div>
+
+    <div class="modal-foot">
+      <button type="button" class="btn ghost" onclick="resetCountryFilter()">
+        Limpiar filtro
+      </button>
+      <button type="button" class="btn primary" onclick="saveCountryFilter()">
+        Aplicar filtro
+      </button>
+    </div>
+  </div>
+</div>

@@ -99,7 +99,13 @@ body{
 .kpi-value{font-weight:800;font-size:1.6rem}
 
 /* ===== Chips de secciones ===== */
-.section-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:2px}
+.section-chips{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:12px;      /* espacio respecto a las KPIs */
+  margin-bottom:12px;   /* espacio respecto a los gráficos */
+}
 .chip{
   appearance:none;border:1px solid var(--border);background:var(--chip-bg);
   color:#e5e7eb;font-weight:700;border-radius:999px;padding:.45rem .8rem;cursor:pointer;
@@ -414,4 +420,49 @@ td.is-right{ text-align:right; }
 
 @media (max-width: 800px){
   #soarIncidentsModal .si-search{ flex: 1 1 100%; max-width:none; min-width:0; }
+}
+
+/* ===== Menú Exportar (SOAR / Alarmas) ===== */
+.export-wrapper{
+  position: relative;
+  display: inline-block;
+}
+
+.export-menu{
+  position: absolute;
+  top: 110%;           /* justo debajo del botón */
+  right: 0;
+  background: var(--card, #0f1d35);
+  border: 1px solid var(--border, #1e293b);
+  border-radius: 12px;
+  box-shadow: var(--shadow, 0 10px 28px rgba(2,6,23,.25));
+  padding: 4px;
+  min-width: 170px;
+  display: none;       /* oculto por defecto */
+  z-index: 60;
+}
+
+.export-menu.is-open{
+  display: flex;
+  flex-direction: column;
+}
+
+.export-menu button{
+  width: 100%;
+  background: transparent;
+  border: 0;
+  color: #e5e7eb;
+  text-align: left;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.export-menu button:hover{
+  background: rgba(255,255,255,.06);
 }

@@ -6,13 +6,19 @@ from django.utils.html import format_html
 from .models import Tenant, Client, TenantUser
 from django.utils import timezone
 
+from home.models import TenantCredentials
+from .models import TenantDashboardEmbed
+# Mover modelos de home al app "tenants" en el admin
+TenantCredentials._meta.app_label = "tenants"
+TenantDashboardEmbed._meta.app_label = "tenants"
+
+
 @admin.register(Tenant)
 class TenantAdmin(admin.ModelAdmin):
     list_display = ("name", "alarms_one_id", "logs360siem_id", "site24x7_id", "created_at")
     search_fields = ("name", "alarms_one_id", "logs360siem_id", "site24x7_id")
     list_filter = ("created_at",)
     ordering = ("name",)
-
 
 
 @admin.register(Client)
@@ -27,7 +33,6 @@ class ClientAdmin(admin.ModelAdmin):
         return qs.annotate(_name_lower=Lower("name")).order_by("_name_lower")
 
 
-
 @admin.register(TenantUser)
 class TenantUserAdmin(UserAdmin):
     """
@@ -37,6 +42,7 @@ class TenantUserAdmin(UserAdmin):
     model = TenantUser
 
     list_display = (
+        "id",
         "username", "email", "first_name", "last_name",
         "tenant", "is_active", "is_staff", "is_superuser", "last_login",
         "Alarma_Telegram", "Alarma_Telefono", "Alarma_Correo",
@@ -71,9 +77,9 @@ class TenantUserAdmin(UserAdmin):
         (None, {
             "classes": ("wide",),
             "fields": (
+                "id",
                 "username", "email", "password1", "password2",
                 "tenant", "is_active", "is_staff", "is_superuser",
-                # 🔔 También disponibles al crear
                 "Alarma_Telegram", "Alarma_Telefono", "Alarma_Correo",
             ),
         }),
@@ -126,3 +132,111 @@ class TenantUserAdmin(UserAdmin):
     def save_related(self, request, form, formsets, change):
         # No tocamos relaciones M2M
         pass
+
+
+@admin.register(TenantDashboardEmbed)
+class TenantDashboardEmbedAdmin(admin.ModelAdmin):
+    """
+    Admin para el modelo que guarda el iframe por tenant.
+    Muestra el nombre del tenant y el tenant_name cacheado.
+    """
+    list_display = ("tenant", "tenant_name", "iframe_url", "created_at", "updated_at")
+    search_fields = ("tenant_name", "tenant__name", "iframe_url")
+    list_filter = ("tenant", "created_at", "updated_at")
+    ordering = ("tenant_name",)
+    list_select_related = ("tenant",)
+
+    readonly_fields = ("tenant_name", "created_at", "updated_at")
+
+    fieldsets = (
+        ("Tenant", {
+            "fields": ("tenant", "tenant_name"),
+        }),
+        ("Dashboard embebido", {
+            "fields": ("iframe_url",),
+        }),
+        ("Timestamps", {
+            "classes": ("collapse",),
+            "fields": ("created_at", "updated_at"),
+        }),
+    )
+
+
+@admin.register(TenantCredentials)
+class TenantCredentialsAdmin(admin.ModelAdmin):
+    # Columnas visibles en la tabla del admin
+    list_display = (
+        "tenant_id",
+        "tenant_name",
+        "username",
+        "is_active",
+        "alarms_one_id",
+        "logs360siem_id",
+        "site24x7_id",
+        "first_login_at",
+        "last_login_at",
+        "created_at",
+        "updated_at",
+    )
+
+    # Campos que puedo buscar desde el admin
+    search_fields = (
+        "tenant_name",
+        "username",
+        "alarms_one_id",
+        "logs360siem_id",
+        "site24x7_id",
+        "password",   # opcional, puedes quitarlo si no quieres buscar por pass
+    )
+
+    # Filtros laterales
+    list_filter = (
+        "is_active",
+        "tenant_id",
+        "created_at",
+        "updated_at",
+    )
+
+    # Orden inicial
+    ordering = ("-updated_at",)
+
+    # Campos de solo lectura (timestamps)
+    readonly_fields = (
+        "first_login_at",
+        "last_login_at",
+        "created_at",
+        "updated_at",
+    )
+
+    # Organización del formulario individual
+    fieldsets = (
+        ("Identificación del Tenant", {
+            "fields": (
+                "tenant_id",
+                "tenant_name",
+            )
+        }),
+        ("Servicios habilitados", {
+            "fields": (
+                "alarms_one_id",
+                "logs360siem_id",
+                "site24x7_id",
+            )
+        }),
+        ("Credenciales de acceso", {
+            "fields": (
+                "username",
+                "password",
+                "is_active",
+            )
+        }),
+        ("Timestamps", {
+            "classes": ("collapse",),  # plegado
+            "fields": (
+                "first_login_at",
+                "last_login_at",
+                "created_at",
+                "updated_at",
+            )
+        }),
+    )

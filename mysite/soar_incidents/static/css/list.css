@@ -211,3 +211,56 @@ body.modal-open { overflow: hidden; }
   width: 100%;
 }
 
+/* ==== Menú de exportación SOAR / listas ==== */
+
+.export-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Dropdown oculto por defecto */
+.export-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 240px;
+
+  background: #020617;           /* fondo oscuro como el resto del panel */
+  border-radius: 0.75rem;
+  padding: 0.4rem 0;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.85);
+
+  display: none;                 /* 👈 clave: oculto por defecto */
+  z-index: 60;
+}
+
+/* Cuando JS le agrega .is-open se muestra como tarjeta flotante */
+.export-menu.is-open {
+  display: block;
+}
+
+/* Estilo de las opciones */
+.export-menu button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #e5e7eb;
+  font-size: 0.875rem;
+  padding: 0.45rem 0.9rem;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.export-menu button:hover {
+  background: #0f172a;
+}
+
+/* Si quieres que el icono quede alineado bonito */
+.export-menu button::first-letter {
+  /* nada especial, solo aseguramos que el emoji no se recorte */
+}

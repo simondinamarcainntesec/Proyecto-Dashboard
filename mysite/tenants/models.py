@@ -14,6 +14,7 @@ class Tenant(models.Model):
     site24x7_id = models.TextField(null=True, blank=True, help_text="ID de Site24x7")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    site24x7_dashboard_url = models.URLField(blank=True, null=True, help_text="URL pública del dashboard Site24x7 (iframe)")
 
     def __str__(self):
         return self.name
@@ -47,6 +48,7 @@ class Client(models.Model):
     email = models.EmailField(unique=True, help_text="Email del cliente (campo 'Email' de la API)")
     phone = models.CharField(max_length=50, null=True, blank=True, help_text="Teléfono del cliente (campo 'Telefono' de la API)")
     telegram_id = models.CharField(max_length=100, null=True, blank=True, help_text="ID de Telegram del cliente (campo 'Telegram' de la API)")
+
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -85,3 +87,52 @@ class TenantUser(AbstractUser):
 
     def __str__(self):
         return f"{self.username} ({self.tenant.name if self.tenant else 'Sin tenant'})"
+
+
+class TenantDashboardEmbed(models.Model):
+    """
+    Guarda URLs de iframes externos asociados a un Tenant.
+
+    - tenant: FK al Tenant (empresa)
+    - tenant_name: nombre del tenant en texto plano (cacheado)
+    - iframe_url: URL completa que se usará en el <iframe>
+    """
+    tenant = models.OneToOneField(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name="dashboard_iframe",
+        help_text="Empresa a la que pertenece este iframe"
+    )
+
+    # Nuevo campo: con default vacío, así no rompe migraciones existentes
+    tenant_name = models.CharField(
+      max_length=255,
+      editable=False,
+      blank=True,
+      default="",
+      help_text="Nombre del tenant en el momento de guardar el registro"
+    )
+
+    iframe_url = models.URLField(
+        help_text="URL pública del dashboard a embeber en un iframe"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Site 24x7 Iframe"
+        verbose_name_plural = "Site 24x7 Iframe"
+
+    def save(self, *args, **kwargs):
+        """
+        Antes de guardar, sincroniza tenant_name con el nombre actual
+        del tenant (columna name de public.tenants_tenant).
+        """
+        if self.tenant_id and getattr(self.tenant, "name", None):
+            self.tenant_name = self.tenant.name
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        # Muestra el nombre cacheado; si por alguna razón estuviera vacío,
+        # usa el nombre actual del tenant.
+        return f"{self.tenant_name or getattr(self.tenant, 'name', '')} - Dashboard"

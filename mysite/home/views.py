@@ -16,7 +16,14 @@ from tenants.models import Tenant, TenantUser
 
 from inyeccion_api.models import Alarm
 from soar_incidents.models import IncidenteSOAR
-from .models import TelegramSolicitud, IPBlacklist, IPWhitelist, TenantCredentials
+from .models import (
+    TelegramSolicitud,
+    IPBlacklist,
+    IPWhitelist,
+    TenantCredentials,
+    WhitelistCountryPreference,
+)
+from .countries import ALL_COUNTRIES, COUNTRY_BY_CODE
 
 from dashboard.charts import make_base_qs
 import requests
@@ -77,6 +84,37 @@ def _split_search_terms(raw: str) -> list[str]:
     return [part.strip() for part in raw.split(",") if part.strip()]
 
 
+def _parse_country_codes(raw: str) -> list[str]:
+    """
+    Convierte 'CL, AR, US' -> ['CL', 'AR', 'US'] (en mayúsculas, sin espacios vacíos).
+    """
+    if not raw:
+        return []
+    return [
+        c.strip().upper()
+        for c in raw.split(",")
+        if c.strip()
+    ]
+
+
+def _save_country_pref(user, tenant, paises: list[str]) -> None:
+    """
+    Guarda en agent.whitelist_country_preference la lista de países (nombres)
+    seleccionados por usuario + tenant.
+    Si paises es [], deja registrada la preferencia vacía (filtro limpio).
+    """
+    from django.utils import timezone as _tz
+
+    WhitelistCountryPreference.objects.update_or_create(
+        user=user,
+        tenant=tenant,
+        defaults={
+            "paises": paises,
+            "updated_at": _tz.now(),
+        },
+    )
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Helper: IP del cliente (funciona con o sin proxy si Apache/Nginx está ok)
 # ──────────────────────────────────────────────────────────────────────────────
@@ -103,10 +141,11 @@ def _upsert_whitelist_from_download(
       - ip                  -> IP pública del cliente
       - cliente             -> NOMBRE DEL TENANT que descarga
       - organizacion        -> NOMBRE DEL TENANT (igual que cliente)
-      - motivo              -> 'ip_whitelist automatizada' (solo al crear)
+      - motivo              -> 'Automatizado' (solo al crear)
       - fecha_creacion      -> now (solo al crear)
       - fecha_actualizacion -> now (siempre en descarga)
       - tenant_id           -> id del tenant actual (si se puede resolver)
+                               (primero con tenant FK, luego con TenantCredentials)
     """
     try:
         logger.info(
@@ -127,7 +166,7 @@ def _upsert_whitelist_from_download(
             getattr(user, "username", None),
         )
 
-        # 1) Intentar sacar el tenant desde las credenciales (lo ideal)
+        # 1) Intentar sacar el tenant desde las credenciales (FK Tenant en TenantCredentials)
         tenant_obj = None
         if creds is not None:
             tenant_obj = getattr(creds, "tenant", None)
@@ -150,15 +189,26 @@ def _upsert_whitelist_from_download(
         tenant_name = (getattr(tenant_obj, "name", "") or "").strip() if tenant_obj else ""
         tenant_id = getattr(tenant_obj, "id", None) if tenant_obj else None
 
+        # 3) Fallback usando agent.tenant_credentials (tenant_id / tenant_name)
+        cred_tenant_id = getattr(creds, "tenant_id", None) if creds else None
+        cred_tenant_name = (getattr(creds, "tenant_name", "") or "").strip() if creds else ""
+
+        if not tenant_id and cred_tenant_id:
+            tenant_id = cred_tenant_id
+
+        if not tenant_name and cred_tenant_name:
+            tenant_name = cred_tenant_name
+
         logger.info(
-            "[WHITELIST UPSERT] Tenant resuelto: name='%s', id=%s",
+            "[WHITELIST UPSERT] Tenant resuelto: name='%s', id=%s (cred_name='%s', cred_id=%s)",
             tenant_name,
             tenant_id,
+            cred_tenant_name,
+            cred_tenant_id,
         )
 
         # Por requerimiento: cliente = nombre del tenant
         if not tenant_name:
-            # Si no logramos resolver el tenant, al menos no dejamos cliente vacío
             tenant_name = "Tenant desconocido"
 
         now = dj_timezone.now()
@@ -175,10 +225,10 @@ def _upsert_whitelist_from_download(
             ip=ip,
             defaults={
                 "cliente": tenant_name,
+                "organizacion": tenant_name,
                 "fecha_creacion": now,
                 "fecha_actualizacion": now,
                 "motivo": "Automatizado",
-                # Django acepta tenant_id aunque el campo sea ForeignKey('Tenant')
                 "tenant_id": tenant_id,
             },
         )
@@ -207,9 +257,10 @@ def _upsert_whitelist_from_download(
             IPWhitelist.objects.filter(pk=obj.pk).update(**update_kwargs)
 
         logger.info(
-            "[WHITELIST UPSERT] Finalizado OK para ip=%s, cliente='%s'",
+            "[WHITELIST UPSERT] Finalizado OK para ip=%s, cliente='%s', tenant_id=%s",
             ip,
             tenant_name,
+            tenant_id,
         )
 
     except Exception:
@@ -225,7 +276,6 @@ def _build_severity_summary(qs):
     if qs is None:
         return []
 
-    # normalizamos msg_severity → sev_norm (minúsculas, sin espacios raros)
     base = _annotate_norm_field(qs, "msg_severity", "sev_norm")
 
     dist = (
@@ -240,7 +290,7 @@ def _build_severity_summary(qs):
         "medium": 0,
         "low": 0,
         "info": 0,
-        "na": 0,   # N/A / sin información
+        "na": 0,
     }
 
     for row in dist:
@@ -260,14 +310,12 @@ def _build_severity_summary(qs):
         elif raw in {"info", "informational", "informacion", "información"}:
             key = "info"
         else:
-            # cualquier valor raro lo mandamos a "sin información"
             key = "na"
 
         counts[key] += n
 
-    total = sum(counts.values()) or 1  # evitar división por 0
+    total = sum(counts.values()) or 1
 
-    # Solo mostramos 4 niveles en la tarjeta
     config = [
         ("critical", "Crítica", "sev-critical"),
         ("high", "Alta", "sev-high"),
@@ -281,9 +329,9 @@ def _build_severity_summary(qs):
         pct = round(c * 100 / total)
         summary.append(
             {
-                "key": key,          # critical, high, etc.
-                "label": label,      # texto legible
-                "css_class": css,    # clase CSS pill: sev-critical, etc.
+                "key": key,
+                "label": label,
+                "css_class": css,
                 "count": c,
                 "percent": pct,
             }
@@ -300,9 +348,6 @@ def home_index(request):
 
     # ─────────────────────────────────────────────
     # Permiso para ver la parte de monitorización
-    # (Alarmas / SOAR / Telegram / buscadores IP)
-    # Lógica: solo si el tenant tiene algún servicio
-    # alarms_one_id / logs360siem_id / site24x7_id
     # ─────────────────────────────────────────────
     can_view_monitoring = False
     try:
@@ -327,13 +372,9 @@ def home_index(request):
     # =======================
     alarms_total = 0
     alarms_critical_total = 0
-
-    # Series para el gráfico (por día)
     alarms_daily_labels: list[str] = []
     alarms_daily_total: list[int] = []
     alarms_daily_critical: list[int] = []
-
-    # Resumen de severidad (por tenant)
     severity_summary: list[dict] = []
 
     if can_view_monitoring and norm_tid:
@@ -342,13 +383,11 @@ def home_index(request):
         try:
             qs_base = make_base_qs(dt_from_utc, dt_to_utc_exclusive)
 
-            # Totales globales
             alarms_total = qs_base.count()
             alarms_critical_total = qs_base.filter(
                 msg_severity__iexact="critical"
             ).count()
 
-            # Serie diaria: total vs críticas por día (event_time)
             daily_qs = qs_base.exclude(event_time__isnull=True)
             daily = (
                 daily_qs
@@ -362,29 +401,24 @@ def home_index(request):
             )
 
             for row in daily:
-                alarms_daily_labels.append(str(row["day"]))   # "YYYY-MM-DD"
+                alarms_daily_labels.append(str(row["day"]))
                 alarms_daily_total.append(row["total"])
                 alarms_daily_critical.append(row["critical"])
 
-            # 🔹 Resumen de severidad filtrado por el mismo tenant
             severity_summary = _build_severity_summary(qs_base)
 
         except Exception:
-            # Fallback si make_base_qs falla
             try:
                 qs_fallback = _annotate_norm_field(
                     Alarm.objects.all(), "tags", "norm_aotag"
                 )
-
                 base_fb = qs_fallback.filter(norm_aotag=norm_tid)
 
-                # Totales
                 alarms_total = base_fb.count()
                 alarms_critical_total = base_fb.filter(
                     msg_severity__iexact="critical"
                 ).count()
 
-                # Serie diaria con fallback
                 daily_fb = (
                     base_fb
                     .exclude(event_time__isnull=True)
@@ -402,7 +436,6 @@ def home_index(request):
                     alarms_daily_total.append(row["total"])
                     alarms_daily_critical.append(row["critical"])
 
-                # 🔹 Resumen de severidad en el fallback (igual por tenant)
                 severity_summary = _build_severity_summary(base_fb)
 
             except Exception as e:
@@ -479,13 +512,49 @@ def home_index(request):
             logger.exception("[HOME] Error búsqueda blacklist: %s", e)
 
     # =======================
-    # WHITELIST (tabla + modal)
+    # WHITELIST (tabla + filtros por país + modal)
     # =======================
     whitelist_results = IPWhitelist.objects.none()
     whitelist_not_found_terms: list[str] = []
     show_whitelist_modal = False
 
-    # Base: whitelist del tenant (listado)
+    # 1) Determinar países seleccionados (preferencias)
+    has_countries_param = "countries" in request.GET
+    raw_country_codes = (request.GET.get("countries") or "").strip()
+    codes_from_query = _parse_country_codes(raw_country_codes)
+
+    if codes_from_query:
+        # Hay países en la URL → convertir códigos ISO a nombres en español y guardar
+        selected_paises = [
+            COUNTRY_BY_CODE[code]
+            for code in codes_from_query
+            if code in COUNTRY_BY_CODE
+        ]
+        try:
+            _save_country_pref(user, tenant, selected_paises)
+        except Exception as e:
+            logger.exception("[HOME WHITELIST] Error guardando preferencias de países: %s", e)
+
+    elif has_countries_param:
+        # Viene el parámetro 'countries' PERO vacío → limpiar preferencia
+        selected_paises = []
+        try:
+            _save_country_pref(user, tenant, [])
+        except Exception as e:
+            logger.exception("[HOME WHITELIST] Error limpiando preferencias de países: %s", e)
+
+    else:
+        # No viene 'countries' en la URL → cargar lo que haya guardado
+        try:
+            pref = WhitelistCountryPreference.objects.get(user=user, tenant=tenant)
+            selected_paises = pref.paises or []
+        except WhitelistCountryPreference.DoesNotExist:
+            selected_paises = []
+        except Exception as e:
+            logger.exception("[HOME WHITELIST] Error leyendo preferencias de países: %s", e)
+            selected_paises = []
+
+    # 2) Base: whitelist del tenant (listado)
     whitelist_table = IPWhitelist.objects.all()
     if tenant:
         t_name = (getattr(tenant, "name", "") or "").strip()
@@ -505,9 +574,13 @@ def home_index(request):
         else:
             whitelist_table = IPWhitelist.objects.none()
 
+    # 3) Aplicar filtro por países seleccionados (si hay)
+    if selected_paises:
+        whitelist_table = whitelist_table.filter(pais__in=selected_paises)
+
+    # 4) Búsqueda dentro de la whitelist del tenant (filtrada o no por país)
     if whitelist_terms:
         try:
-            # Buscar dentro del whitelist del tenant (ya filtrado arriba)
             q_wl = Q()
             for term in whitelist_terms:
                 q_wl |= Q(ip__icontains=term)
@@ -518,7 +591,6 @@ def home_index(request):
                 qs_wl = qs_wl.exclude(ip__in=whitelist_removed_terms)
 
             if qs_wl.exists():
-                # Hay coincidencias → se muestran en la tabla
                 whitelist_table = qs_wl
                 whitelist_results = qs_wl
 
@@ -526,10 +598,8 @@ def home_index(request):
                 whitelist_not_found_terms = [
                     ip for ip in whitelist_terms if ip not in existing_ips
                 ]
-                # Solo mostramos modal si hay alguna IP buscada que NO está
                 show_whitelist_modal = bool(whitelist_not_found_terms)
             else:
-                # No existe ninguna de las IP buscadas en la whitelist del tenant
                 whitelist_results = IPWhitelist.objects.none()
                 whitelist_not_found_terms = whitelist_terms
                 show_whitelist_modal = True
@@ -537,7 +607,7 @@ def home_index(request):
         except Exception as e:
             logger.exception("[HOME] Error búsqueda whitelist: %s", e)
     else:
-        # Sin búsqueda: mostramos todo el whitelist del tenant en la tabla
+        # Sin búsqueda: mostramos todo el whitelist del tenant (filtrado por país si aplica)
         whitelist_results = whitelist_table
 
     # =======================
@@ -567,7 +637,7 @@ def home_index(request):
         "alarms_daily_labels_json": json.dumps(alarms_daily_labels),
         "alarms_daily_total_json": json.dumps(alarms_daily_total),
         "alarms_daily_critical_json": json.dumps(alarms_daily_critical),
-        # 🔹 Resumen de severidad (para la tarjeta al lado del gráfico)
+        # Resumen de severidad
         "severity_summary": severity_summary,
         # Blacklist
         "blacklist_q": blacklist_q_raw,
@@ -575,15 +645,17 @@ def home_index(request):
         "blacklist_removed": blacklist_removed_raw,
         "blacklist_removed_terms": blacklist_removed_terms,
         "blacklist_results": blacklist_results,
-        # Whitelist (tabla + modal)
+        # Whitelist (tabla + modal + filtro países)
         "whitelist_q": whitelist_q_raw,
         "whitelist_terms": whitelist_terms,
         "whitelist_removed": whitelist_removed_raw,
         "whitelist_removed_terms": whitelist_removed_terms,
-        "whitelist_results": whitelist_results,          # listado actual para el tenant
-        "whitelist_table": whitelist_table,              # alias para la tabla
+        "whitelist_results": whitelist_results,
+        "whitelist_table": whitelist_table,
         "whitelist_not_found_terms": whitelist_not_found_terms,
         "show_whitelist_modal": show_whitelist_modal,
+        "whitelist_countries": ALL_COUNTRIES,
+        "selected_paises": selected_paises,
         # Credenciales TXT
         "cred": cred,
     }
@@ -682,7 +754,6 @@ def blacklist_create_ticket(request):
 
         messages.error(request, "Ocurrió un error al enviar la solicitud al sistema de tickets.")
 
-    # --- flujo clásico (no AJAX) se mantiene igual ---
     all_removed = False
     if original_terms:
         try:
@@ -705,9 +776,6 @@ def blacklist_create_ticket(request):
     if params:
         redirect_url += "?" + urlencode(params)
     return HttpResponseRedirect(redirect_url)
-
-
-logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -828,7 +896,6 @@ def whitelist_create_ticket(request):
             "Ocurrió un error al enviar la solicitud de whitelist."
         )
 
-    # --- flujo clásico (no AJAX) se mantiene igual ---
     all_removed = False
     if original_terms:
         try:
@@ -869,10 +936,6 @@ def blacklist_txt(request):
     realm = "Inntesec Blacklist"
 
     def _basic_challenge(message: str = "Auth required") -> HttpResponse:
-        """
-        Devuelve un 401 con cabecera WWW-Authenticate para que el navegador
-        muestre el popup de usuario/contraseña.
-        """
         resp = HttpResponse(message, status=401, content_type="text/plain")
         resp["WWW-Authenticate"] = f'Basic realm="{realm}"'
         resp["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
@@ -883,12 +946,10 @@ def blacklist_txt(request):
 
     logger.info("[BLACKLIST TXT] Llamada a blacklist_txt. Authorization='%s'", auth)
 
-    # 1) Sin cabecera -> lanzar challenge
     if not auth.startswith("Basic "):
         logger.info("[BLACKLIST TXT] Sin cabecera Basic. Enviando challenge.")
         return _basic_challenge()
 
-    # 2) Intentar decodificar usuario:password
     try:
         raw = auth.split(" ", 1)[1].strip()
         userpass = base64.b64decode(raw).decode("utf-8")
@@ -900,20 +961,15 @@ def blacklist_txt(request):
         logger.exception("[BLACKLIST TXT] Error decodificando cabecera Basic")
         return _basic_challenge("Invalid authorization header")
 
-    # 3) Validar con TenantCredentials (usa tu helper)
     creds = _validate_creds(username, password)
     if not creds:
         logger.info("[BLACKLIST TXT] Credenciales inválidas para usuario=%s", username)
-        # Volvemos a dar challenge para que puedan reintentar
         return _basic_challenge("Invalid credentials")
 
-    # 4) Verificar que tenga algún servicio habilitado
     if not _has_any_service(creds):
         logger.info("[BLACKLIST TXT] Usuario sin servicios habilitados: %s", username)
-        # 403: el navegador YA NO vuelve a pedir usuario/clave
         return HttpResponse("Forbidden", status=403, content_type="text/plain")
 
-    # 5) Actualizar timestamps y registrar IP en whitelist
     try:
         now = dj_timezone.now()
         if not creds.first_login_at:
@@ -927,26 +983,19 @@ def blacklist_txt(request):
     logger.info("[BLACKLIST TXT] Llamando a _upsert_whitelist_from_download desde blacklist_txt")
     _upsert_whitelist_from_download(request, creds)
 
-    # 6) Enviar el TXT
     return _stream_blacklist_txt_response()
 
 
-# --------------------------------------------
-#  Helpers de descarga POST (misma página)
-# --------------------------------------------
 def _stream_blacklist_txt_response() -> HttpResponse:
     try:
-        # Obtenemos solo la columna ip, ordenada, en una lista "plana"
         ips_qs = IPBlacklist.objects.order_by("ip").values_list("ip", flat=True)
 
         ips = []
         for ip in ips_qs:
             if ip is None:
-                # saltamos nulos para que no reviente el join
                 continue
             ip_str = str(ip).strip()
             if not ip_str:
-                # saltamos strings vacíos
                 continue
             ips.append(ip_str)
 
@@ -954,13 +1003,12 @@ def _stream_blacklist_txt_response() -> HttpResponse:
         logger.exception("[BLACKLIST GET] Error consultando IPs: %s", e)
         return HttpResponse("Internal error", status=500, content_type="text/plain")
 
-    # Armamos el cuerpo del TXT
     body = "\n".join(ips)
     if body:
-        body += "\n"  # salto de línea final solo si hay contenido
+        body += "\n"
 
     resp = HttpResponse(body, content_type="text/plain; charset=utf-8")
-    resp["Content-Disposition"] = 'attachment; filename="blacklist.txt"'
+    resp["Content-Disposition"] = 'attachment; filename=\"blacklist.txt\"'
     resp["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     resp["Pragma"] = "no-cache"
     return resp
@@ -1022,14 +1070,10 @@ def _touch_login(creds: TenantCredentials) -> None:
         logger.exception("[BLACKLIST POST] No se pudo actualizar timestamps")
 
 
-# Alias que faltaba (evita NameError)
 def _touch_tc_login(creds: TenantCredentials) -> None:
     _touch_login(creds)
 
 
-# --------------------------------------------
-#  Página dedicada de Login + Descarga (GET/POST)
-# --------------------------------------------
 @login_required
 def blacklist_download_root(request):
     """
@@ -1049,7 +1093,6 @@ def blacklist_download_root(request):
         realm,
     )
 
-    # 1) Si no viene cabecera Basic -> forzamos prompt
     if not auth.startswith("Basic "):
         logger.info("[BLACKLIST ROOT] Sin cabecera Basic. Enviando challenge inicial.")
         resp = HttpResponse("Auth required", status=401, content_type="text/plain")
@@ -1058,7 +1101,6 @@ def blacklist_download_root(request):
         resp["Pragma"] = "no-cache"
         return resp
 
-    # 2) Decodificar usuario:password
     try:
         raw = auth.split(" ", 1)[1]
         userpass = base64.b64decode(raw).decode("utf-8")
@@ -1074,7 +1116,6 @@ def blacklist_download_root(request):
         resp["Pragma"] = "no-cache"
         return resp
 
-    # 3) Validar credenciales contra TenantCredentials
     creds = _validate_creds(username, password)
     if not creds or not _has_any_service(creds):
         logger.info(
@@ -1088,7 +1129,6 @@ def blacklist_download_root(request):
         resp["Pragma"] = "no-cache"
         return resp
 
-    # 4) Registrar login + actualizar whitelist con la IP de quien descarga
     logger.info(
         "[BLACKLIST ROOT] Credenciales OK. creds_pk=%s, llamando a _touch_login + _upsert_whitelist_from_download",
         creds.pk,
@@ -1096,7 +1136,6 @@ def blacklist_download_root(request):
     _touch_login(creds)
     _upsert_whitelist_from_download(request, creds)
 
-    # 5) Si todo OK, redirigimos a la página final
     logger.info("[BLACKLIST ROOT] Redirigiendo a blacklist_download_page")
     return HttpResponseRedirect(reverse("home:blacklist_download_page"))
 
@@ -1112,9 +1151,6 @@ def blacklist_download_page(request):
     return _stream_blacklist_txt_response()
 
 
-# --------------------------------------------
-#  (Opcional) descarga por POST “antigua”
-# --------------------------------------------
 @require_POST
 def blacklist_download_post(request):
     client_ip = _get_client_ip(request)
@@ -1138,7 +1174,6 @@ def blacklist_download_post(request):
 
     logger.info("[BLACKLIST POST] OK download for %s ip=%s creds_pk=%s", username, client_ip, creds.pk)
     _touch_login(creds)
-    # registra/actualiza ip -> fecha_actualizacion y tenant/nombre
     logger.info("[BLACKLIST POST] Llamando a _upsert_whitelist_from_download desde blacklist_download_post")
     _upsert_whitelist_from_download(request, creds)
 

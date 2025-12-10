@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="{% static 'css/cred_modal.css' %}?v={% now 'U' %}">
 </head>
 
-<body class="layout soar">
+<body class="layout soar" data-page-slug="soar_dashboard">
   <!-- Overlay de carga -->
   <div id="loading-overlay" role="status" aria-live="polite" aria-label="Cargando">
     <div class="loading-card">
@@ -30,7 +30,7 @@
     </div>
 
     <nav class="nav">
-      {% if tenant.alarms_one_id %}
+      {% if tenant and tenant.alarms_one_id %}
 
       <a id="homeNav" class="nav-item {% if request.resolver_match.app_name == 'home' %}is-active{% endif %}"
         href="{% url 'home:index' %}">
@@ -77,20 +77,53 @@
         </div>
       </details>
       {% endwith %}
-      {# ===== SIEM (solo si el servicio está habilitado para el tenant) ===== #}
+
+      {# ===== SIEM ===== #}
       {% with raw_siem_id=tenant.logs360siem_id|default_if_none:"" %}
       {% with siem_id=raw_siem_id|stringformat:"s" %}
       {% if siem_id and siem_id != "0" and siem_id != "null" and siem_id != "NULL" and siem_id != "None" %}
       <a class="nav-item {% if request.resolver_match.app_name == 'siem' %}is-active{% endif %}"
         href="{% url 'siem:alerts_logs360' %}">
         <span class="nav-ico">🧠</span>SIEM
+        <span id="coachDotSiem" class="coachmark-dot hidden"></span>
       </a>
       {% endif %}
       {% endwith %}
       {% endwith %}
       {% endif %}
 
-      {# ===== Configuración (igual que antes) ===== #}
+      {# ===== Site24x7 ===== #}
+      {% if tenant %}
+      {% with raw_site_id=tenant.site24x7_id|default_if_none:"" %}
+      {% with site_id=raw_site_id|stringformat:"s" %}
+      {% if site_id and site_id != "0" and site_id != "null" and site_id != "NULL" and site_id != "None" %}
+      {% with url_name=request.resolver_match.url_name %}
+      <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.app_name == 'site24x7' %}open{% endif %}>
+        <summary class="nav-item {% if request.resolver_match.app_name == 'site24x7' %}is-active{% endif %}">
+          <span class="nav-ico">📡</span>Inn-Monitor
+          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+          <span id="coachDotInnMonitor" class="coachmark-dot hidden"></span>
+        </summary>
+        <div class="tenant-list nav-submenu">
+          <a class="tenant-option nav-subitem {% if url_name == 'monitor_status' %}is-active{% endif %}"
+            href="{% url 'site24x7:monitor_status' %}">
+            Monitores
+          </a>
+          <a class="tenant-option nav-subitem {% if url_name == 'dashboard' %}is-active{% endif %}"
+            href="{% url 'site24x7:dashboard' %}">
+            Dashboard
+          </a>
+        </div>
+      </details>
+      {% endwith %}
+      {% endif %}
+      {% endwith %}
+      {% endwith %}
+      {% endif %}
+
+      {# ===== Configuración ===== #}
       <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.url_name == 'cambiar_contrasena' %}open{% endif %}>
         <summary id="settingsSummary"
           class="nav-item {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}">
@@ -141,7 +174,18 @@
       </div>
       <div class="top-right">
         <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
-        <button class="btn ghost" title="Exportar">⬇︎</button>
+
+        <!-- ===== Menú Exportar ===== -->
+        <div class="export-wrapper">
+          <button class="btn ghost" title="Exportar dashboard" id="btn-export-toggle">
+            ⬇︎
+          </button>
+          <div id="export-menu" class="export-menu" aria-label="Exportar dashboard SOAR">
+            <button type="button" data-export-format="pdf">📄 Exportar PDF</button>
+            <button type="button" data-export-format="csv">📊 Exportar CSV</button>
+          </div>
+        </div>
+
         <div class="user-menu" id="userMenu">
           <button type="button" id="userButton" class="user-button">
             <div class="user-avatar">{{ request.user.username|default:"U"|slice:":1"|upper }}</div>
@@ -183,86 +227,89 @@
     {% endif %}
 
     {% if events|length > 0 %}
-      <!-- KPIs -->
-      <section class="grid grid-kpis">
-        <div class="card kpi"><div class="kpi-label">Total eventos</div><div class="kpi-value" id="kpi-total">—</div></div>
-        <div class="card kpi"><div class="kpi-label">Top dispositivo</div><div class="kpi-value" id="kpi-top-device">—</div></div>
-        <div class="card kpi"><div class="kpi-label">Severidad dominante</div><div class="kpi-value" id="kpi-dom-sev">—</div></div>
-        <div class="card kpi"><div class="kpi-label">País Top Incidentes</div><div class="kpi-value" id="kpi-top-country">—</div></div>
-      </section>
+      <!-- ÁREA COMPLETA A EXPORTAR (KPIs + gráficos) -->
+      <section id="dashboard-export-area" data-page-slug="soar_dashboard">
+        <!-- KPIs -->
+        <section class="grid grid-kpis">
+          <div class="card kpi"><div class="kpi-label">Total eventos</div><div class="kpi-value" id="kpi-total">—</div></div>
+          <div class="card kpi"><div class="kpi-label">Top dispositivo</div><div class="kpi-value" id="kpi-top-device">—</div></div>
+          <div class="card kpi"><div class="kpi-label">Severidad dominante</div><div class="kpi-value" id="kpi-dom-sev">—</div></div>
+          <div class="card kpi"><div class="kpi-label">País Top Incidentes</div><div class="kpi-value" id="kpi-top-country">—</div></div>
+        </section>
 
-      <!-- Chips de secciones -->
-      <div class="section-chips">
-        <button class="chip active" data-sec="all">Todos</button>
-        <button class="chip" data-sec="incidentes">Incidentes</button>
-        <button class="chip" data-sec="origen">Origen/Destino</button>
-        <button class="chip" data-sec="politicas">Políticas/Acciones</button>
-        <button class="chip" data-sec="operativa">Operativa</button>
-      </div>
-
-      <section class="sec visible">
-        <div class="grid grid-main">
-          <div class="card chart" data-groups="all,origen">
-            <div class="card-head"><h3>Top países origen</h3></div>
-            <div class="card-body"><canvas id="chartCountries"></canvas></div>
-          </div>
-
-          <div class="card chart" data-groups="all,incidentes">
-            <div class="card-head"><h3>Severidad</h3></div>
-            <div class="card-body"><canvas id="chartSeverity"></canvas></div>
-          </div>
-
-          <div class="card chart" data-groups="all,politicas">
-            <div class="card-head"><h3>Acción de seguridad</h3></div>
-            <div class="card-body"><canvas id="chartSecAction"></canvas></div>
-          </div>
-
-          <div class="card chart" data-groups="all,incidentes">
-            <div class="card-head"><h3>Tendencia diaria</h3></div>
-            <div class="card-body"><canvas id="chartTrendDaily"></canvas></div>
-          </div>
-
-          <div class="card chart" data-groups="all,incidentes">
-            <div class="card-head"><h3>Tendencia por hora</h3></div>
-            <div class="card-body"><canvas id="chartTrendHourly"></canvas></div>
-          </div>
-
-          <div class="card table card--table" data-groups="all,operativa">
-            <div class="card-head between"><h3>Top dispositivos</h3></div>
-            <div class="table-wrap">
-              <table class="datatable" id="device-table">
-                <thead>
-                  <tr>
-                    <th data-sort="text">Dispositivo</th>
-                    <th data-sort="number" class="is-right">Cantidad</th>
-                  </tr>
-                </thead>
-                <tbody id="device-table-body"></tbody>
-              </table>
-            </div>
-            <div class="table-footnote">* Clic en una fila para filtrar</div>
-          </div>
-
-          <div class="card chart" data-groups="all,operativa">
-            <div class="card-head"><h3>Top servicios</h3></div>
-            <div class="card-body"><canvas id="chartServices"></canvas></div>
-          </div>
-
-          <div class="card chart" data-groups="all,operativa">
-            <div class="card-head"><h3>Top aplicaciones</h3></div>
-            <div class="card-body"><canvas id="chartApplications"></canvas></div>
-          </div>
-
-          <div class="card chart" data-groups="all,origen">
-            <div class="card-head"><h3>Top IP Origen</h3></div>
-            <div class="card-body"><canvas id="chartTopSrcIP"></canvas></div>
-          </div>
-
-          <div class="card chart" data-groups="all,origen">
-            <div class="card-head"><h3>Top IP Destino</h3></div>
-            <div class="card-body"><canvas id="chartTopDstIP"></canvas></div>
-          </div>
+        <!-- Chips de secciones (NO se exportan en PDF) -->
+        <div class="section-chips" data-export-hide="true">
+          <button class="chip active" data-sec="all">Todos</button>
+          <button class="chip" data-sec="incidentes">Incidentes</button>
+          <button class="chip" data-sec="origen">Origen/Destino</button>
+          <button class="chip" data-sec="politicas">Políticas/Acciones</button>
+          <button class="chip" data-sec="operativa">Operativa</button>
         </div>
+
+        <section class="sec visible">
+          <div class="grid grid-main">
+            <div class="card chart" data-groups="all,origen">
+              <div class="card-head"><h3>Top países origen</h3></div>
+              <div class="card-body"><canvas id="chartCountries"></canvas></div>
+            </div>
+
+            <div class="card chart" data-groups="all,incidentes">
+              <div class="card-head"><h3>Severidad</h3></div>
+              <div class="card-body"><canvas id="chartSeverity"></canvas></div>
+            </div>
+
+            <div class="card chart" data-groups="all,politicas">
+              <div class="card-head"><h3>Acción de seguridad</h3></div>
+              <div class="card-body"><canvas id="chartSecAction"></canvas></div>
+            </div>
+
+            <div class="card chart" data-groups="all,incidentes">
+              <div class="card-head"><h3>Tendencia diaria</h3></div>
+              <div class="card-body"><canvas id="chartTrendDaily"></canvas></div>
+            </div>
+
+            <div class="card chart" data-groups="all,incidentes">
+              <div class="card-head"><h3>Tendencia por hora</h3></div>
+              <div class="card-body"><canvas id="chartTrendHourly"></canvas></div>
+            </div>
+
+            <div class="card table card--table" data-groups="all,operativa">
+              <div class="card-head between"><h3>Top dispositivos</h3></div>
+              <div class="table-wrap">
+                <table class="datatable" id="device-table">
+                  <thead>
+                    <tr>
+                      <th data-sort="text">Dispositivo</th>
+                      <th data-sort="number" class="is-right">Cantidad</th>
+                    </tr>
+                  </thead>
+                  <tbody id="device-table-body"></tbody>
+                </table>
+              </div>
+              <div class="table-footnote">* Clic en una fila para filtrar</div>
+            </div>
+
+            <div class="card chart" data-groups="all,operativa">
+              <div class="card-head"><h3>Top servicios</h3></div>
+              <div class="card-body"><canvas id="chartServices"></canvas></div>
+            </div>
+
+            <div class="card chart" data-groups="all,operativa">
+              <div class="card-head"><h3>Top aplicaciones</h3></div>
+              <div class="card-body"><canvas id="chartApplications"></canvas></div>
+            </div>
+
+            <div class="card chart" data-groups="all,origen">
+              <div class="card-head"><h3>Top IP Origen</h3></div>
+              <div class="card-body"><canvas id="chartTopSrcIP"></canvas></div>
+            </div>
+
+            <div class="card chart" data-groups="all,origen">
+              <div class="card-head"><h3>Top IP Destino</h3></div>
+              <div class="card-body"><canvas id="chartTopDstIP"></canvas></div>
+            </div>
+          </div>
+        </section>
       </section>
 
       <footer class="footnote">SOAR · última actualización: hace 1 min</footer>
@@ -359,7 +406,16 @@
   <!-- Modales (exponen window.SOAR_Incidents) -->
   <script defer src="{% static 'js/soar/incidents_modal.js' %}?v={% now 'U' %}"></script>
 
-  <!-- App principal -->
+  <!-- Librerías para exportar PDF/imagen -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+          crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+          crossorigin="anonymous"></script>
+
+  <!-- JS DE EXPORT -->
+  <script defer src="{% static 'js/alarms_one/dashboard_export.js' %}?v={% now 'U' %}"></script>
+
+  <!-- App principal SOAR -->
   <script type="module" src="{% static 'js/soar/dashboardsoar.js' %}?v={{ now|date:'U' }}"></script>
 
   <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>

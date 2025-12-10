@@ -19,7 +19,7 @@
       <div class="modal-body">
         <!-- Alerta por Teléfono -->
         <div class="config-option {% if user.Alarma_Telefono %}is-active{% endif %}">
-          <span>📞 Alerta por Teléfono</span>
+          <span>📞 The alerta por Teléfono</span>
           <label class="switch">
             <input type="checkbox" id="toggleTelefono" name="Alarma_Telefono" {% if user.Alarma_Telefono %}checked{% endif %}>
           </label>
@@ -28,30 +28,24 @@
         <!-- 🔹 Franja horaria -->
         <div id="franjaHoraria" class="franja-horaria {% if not user.Alarma_Telefono %}hidden{% endif %}">
           <label for="hora_inicio" class="franja-label">🕒 Recibir notificaciones desde:</label>
-          <input 
-            type="time" 
-            id="hora_inicio" 
+          <select
+            id="hora_inicio"
             name="hora_inicio"
             class="franja-input"
-            min="00:00" 
-            max="23:59" 
-            step="60" 
-            inputmode="numeric"
-            value="{{ user.hora_inicio|default:'' }}"
+            data-current-value="{{ user.hora_inicio|default:'' }}"
           >
+            <!-- Opciones se rellenan por JS -->
+          </select>
 
           <label for="hora_fin" class="franja-label">Hasta:</label>
-          <input 
-            type="time" 
-            id="hora_fin" 
+          <select
+            id="hora_fin"
             name="hora_fin"
             class="franja-input"
-            min="00:00" 
-            max="23:59" 
-            step="60" 
-            inputmode="numeric"
-            value="{{ user.hora_fin|default:'' }}"
+            data-current-value="{{ user.hora_fin|default:'' }}"
           >
+            <!-- Opciones se rellenan por JS -->
+          </select>
         </div>
 
         <!-- Alerta por Correo -->

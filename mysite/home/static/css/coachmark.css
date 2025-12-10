@@ -33,12 +33,12 @@ body.coachmark-open .sidebar {
   opacity: 0.35;
 }
 
-/* Resaltar item activo */
+/* Resaltar item activo (solo borde y glow, SIN oscurecer el interior) */
 .nav .nav-item.coachmark-highlight,
 .nav summary.nav-item.coachmark-highlight {
   position: relative;
   z-index: 9850;
-  background: #142246 !important;
+  /* antes: background: #142246 !important; -> lo quitamos para que no se vea opaco */
   box-shadow:
     0 0 0 2px rgba(59, 130, 246, 0.65),
     0 8px 24px rgba(2, 6, 23, 0.55),
@@ -123,9 +123,11 @@ body.coachmark-open .sidebar {
   box-shadow: 0 2px 8px rgba(37, 99, 235, 0.65);
 }
 
-/* Puntos naranjos */
+/* =========================
+   Puntos naranjos del nav
+   ========================= */
 .coachmark-dot {
-  display: none;
+  display: none; /* por defecto oculto; lo prende .is-on */
   width: 10px;
   height: 10px;
   margin-left: 8px;
@@ -134,9 +136,12 @@ body.coachmark-open .sidebar {
   box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
   animation: coachmark-pulse 1.4s ease-in-out infinite;
 }
+
 .coachmark-dot.hidden {
   display: none !important;
 }
+
+/* Estado “encendido” (este lo usaremos desde el JS) */
 .coachmark-dot.is-on {
   display: inline-block;
 }

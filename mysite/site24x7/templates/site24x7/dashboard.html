@@ -1,0 +1,252 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Site24x7</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/list.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/user_dropdown.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/config_notificaciones_modal.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/cred_modal.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/site24x7.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/site24x7_dashboard.css' %}?v={% now 'U' %}">
+</head>
+
+<body class="layout">
+  <!-- Overlay -->
+  <div id="loading-overlay" role="status" aria-live="polite" aria-label="Cargando">
+    <div class="loading-card">
+      <div class="spinner" aria-hidden="true"></div>
+      <div class="loading-text">Cargando datos…</div>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="{% static 'img/inntesec CSS negro 1.avif' %}" alt="Logo Inntesec" />
+    </div>
+
+    <nav class="nav">
+      {% if tenant and tenant.alarms_one_id %}
+
+      <a id="homeNav" class="nav-item {% if request.resolver_match.app_name == 'home' %}is-active{% endif %}"
+         href="{% url 'home:index' %}">
+        <span class="nav-ico">🏠</span>Home
+        <span id="coachDotHome" class="coachmark-dot hidden"></span>
+      </a>
+
+      {# ===== Alarmas ===== #}
+      {% with url_name=request.resolver_match.url_name %}
+      <details class="tenant-dropdown nav-dropdown" {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}open{% endif %}>
+        <summary id="alarmsSummary"
+          class="nav-item {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}is-active{% endif %}">
+          <span class="nav-ico">📊</span>Alarmas
+          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+          <span id="coachDotAlarms" class="coachmark-dot hidden"></span>
+        </summary>
+        <div class="tenant-list nav-submenu">
+          <a class="tenant-option nav-subitem {% if url_name == 'dashboard_alarmsone' %}is-active{% endif %}"
+             href="{% url 'dashboard:dashboard_alarmsone' %}">Dashboard</a>
+          <a class="tenant-option nav-subitem {% if url_name == 'dashboard_realtime' %}is-active{% endif %}"
+             href="{% url 'dashboard:dashboard_realtime' %}">Tiempo Real</a>
+        </div>
+      </details>
+      {% endwith %}
+
+      {# ===== SOAR ===== #}
+      {% with app_name=request.resolver_match.app_name %}
+      <details class="tenant-dropdown nav-dropdown" {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' %}open{% endif %}>
+        <summary id="soarSummary"
+          class="nav-item {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' %}is-active{% endif %}">
+          <span class="nav-ico">🚨</span>SOAR
+          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+          <span id="coachDotSoar" class="coachmark-dot hidden"></span>
+        </summary>
+        <div class="tenant-list nav-submenu">
+          <a class="tenant-option nav-subitem {% if app_name == 'soar_dashboard' %}is-active{% endif %}"
+             href="{% url 'soar_dashboard:dashboard' %}">Dashboard</a>
+          <a class="tenant-option nav-subitem {% if app_name == 'soar_incidents' %}is-active{% endif %}"
+             href="{% url 'soar_incidents:list' %}">Eventos</a>
+        </div>
+      </details>
+      {% endwith %}
+
+      {# ===== SIEM ===== #}
+      {% with raw_siem_id=tenant.logs360siem_id|default_if_none:"" %}
+      {% with siem_id=raw_siem_id|stringformat:"s" %}
+      {% if siem_id and siem_id != "0" and siem_id != "null" and siem_id != "NULL" and siem_id != "None" %}
+      <a class="nav-item {% if request.resolver_match.app_name == 'siem' %}is-active{% endif %}"
+         href="{% url 'siem:alerts_logs360' %}">
+        <span class="nav-ico">🧠</span>SIEM
+      </a>
+      {% endif %}
+      {% endwith %}
+      {% endwith %}
+      {% endif %}
+
+      {# ===== Site24x7 ===== #}
+      {% with url_name=request.resolver_match.url_name %}
+      <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.app_name == 'site24x7' %}open{% endif %}>
+        <summary
+          class="nav-item {% if request.resolver_match.app_name == 'site24x7' %}is-active{% endif %}">
+          <span class="nav-ico">📡</span>Inn-Monitor
+          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+        </summary>
+        <div class="tenant-list nav-submenu">
+          <a class="tenant-option nav-subitem {% if url_name == 'monitor_status' %}is-active{% endif %}"
+             href="{% url 'site24x7:monitor_status' %}">
+            Monitores
+          </a>
+          <a class="tenant-option nav-subitem {% if url_name == 'dashboard' %}is-active{% endif %}"
+             href="{% url 'site24x7:dashboard' %}">
+            Dashboard
+          </a>
+        </div>
+      </details>
+      {% endwith %}
+
+      {# ===== Configuración ===== #}
+      <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.url_name == 'cambiar_contrasena' %}open{% endif %}>
+        <summary id="settingsSummary"
+          class="nav-item {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}">
+          <span class="nav-ico">⚙️</span>Configuración
+          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24">
+            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+          <span id="coachDotConfig" class="coachmark-dot hidden"></span>
+        </summary>
+        <div class="tenant-list nav-submenu">
+          <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}"
+             href="{% url 'cambiar_contrasena' %}">🔒 Cambiar contraseña</a>
+          <a class="tenant-option nav-subitem" href="#" onclick="toggleCredModal(true)">🔑 Credenciales</a>
+          <a class="tenant-option nav-subitem" href="#" onclick="toggleConfigModal(true)">🔔 Notificaciones</a>
+        </div>
+      </details>
+    </nav>
+  </aside>
+
+  <!-- Main -->
+  <div class="content">
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="top-left">
+        <h1 class="top-title">
+          Tenant:
+          {% if request.user.tenant.name|lower == "inntesec" %}
+          <details class="tenant-dropdown">
+            <summary class="tenant-summary">
+              {{ tenant.name }}
+              <span class="caret">▼</span>
+            </summary>
+            <div class="tenant-list">
+              {% for t in all_tenants %}
+              <form method="post" action="{% url 'dashboard:switch_tenant' t.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit" class="tenant-option {% if tenant.id == t.id %}is-active{% endif %}">
+                  {{ t.name }}
+                </button>
+              </form>
+              {% endfor %}
+            </div>
+          </details>
+          {% else %}
+          <span class="top-tenant">{{ tenant.name }}</span>
+          {% endif %}
+        </h1>
+      </div>
+
+      <div class="top-right">
+        <button class="btn ghost" title="Actualizar" id="btn-refresh">⟳</button>
+
+        <!-- Menú Exportar (misma estructura que Panel histórico, solo PDF) -->
+        <div class="export-wrapper">
+          <button class="btn ghost" title="Exportar" id="btn-export-toggle">⬇︎</button>
+          <div class="export-dropdown" id="export-menu">
+            <button type="button" data-export-format="pdf">📄 Exportar PDF</button>
+          </div>
+        </div>
+
+        <div class="user-menu" id="userMenu">
+          <button type="button" id="userButton" class="user-button">
+            <div class="user-avatar">
+              {{ request.user.username|default:"U"|slice:":1"|upper }}
+            </div>
+            <div class="user-name">
+              {{ request.user.get_full_name|default:request.user.username }}
+            </div>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
+          </button>
+
+          <div class="dropdown-menu">
+            <form action="{% url 'logout' %}" method="post">
+              {% csrf_token %}
+              <button type="submit">🚪 Cerrar sesión</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Contenido principal: SOLO esta grilla se exporta como PDF -->
+    <section class="wrap" id="dashboard-export-area" data-page-slug="Inn-monitor-dashboard">
+      <div class="card">
+        <div class="card-head">
+          <h3>Dashboard Inn-Monitor</h3>
+        </div>
+        <div class="card-body">
+          {% if not iframe_url %}
+            <div class="empty-state">
+              <div class="empty-card">
+                <h2>Sin dashboard configurado</h2>
+                <p>No hay un iframe configurado para <strong>{{ tenant.name|default:"—" }}</strong>.</p>
+                <p>Configura un registro en <code>TenantDashboardEmbed</code> para este tenant.</p>
+              </div>
+            </div>
+          {% else %}
+            <div class="iframe-container">
+              <iframe src="{{ iframe_url }}" loading="lazy"></iframe>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- JS base -->
+  <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/page-loader-universal.js' %}?v={% now 'U' %}"></script>
+
+  {# Librerías para exportar a PDF con captura (mismas que dashboard histórico) #}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+          integrity="sha512-YkC9cRTfZc2wP/d9vywgqbiZ9erjRzCQXDpUe1koRaSPoaqe7i0rGUNShUMHbOWcZH/5LiO96XkNjEcZCcXANA=="
+          crossorigin="anonymous"
+          referrerpolicy="no-referrer"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+          integrity="sha512-BNa5H5LrS9x+h0/pk3jfbQ3VIAtF+wNCz7L+G2kZZgwyXR0YJIUKGwEuUXXSb9VInmxGkP0U4+U8sGZ7WkJ0Ug=="
+          crossorigin="anonymous"
+          referrerpolicy="no-referrer"></script>
+
+  <!-- JS específico de export SOLO PARA ESTE DASHBOARD -->
+  <script defer src="{% static 'js/site24x7_dashboard_export.js' %}?v={% now 'U' %}"></script>
+
+  {% include 'partials/config_notificaciones_modal.html' %}
+  {% include 'partials/cred_modal.html' %}
+</body>
+
+</html>
