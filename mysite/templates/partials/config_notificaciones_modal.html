@@ -2,30 +2,79 @@
 
 <div id="configModal" class="modal-overlay hidden" aria-hidden="true">
   <div class="modal-card">
-    <!-- ① Toast de confirmación -->
+    <!-- Toast de confirmación -->
     <div id="saveToast" class="save-toast hidden">
       ✅ Preferencias guardadas
     </div>
 
-    <!-- ② Cabecera -->
+    <!-- Cabecera -->
     <div class="modal-head">
       <h3>Configuración de Notificaciones</h3>
       <button class="close-btn" type="button" aria-label="Cerrar" onclick="toggleConfigModal(false)">×</button>
     </div>
 
-    <!-- ③ Formulario -->
+    <!-- Formulario -->
     <form method="POST" id="configForm" action="{% url 'config_notificaciones' %}">
       {% csrf_token %}
       <div class="modal-body">
-        <!-- Alerta por Teléfono -->
+
+        {# =============== TELÉFONO =============== #}
+        <!-- Toggle Teléfono -->
         <div class="config-option {% if user.Alarma_Telefono %}is-active{% endif %}">
-          <span>📞 The alerta por Teléfono</span>
+          <span>📞 Alerta por Teléfono</span>
           <label class="switch">
-            <input type="checkbox" id="toggleTelefono" name="Alarma_Telefono" {% if user.Alarma_Telefono %}checked{% endif %}>
+            <input
+              type="checkbox"
+              id="toggleTelefono"
+              name="Alarma_Telefono"
+              {% if user.Alarma_Telefono %}checked{% endif %}
+            >
           </label>
         </div>
 
-        <!-- 🔹 Franja horaria -->
+        <!-- Severidades Teléfono -->
+        <div
+          id="telSeverity"
+          class="config-option {% if not user.Alarma_Telefono %}hidden{% endif %}"
+        >
+          <span>Severidad para Teléfono</span>
+          <div class="severity-chips">
+            <label class="severity-chip">
+              <input
+                type="checkbox"
+                name="sev_tel_baja"
+                {% if tel_baja %}checked{% endif %}
+              >
+              Baja
+            </label>
+            <label class="severity-chip">
+              <input
+                type="checkbox"
+                name="sev_tel_media"
+                {% if tel_media %}checked{% endif %}
+              >
+              Media
+            </label>
+            <label class="severity-chip">
+              <input
+                type="checkbox"
+                name="sev_tel_alta"
+                {% if tel_alta %}checked{% endif %}
+              >
+              Alta
+            </label>
+            <label class="severity-chip">
+              <input
+                type="checkbox"
+                name="sev_tel_critica"
+                {% if tel_critica %}checked{% endif %}
+              >
+              Crítica
+            </label>
+          </div>
+        </div>
+
+        <!-- Franja horaria (solo Teléfono) -->
         <div id="franjaHoraria" class="franja-horaria {% if not user.Alarma_Telefono %}hidden{% endif %}">
           <label for="hora_inicio" class="franja-label">🕒 Recibir notificaciones desde:</label>
           <select
@@ -34,7 +83,6 @@
             class="franja-input"
             data-current-value="{{ user.hora_inicio|default:'' }}"
           >
-            <!-- Opciones se rellenan por JS -->
           </select>
 
           <label for="hora_fin" class="franja-label">Hasta:</label>
@@ -44,33 +92,123 @@
             class="franja-input"
             data-current-value="{{ user.hora_fin|default:'' }}"
           >
-            <!-- Opciones se rellenan por JS -->
           </select>
         </div>
 
-        <!-- Alerta por Correo -->
+        {# =============== CORREO =============== #}
+        <!-- Toggle Correo -->
         <div class="config-option {% if user.Alarma_Correo %}is-active{% endif %}">
           <span>📧 Alerta por Correo</span>
           <label class="switch">
-            <input type="checkbox" name="Alarma_Correo" {% if user.Alarma_Correo %}checked{% endif %}>
+            <input
+              type="checkbox"
+              id="toggleCorreo"
+              name="Alarma_Correo"
+              {% if user.Alarma_Correo %}checked{% endif %}
+            >
           </label>
         </div>
 
-        <!-- Alerta por Telegram -->
+        <!-- Severidades Correo -->
+        <div id="mailSeverity" class="config-option {% if not user.Alarma_Correo %}hidden{% endif %}">
+          <span>Severidad para Correo</span>
+          <div class="severity-chips">
+            <label class="severity-chip">
+              <input
+                type="checkbox"
+                name="sev_mail_baja"
+                {% if mail_baja %}checked{% endif %}
+              >
+              Baja
+            </label>
+            <label class="severity-chip">
+              <input
+                type="checkbox"
+                name="sev_mail_media"
+                {% if mail_media %}checked{% endif %}
+              >
+              Media
+            </label>
+            <label class="severity-chip">
+              <input
+                type="checkbox"
+                name="sev_mail_alta"
+                {% if mail_alta %}checked{% endif %}
+              >
+              Alta
+            </label>
+            <label class="severity-chip">
+              <input
+                type="checkbox"
+                name="sev_mail_critica"
+                {% if mail_critica %}checked{% endif %}
+              >
+              Crítica
+            </label>
+          </div>
+        </div>
+
+        {# =============== TELEGRAM =============== #}
+        <!-- Toggle Telegram -->
         <div class="config-option {% if user.Alarma_Telegram %}is-active{% endif %}">
           <span>💬 Alerta por Telegram</span>
           <label class="switch">
-            <input type="checkbox" id="toggleTelegram" name="Alarma_Telegram" {% if user.Alarma_Telegram %}checked{% endif %}>
+            <input
+              type="checkbox"
+              id="toggleTelegram"
+              name="Alarma_Telegram"
+              {% if user.Alarma_Telegram %}checked{% endif %}
+            >
           </label>
         </div>
 
-        <!-- 🖼️ Imagen QR (solo visible si Telegram está activado) -->
+        <!-- Severidades Telegram -->
+        <div id="tgSeverity" class="config-option {% if not user.Alarma_Telegram %}hidden{% endif %}">
+          <span>Severidad para Telegram</span>
+          <div class="severity-chips">
+            <label class="severity-chip">
+              <input
+                type="checkbox"
+                name="sev_tg_baja"
+                {% if tg_baja %}checked{% endif %}
+              >
+              Baja
+            </label>
+            <label class="severity-chip">
+              <input
+                type="checkbox"
+                name="sev_tg_media"
+                {% if tg_media %}checked{% endif %}
+              >
+              Media
+            </label>
+            <label class="severity-chip">
+              <input
+                type="checkbox"
+                name="sev_tg_alta"
+                {% if tg_alta %}checked{% endif %}
+              >
+              Alta
+            </label>
+            <label class="severity-chip">
+              <input
+                type="checkbox"
+                name="sev_tg_critica"
+                {% if tg_critica %}checked{% endif %}
+              >
+              Crítica
+            </label>
+          </div>
+        </div>
+
+        <!-- QR Telegram -->
         <div id="qrTelegram" class="{% if not user.Alarma_Telegram %}hidden{% endif %}">
           <div class="qr-container">
             <img src="{% static 'img/qr-code (3).png' %}" alt="Código QR Telegram" class="qr-image">
             <p class="qr-text">Escanea este código para vincular tu cuenta de Telegram</p>
           </div>
         </div>
+
       </div>
 
       <div class="modal-foot">
@@ -81,6 +219,5 @@
   </div>
 </div>
 
-<!-- CSS y JS -->
 <link rel="stylesheet" href="{% static 'css/config_notificaciones.css' %}?v={% now 'U' %}">
 <script defer src="{% static 'js/config_notificaciones_modal.js' %}?v={% now 'U' %}"></script>

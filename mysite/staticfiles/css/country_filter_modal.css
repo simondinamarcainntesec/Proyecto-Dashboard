@@ -1,0 +1,300 @@
+/* ==========================================================
+   Modal genérico (mismo estilo que Configuración de Notificaciones)
+   ========================================================== */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.75);
+  backdrop-filter: blur(3px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  transition: opacity 0.25s ease;
+}
+
+.modal-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Tarjeta del modal */
+.modal-card {
+  position: relative;
+  background: var(--card, #0f1d35);
+  border: 1px solid var(--border, #1e293b);
+  border-radius: 1rem;
+  box-shadow: 0 10px 40px rgba(2, 6, 23, 0.6);
+  width: 100%;
+  max-width: 720px;
+  max-height: 80vh;          /* límite de alto */
+  padding: 1.5rem 1.75rem;
+  transform: translateY(-10px);
+  animation: floatIn 0.3s ease forwards;
+  color: var(--text, #e5e7eb);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;          /* que no se vea scroll "por fuera" */
+}
+
+@keyframes floatIn {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Cabecera */
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.modal-head h3 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin: 0;
+  color: var(--text, #e5e7eb);
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--muted, #94a3b8);
+  transition: color 0.2s ease;
+}
+
+.close-btn:hover {
+  color: #fff;
+}
+
+/* Cuerpo: aquí va el SCROLL */
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;      /* solo vertical */
+  overflow-x: hidden;    /* sin scroll horizontal */
+  padding-right: 0.5rem; /* separa del scrollbar */
+}
+
+/* Scrollbar oscuro dentro del cuerpo del modal */
+.modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: #020617;
+  border-radius: 999px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background: #1f2937;
+  border-radius: 999px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
+}
+
+.modal-desc {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  color: var(--muted, #94a3b8);
+}
+
+.modal-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted, #94a3b8);
+}
+
+/* Bloque tipo "config-option" (genérico, por si lo reutilizas) */
+.config-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--surface, #0e172a);
+  padding: 0.9rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border, #1e293b);
+  transition: all 0.2s ease;
+  font-weight: 600;
+}
+
+.config-option.is-active {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: var(--brand, #3b82f6);
+  color: #e8eeff;
+}
+
+.switch input {
+  width: 1.4rem;
+  height: 1.4rem;
+  accent-color: var(--brand, #3b82f6);
+  cursor: pointer;
+}
+
+/* Pie de botones */
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.modal-foot .btn {
+  border: 1px solid var(--border, #1e293b);
+  border-radius: 10px;
+  padding: 0.45rem 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.modal-foot .btn.primary {
+  background: var(--brand, #3b82f6);
+  color: #fff;
+  border-color: var(--brand, #3b82f6);
+}
+
+.modal-foot .btn.primary:hover {
+  background: #2563eb;
+}
+
+.modal-foot .btn.ghost {
+  background: transparent;
+  color: var(--text, #e5e7eb);
+}
+
+.modal-foot .btn.ghost:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ==========================================================
+   Toast flotante dentro del modal
+   ========================================================== */
+
+.save-toast {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -120%);
+  background: var(--brand, #3b82f6);
+  color: #fff;
+  font-weight: 600;
+  padding: 0.6rem 1.2rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  z-index: 3000;
+}
+
+.save-toast.show {
+  opacity: 1;
+  transform: translate(-50%, 20%);
+}
+
+.save-toast.hidden {
+  display: none;
+}
+
+/* ==========================================================
+   Imagen QR (si se reutiliza en otros modales)
+   ========================================================== */
+
+.qr-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--color-border);
+  text-align: center;
+}
+
+.qr-image {
+  width: 130px;
+  height: 130px;
+  object-fit: contain;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  transition: transform 0.25s ease;
+}
+
+.qr-image:hover {
+  transform: scale(1.05);
+}
+
+.qr-text {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+/* ==========================================================
+   Utilidades generales
+   ========================================================== */
+
+.hidden {
+  display: none !important;
+}
+
+/* ==========================================================
+   Específico: Filtro de países (whitelist)
+   ========================================================== */
+
+.country-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.country-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  background: var(--surface, #0e172a);
+  border: 1px solid var(--border, #1e293b);
+  font-size: 0.9rem;
+  color: var(--text, #e5e7eb);
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.1s ease;
+  max-width: 100%;
+}
+
+/* El texto del país envuelve cuando es largo */
+.country-pill span {
+  display: inline-block;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  line-height: 1.25;
+}
+
+.country-pill:hover {
+  background: rgba(148, 163, 184, 0.12);
+  border-color: var(--brand, #3b82f6);
+  transform: translateY(-1px);
+}
+
+.country-pill input[type="checkbox"] {
+  accent-color: var(--brand, #3b82f6);
+  cursor: pointer;
+}
+
+.country-pill.is-selected {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: var(--brand, #3b82f6);
+  color: #e8eeff;
+}

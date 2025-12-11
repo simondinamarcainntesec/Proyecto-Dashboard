@@ -1,22 +1,20 @@
 from datetime import datetime, timedelta, timezone
 import logging
-import pytz
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.csrf import csrf_protect
 
-from django.shortcuts import render, redirect, get_object_or_404
+import pytz
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
+from django.shortcuts import render, redirect
 from django.views.decorators.cache import never_cache
 from django.core.cache import cache
 from django.db.models import Count
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from urllib.parse import urlparse
-from tenants.decorators import tenant_required
-from tenants.models import Tenant
 from django.http import HttpResponseRedirect
 
-# <<< NUEVO: importamos las credenciales del portal
-from home.models import TenantCredentials  # noqa
+from tenants.decorators import tenant_required
+from tenants.models import Tenant
+from home.models import TenantCredentials  # credenciales del portal
 
 from .charts import (
     build_trend_data,
@@ -52,15 +50,20 @@ logger = logging.getLogger(__name__)
 CL_TZ = pytz.timezone("America/Santiago")
 
 
-def _localize_naive(dt_naive):
+def _localize_naive(dt_naive: datetime) -> datetime:
     return CL_TZ.localize(dt_naive).astimezone(timezone.utc)
 
 
 def _parse_local_any(s: str):
+    """
+    Intenta parsear un string de fecha/hora local en distintos formatos y
+    devolverlo en UTC, junto con el tipo ("datetime" o "date").
+    """
     if not s:
         return None, None
     s = s.strip()
 
+    # Formatos con hora
     for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"):
         try:
             dt_local = datetime.strptime(s, fmt)
@@ -68,6 +71,7 @@ def _parse_local_any(s: str):
         except Exception:
             pass
 
+    # Formatos solo fecha
     for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%Y/%m/%d", "%d/%m/%Y"):
         try:
             d = datetime.strptime(s, fmt).date()
@@ -90,6 +94,7 @@ def dashboard_view(request):
     parsed_from_utc, kind_from = _parse_local_any(raw_from)
     parsed_to_utc, kind_to = _parse_local_any(raw_to)
 
+    # Rango por defecto: últimos 7 días
     dt_from_utc = now_utc - timedelta(days=7)
     dt_to_utc_exclusive = now_utc + timedelta(seconds=1)
 
@@ -107,10 +112,11 @@ def dashboard_view(request):
             )
             dt_from_utc = dt_to_utc_exclusive - timedelta(days=30)
 
+    # Sanidad: evitar rango invertido
     if dt_from_utc >= dt_to_utc_exclusive:
         dt_to_utc_exclusive = dt_from_utc + timedelta(days=1)
 
-    def utc_to_local_date_str(dt_utc):
+    def utc_to_local_date_str(dt_utc: datetime) -> str:
         return dt_utc.astimezone(CL_TZ).date().isoformat()
 
     from_date_str = raw_from or utc_to_local_date_str(dt_from_utc)
@@ -221,6 +227,7 @@ def dashboard_view(request):
         hour_series_by_subtype = build_hour_series_by_subtype(
             dt_from_utc, dt_to_utc_exclusive, qs_base=qs_base
         )
+
         rows_all_devices = (
             qs_base.values("device_name").annotate(total=Count("id")).order_by()
         )
@@ -301,7 +308,7 @@ def dashboard_view(request):
 
         cache.set(_key("ctx"), context, timeout=ttl)
 
-    # <<< NUEVO: obtener credenciales activas del tenant (igual que en home_index)
+    # Credenciales activas del tenant (para iframes, etc.)
     cred = None
     try:
         if tenant:
@@ -313,11 +320,9 @@ def dashboard_view(request):
             "[DASHBOARD] Error obteniendo credenciales del tenant: %s", e
         )
 
-    # Las añadimos SIEMPRE al contexto (aunque venga desde caché)
     context["cred"] = cred
-    # >>> FIN NUEVO
 
-    # ✅ Mostrar selector siempre si el usuario pertenece a Inntesec
+    # Selector de tenants solo para usuarios del tenant Inntesec
     user_tenant_name = getattr(
         getattr(request.user, "tenant", None), "name", ""
     ).lower()
@@ -333,7 +338,7 @@ def dashboard_view(request):
 
 
 # ==============
-# 🔹 Cambio tenant
+# Cambio de tenant
 # ==============
 @login_required
 def switch_tenant(request, tenant_id):
@@ -342,25 +347,23 @@ def switch_tenant(request, tenant_id):
     Mantiene al usuario en el mismo módulo (SOAR, Realtime, Alarmas, etc.)
     tras el cambio, y limpia la caché para evitar datos inconsistentes.
     """
-    from tenants.models import Tenant
     from django.contrib import messages
-    from django.core.cache import cache
 
     logger = logging.getLogger(__name__)
 
-    # --- Validar permisos ---
+    # Validar permisos
     user_tenant = getattr(request.user, "tenant", None)
     if not user_tenant or user_tenant.name.lower() != "inntesec":
         messages.error(request, "No tienes permiso para cambiar de empresa.")
         return redirect("dashboard:dashboard")
 
-    # --- Buscar tenant destino ---
+    # Buscar tenant destino
     tenant = Tenant.objects.filter(id=tenant_id).first()
     if not tenant:
         messages.error(request, "El tenant seleccionado no existe.")
         return redirect("dashboard:dashboard")
 
-    # --- Actualizar tenant activo en sesión ---
+    # Actualizar tenant activo en sesión
     request.session["tenant_id"] = tenant.id
     request.session["tenant_name"] = tenant.name
     logger.info(
@@ -369,11 +372,11 @@ def switch_tenant(request, tenant_id):
         tenant.name,
     )
 
-    # --- Limpiar caché ---
+    # Limpiar caché
     cache.clear()
     logger.debug("[SwitchTenant] Caché limpiada tras cambio de tenant")
 
-    # --- Detectar URL de origen ---
+    # Detectar URL de origen
     next_url = (
         request.POST.get("next") or request.META.get("HTTP_REFERER") or ""
     ).strip()
@@ -383,12 +386,12 @@ def switch_tenant(request, tenant_id):
         "[SwitchTenant] next_url: %s | referer: %s", next_url, referer
     )
 
-    # --- Si la URL es interna válida, mantener la ruta actual ---
+    # Si la URL es interna válida, mantener la ruta actual
     if parsed.path and parsed.path.startswith("/"):
-        logger.debug(f"[SwitchTenant] Redirigiendo a ruta interna: {parsed.path}")
+        logger.debug("[SwitchTenant] Redirigiendo a ruta interna: %s", parsed.path)
         return HttpResponseRedirect(parsed.path)
 
-    # --- Redirecciones según el origen ---
+    # Redirecciones según origen
     if "/soar/incidentes" in referer:
         logger.debug("[SwitchTenant] Manteniendo en lista de incidentes SOAR")
         return redirect("soar_incidents:list")
@@ -405,7 +408,7 @@ def switch_tenant(request, tenant_id):
         logger.debug("[SwitchTenant] Manteniendo en dashboard AlarmasOne")
         return redirect("dashboard:dashboard_alarmsone")
 
-    # --- Fallback final: dashboard principal ---
+    # Fallback final: misma ruta o dashboard principal
     try:
         current_path = request.META.get("PATH_INFO", "")
         origin = request.META.get("HTTP_ORIGIN") or request.build_absolute_uri(
@@ -417,9 +420,9 @@ def switch_tenant(request, tenant_id):
             else request.build_absolute_uri("/")
         )
         logger.debug(
-            f"[SwitchTenant] Fallback: redirigiendo a la misma ruta ({full_path})"
+            "[SwitchTenant] Fallback: redirigiendo a la misma ruta (%s)", full_path
         )
         return HttpResponseRedirect(full_path)
     except Exception as e:
-        logger.warning(f"[SwitchTenant] Fallback al dashboard por error ({e})")
+        logger.warning("[SwitchTenant] Fallback al dashboard por error (%s)", e)
         return redirect("dashboard:dashboard")

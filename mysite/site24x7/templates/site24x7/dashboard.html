@@ -171,14 +171,6 @@
       <div class="top-right">
         <button class="btn ghost" title="Actualizar" id="btn-refresh">⟳</button>
 
-        <!-- Menú Exportar (misma estructura que Panel histórico, solo PDF) -->
-        <div class="export-wrapper">
-          <button class="btn ghost" title="Exportar" id="btn-export-toggle">⬇︎</button>
-          <div class="export-dropdown" id="export-menu">
-            <button type="button" data-export-format="pdf">📄 Exportar PDF</button>
-          </div>
-        </div>
-
         <div class="user-menu" id="userMenu">
           <button type="button" id="userButton" class="user-button">
             <div class="user-avatar">
@@ -202,8 +194,8 @@
       </div>
     </header>
 
-    <!-- Contenido principal: SOLO esta grilla se exporta como PDF -->
-    <section class="wrap" id="dashboard-export-area" data-page-slug="Inn-monitor-dashboard">
+    <!-- Contenido principal -->
+    <section class="wrap">
       <div class="card">
         <div class="card-head">
           <h3>Dashboard Inn-Monitor</h3>
@@ -230,20 +222,6 @@
   <!-- JS base -->
   <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/page-loader-universal.js' %}?v={% now 'U' %}"></script>
-
-  {# Librerías para exportar a PDF con captura (mismas que dashboard histórico) #}
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
-          integrity="sha512-YkC9cRTfZc2wP/d9vywgqbiZ9erjRzCQXDpUe1koRaSPoaqe7i0rGUNShUMHbOWcZH/5LiO96XkNjEcZCcXANA=="
-          crossorigin="anonymous"
-          referrerpolicy="no-referrer"></script>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
-          integrity="sha512-BNa5H5LrS9x+h0/pk3jfbQ3VIAtF+wNCz7L+G2kZZgwyXR0YJIUKGwEuUXXSb9VInmxGkP0U4+U8sGZ7WkJ0Ug=="
-          crossorigin="anonymous"
-          referrerpolicy="no-referrer"></script>
-
-  <!-- JS específico de export SOLO PARA ESTE DASHBOARD -->
-  <script defer src="{% static 'js/site24x7_dashboard_export.js' %}?v={% now 'U' %}"></script>
 
   {% include 'partials/config_notificaciones_modal.html' %}
   {% include 'partials/cred_modal.html' %}

@@ -250,7 +250,7 @@ LOGGING = {
 
     "root": {  # logger raíz
         "handlers": ["console"],
-        "level": "INFO",  # 👈 esto permite ver logger.info()
+        "level": "INFO",
     },
 
     "loggers": {
@@ -260,10 +260,16 @@ LOGGING = {
             "level": "INFO",
             "propagate": False,
         },
-        # Si quieres ser bien explícito con el módulo:
         "home.views": {
             "handlers": ["console"],
             "level": "INFO",
+            "propagate": False,
+        },
+
+        # <<< AÑADE ESTO PARA VER inyeccion_api >>>
+        "inyeccion_api": {
+            "handlers": ["console"],
+            "level": "DEBUG",   # así ves info/warning/debug de utils.py
             "propagate": False,
         },
     },

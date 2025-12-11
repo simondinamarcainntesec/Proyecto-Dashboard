@@ -1,6 +1,7 @@
 import os
 from celery import Celery
 from celery.schedules import crontab
+from celery.signals import worker_ready  # <<< NUEVO
 
 # Configura el módulo de settings de Django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "mysite.settings")
@@ -23,13 +24,6 @@ app.conf.beat_schedule = {
         "schedule": crontab(minute="0"),  # cada hora exacta
     },
 
-    # Ingesta de alarmas cada 65 minutos (en realidad: cada hora, minuto 5)
-    "ingesta-api-cada-65-min": {
-        "task": "integrations.tasks.tarea_ingesta_api",
-        "schedule": crontab(minute="*"),  # cada hora, en el minuto 5
-        # Si de verdad quieres cada 65 min, conviene usar timedelta(minutes=65)
-    },
-
     # === Sync de empresas una vez al día ===
     "sync-empresas-diario": {
         "task": "integrations.tasks.tarea_sync_empresas",
@@ -48,11 +42,18 @@ app.conf.beat_schedule = {
         "schedule": crontab(minute="20", hour="3"),  # todos los días a las 03:20 AM
     },
 
-    # Ingesta mensual cada 5 minutos (desactivada por ahora)
-    # "ingesta-mensual": {
-    #     "task": "integrations.tasks.ingesta_mensual_ciclica",
-    #     "schedule": crontab(minute="*/5"),  # Cada 5 minutos
-    # },
+    # Ingesta mensual cada 5 minutos (si la quieres periódica además del arranque)
+    #"ingesta-mensual": {
+    #    "task": "integrations.tasks.ingesta_mensual_ciclica",
+    #    "schedule": crontab(minute="*/5"),  # Cada 5 minutos
+    #},
+
+    # Ingesta de alarmas cada 65 minutos (en realidad: cada hora, minuto 5)
+    "ingesta-api-cada-65-min": {
+        "task": "integrations.tasks.tarea_ingesta_api",
+        "schedule": crontab(minute="5", hour="*/1"),  # cada hora, en el minuto 5
+        # Si de verdad quieres cada 65 min, conviene usar timedelta(minutes=65)
+    },
 }
 
 # Configuración adicional
@@ -65,3 +66,19 @@ app.conf.task_acks_late = True
 @app.task(bind=True)
 def debug_task(self):
     print(f"Request: {self.request!r}")
+
+
+# === Ejecutar ingesta mensual al iniciar el worker ===
+@worker_ready.connect
+def at_worker_ready(sender, **kwargs):
+    """
+    Se ejecuta cuando el worker Celery está listo.
+    Lanza la tarea de ingesta mensual inmediatamente al iniciar el worker.
+    """
+    try:
+        # Usamos send_task para evitar imports circulares
+        print("[CELERY STARTUP] Lanzando 'integrations.tasks.ingesta_mensual_ciclica' al iniciar worker...")
+        sender.app.send_task("integrations.tasks.ingesta_mensual_ciclica")
+    except Exception as exc:
+        # Si quieres, cambia esto a logging
+        print(f"[CELERY STARTUP] Error al lanzar ingesta_mensual_ciclica: {exc!r}")

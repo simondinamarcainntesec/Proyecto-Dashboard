@@ -136,3 +136,41 @@ class TenantDashboardEmbed(models.Model):
         # Muestra el nombre cacheado; si por alguna razón estuviera vacío,
         # usa el nombre actual del tenant.
         return f"{self.tenant_name or getattr(self.tenant, 'name', '')} - Dashboard"
+
+def default_severity():
+    """
+    Estructura por defecto para las severidades.
+    Puedes ajustarla a lo que necesites.
+    """
+    return {
+        "baja": True,
+        "media": True,
+        "alta": True,
+        "critica": True,
+    }
+
+
+class NotificationChannelPreference(models.Model):
+    """
+    Preferencias de severidad por canal de notificación.
+
+    - user: OneToOne => user_id único en la tabla.
+    - telefono / correo / telegram: se guardan como JSON
+      con las severidades marcadas (baja, media, alta, critica).
+    """
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notification_pref",
+    )
+
+    telefono = models.JSONField(default=default_severity)
+    correo = models.JSONField(default=default_severity)
+    telegram = models.JSONField(default=default_severity)
+
+    def __str__(self):
+        return f"Preferencias de notificación de {self.user}"
+
+    class Meta:
+        # Nombre final en Postgres: schema agent + tabla notification_channel_preference
+        db_table = 'agent"."notification_channel_preference'

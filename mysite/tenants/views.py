@@ -15,7 +15,7 @@ from django.views.decorators.cache import never_cache
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
 from django.http import HttpResponseRedirect, JsonResponse
-from tenants.models import Tenant, Client  # ⭐ añadimos Client
+from tenants.models import Tenant, Client, NotificationChannelPreference  # ⭐ añadimos Client
 from tenants.context import current_tenant, current_tenant_source
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.messages import get_messages
@@ -541,12 +541,18 @@ def config_notificaciones_view(request):
     """Página o modal de configuración de notificaciones del usuario"""
     user = request.user
 
+    # Crear/obtener el registro de preferencias de canal para este usuario
+    prefs, _ = NotificationChannelPreference.objects.get_or_create(user=user)
+
     if request.method == "POST":
+        # ==============================
+        # Canales (como ya los tenías)
+        # ==============================
         user.Alarma_Telefono = "Alarma_Telefono" in request.POST
         user.Alarma_Correo = "Alarma_Correo" in request.POST
         user.Alarma_Telegram = "Alarma_Telegram" in request.POST
 
-        # 🔹 Nuevos campos: franja horaria
+        # 🔹 Franja horaria
         hora_inicio = request.POST.get("hora_inicio") or None
         hora_fin = request.POST.get("hora_fin") or None
 
@@ -558,6 +564,71 @@ def config_notificaciones_view(request):
             user.hora_fin = None
 
         user.save()
+
+        # ==============================
+        # Severidades por canal
+        # ==============================
+
+        # Teléfono
+        prefs.telefono = {
+            "baja": "sev_tel_baja" in request.POST,
+            "media": "sev_tel_media" in request.POST,
+            "alta": "sev_tel_alta" in request.POST,
+            "critica": "sev_tel_critica" in request.POST,
+        }
+
+        # Correo
+        prefs.correo = {
+            "baja": "sev_mail_baja" in request.POST,
+            "media": "sev_mail_media" in request.POST,
+            "alta": "sev_mail_alta" in request.POST,
+            "critica": "sev_mail_critica" in request.POST,
+        }
+
+        # Telegram
+        prefs.telegram = {
+            "baja": "sev_tg_baja" in request.POST,
+            "media": "sev_tg_media" in request.POST,
+            "alta": "sev_tg_alta" in request.POST,
+            "critica": "sev_tg_critica" in request.POST,
+        }
+
+        prefs.save()
+
+        # Soporta tanto submit normal como AJAX (fetch)
+        is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        if is_ajax:
+            return JsonResponse({"ok": True})
+
         return redirect(request.META.get("HTTP_REFERER", "dashboard:dashboard_alarmsone"))
 
-    return render(request, "tenants/config_notificaciones.html", {"user": user})
+    # ==============================
+    # GET: preparar datos para el template
+    # ==============================
+    tel = prefs.telefono or {}
+    mail = prefs.correo or {}
+    tg = prefs.telegram or {}
+
+    ctx = {
+        "user": user,
+
+        # Teléfono
+        "tel_baja": tel.get("baja", True),
+        "tel_media": tel.get("media", True),
+        "tel_alta": tel.get("alta", True),
+        "tel_critica": tel.get("critica", True),
+
+        # Correo
+        "mail_baja": mail.get("baja", True),
+        "mail_media": mail.get("media", True),
+        "mail_alta": mail.get("alta", True),
+        "mail_critica": mail.get("critica", True),
+
+        # Telegram
+        "tg_baja": tg.get("baja", True),
+        "tg_media": tg.get("media", True),
+        "tg_alta": tg.get("alta", True),
+        "tg_critica": tg.get("critica", True),
+    }
+
+    return render(request, "tenants/config_notificaciones.html", ctx)

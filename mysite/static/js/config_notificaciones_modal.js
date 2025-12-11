@@ -32,9 +32,15 @@ function showSaveToastAndClose() {
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("configForm");
   const overlay = document.getElementById("configModal");
+
   const toggleTelefono = document.getElementById("toggleTelefono");
-  const franja = document.getElementById("franjaHoraria");
+  const toggleCorreo = document.getElementById("toggleCorreo");
   const toggleTelegram = document.getElementById("toggleTelegram");
+
+  const franja = document.getElementById("franjaHoraria");
+  const telSeverity = document.getElementById("telSeverity");
+  const mailSeverity = document.getElementById("mailSeverity");
+  const tgSeverity = document.getElementById("tgSeverity");
   const qrContainer = document.getElementById("qrTelegram");
 
   // ============================
@@ -136,26 +142,42 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ============================
-  // Mostrar/ocultar franja horaria según Teléfono
+  // Teléfono: franja horaria + severidad
   // ============================
-  if (toggleTelefono && franja) {
-    function updateFranja() {
-      franja.classList.toggle("hidden", !toggleTelefono.checked);
+  if (toggleTelefono) {
+    function updateTelefono() {
+      const show = toggleTelefono.checked;
+      if (franja) franja.classList.toggle("hidden", !show);
+      if (telSeverity) telSeverity.classList.toggle("hidden", !show);
     }
 
-    toggleTelefono.addEventListener("change", updateFranja);
-    updateFranja(); // Inicializa al cargar
+    toggleTelefono.addEventListener("change", updateTelefono);
+    updateTelefono(); // Inicializa al cargar
   }
 
   // ============================
-  // Mostrar/ocultar QR según Telegram
+  // Correo: severidad
   // ============================
-  if (toggleTelegram && qrContainer) {
-    function updateQR() {
-      qrContainer.classList.toggle("hidden", !toggleTelegram.checked);
+  if (toggleCorreo && mailSeverity) {
+    function updateCorreo() {
+      mailSeverity.classList.toggle("hidden", !toggleCorreo.checked);
     }
 
-    toggleTelegram.addEventListener("change", updateQR);
-    updateQR(); // Inicializa al cargar
+    toggleCorreo.addEventListener("change", updateCorreo);
+    updateCorreo(); // Inicializa al cargar
+  }
+
+  // ============================
+  // Telegram: severidad + QR
+  // ============================
+  if (toggleTelegram) {
+    function updateTelegram() {
+      const show = toggleTelegram.checked;
+      if (tgSeverity) tgSeverity.classList.toggle("hidden", !show);
+      if (qrContainer) qrContainer.classList.toggle("hidden", !show);
+    }
+
+    toggleTelegram.addEventListener("change", updateTelegram);
+    updateTelegram(); // Inicializa al cargar
   }
 });

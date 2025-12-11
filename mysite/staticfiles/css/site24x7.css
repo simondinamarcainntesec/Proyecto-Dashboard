@@ -1,16 +1,14 @@
-/* ===== Meta de la tarjeta superior (por si la usamos en otros lados) ===== */
+/* ===== Meta de la tarjeta superior ===== */
 .meta-inline{
   font-size: 0.85rem;
   color: var(--muted, #94a3b8);
 }
 
 /* ===== KPIs Site24x7 ===== */
-/* Forzamos 5 columnas en una sola fila, como en tu captura */
 .grid-kpis.kpis-site24x7{
   grid-template-columns: repeat(5, minmax(180px, 1fr));
 }
 
-/* Opcional: si la pantalla se hace muy chica, que empiece a quebrar */
 @media (max-width: 1200px){
   .grid-kpis.kpis-site24x7{
     grid-template-columns: repeat(3, minmax(180px, 1fr));
@@ -66,7 +64,7 @@
   color: #e5e7eb;
 }
 
-/* ===== Pill "Monitores totales" estilo 'Últimas 50 alertas' ===== */
+/* ===== Pill "Monitores totales" ===== */
 .meta-pill-row{
   display: flex;
   justify-content: flex-start;
