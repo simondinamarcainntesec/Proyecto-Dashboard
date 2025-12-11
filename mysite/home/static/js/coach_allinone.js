@@ -1,7 +1,5 @@
 // static/js/coach_allinone.js
 (function () {
-  console.log("[Coach] script cargado");
-
   const STORAGE_KEY = "inntesec_coach_nav_v2";
 
   function qs(selector) {
@@ -17,13 +15,11 @@
     const match = summaries.find((el) =>
       el.textContent.trim().includes("Inn-Monitor")
     );
-    console.log("[Coach] Inn-Monitor summary encontrado:", !!match);
     return match || null;
   }
 
   function findSiemLink() {
     const byHref = qs('.nav a.nav-item[href*="/siem/"]');
-    console.log("[Coach] SIEM link por href encontrado:", !!byHref);
     return byHref || null;
   }
 
@@ -321,7 +317,6 @@
     currentIndex = index;
 
     const step = steps[currentIndex];
-    console.log("[Coach] Mostrando paso:", step.key);
 
     clearAllDots();
     clearNavEffects();
@@ -349,23 +344,17 @@
   }
 
   function startCoach(force = false) {
-    console.log("[Coach] startCoach(force=", force, ")");
-
     // Auto (primera vez) respeta localStorage; botón Guía rápida lo ignora.
     if (!force && localStorage.getItem(STORAGE_KEY) === "done") {
-      console.log("[Coach] Ya completado, no se muestra de nuevo (modo auto).");
       return;
     }
 
     steps = stepsConfig
       .map((s) => {
         const exists = !!s.getTarget();
-        console.log("[Coach] Paso", s.key, "existe:", exists);
         return { ...s, exists };
       })
       .filter((s) => s.exists);
-
-    console.log("[Coach] Pasos encontrados:", steps.length);
 
     if (!steps.length) {
       console.warn("[Coach] No hay pasos válidos, no se inicia el tour.");
@@ -377,7 +366,6 @@
   }
 
   function endCoach() {
-    console.log("[Coach] endCoach");
     clearAllDots();
     clearNavEffects();
     setBodyCoachOpen(false);
@@ -396,12 +384,9 @@
 
   // ==== INICIALIZACIÓN ====
   document.addEventListener("DOMContentLoaded", function () {
-    console.log("[Coach] DOMContentLoaded");
-
     const quickBtn = document.getElementById("showCoachBtn");
     if (quickBtn) {
       quickBtn.addEventListener("click", function () {
-        console.log("[Coach] Click en Guía rápida");
         window.startInntesecCoach();
       });
     }
@@ -412,7 +397,6 @@
 
   // Exponer función global para el botón Guía rápida
   window.startInntesecCoach = function () {
-    console.log("[Coach] startInntesecCoach manual");
     startCoach(true);
   };
 })();

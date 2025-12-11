@@ -942,7 +942,55 @@ body{
   min-height: 320px;
 }
 
-/* =============================================
-   FIX HOME: Íconos de KPIs alineados a la izquierda
-   ============================================= */
-/* (vacío por ahora) */
+/* ============================
+   Buscador de países (modal)
+   ============================ */
+
+/* Wrapper del input dentro del modal de países */
+#countryModal .country-search-wrapper {
+  margin: 0 0 12px 0;
+}
+
+/* Input de búsqueda de países dentro del modal */
+#countryModal #countrySearch {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  box-sizing: border-box;
+
+  padding: 0.6rem 0.9rem;
+  border-radius: 999px;
+
+  border: 1px solid var(--border, #1e293b) !important;
+  background: #020617 !important;
+  color: var(--text, #e5e7eb) !important;
+
+  font-size: 0.9rem;
+  outline: none;
+
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+#countryModal #countrySearch::placeholder {
+  color: var(--muted, #94a3b8);
+  opacity: 0.85;
+}
+
+#countryModal #countrySearch:hover {
+  background: #020818 !important;
+}
+
+#countryModal #countrySearch:focus {
+  border-color: var(--brand, #3b82f6) !important;
+  box-shadow: 0 0 0 1px rgba(59,130,246,0.45);
+}
+
+@media (max-width: 640px) {
+  #countryModal #countrySearch {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.8rem;
+  }
+}

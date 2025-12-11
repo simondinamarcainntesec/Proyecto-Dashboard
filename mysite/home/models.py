@@ -3,6 +3,7 @@ from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
 from tenants.models import Tenant
 
+
 class TelegramSolicitud(models.Model):
     id = models.IntegerField(primary_key=True, db_column='id')
     chat_id = models.CharField(max_length=255, db_column='Chat_ID', blank=True, null=True)
@@ -14,11 +15,12 @@ class TelegramSolicitud(models.Model):
 
     class Meta:
         managed = False  # ← no crear/alterar tabla
-        db_table = 'telegram"."solicitudes'  # ← schema.tabla (mismo patrón que usas con agent"."ia_soar)
+        db_table = 'telegram"."solicitudes'  # ← schema.tabla
         ordering = ['-fecha_solicitud']
 
     def __str__(self):
         return f"{self.nombre or 'N/A'} • {self.fecha_solicitud or ''}"
+
 
 class IPBlacklist(models.Model):
     ip = models.CharField(
@@ -89,16 +91,12 @@ class IPWhitelist(models.Model):
 
     class Meta:
         managed = False
-        # Forma segura para referenciar esquema + tabla
         db_table = 'agent"."ip_whitelist'
         verbose_name = "IP Whitelist"
         verbose_name_plural = "IP Whitelist"
 
     def __str__(self):
         return self.ip
-
-# home/models_credentials.py  (o dentro de tu app "home/models.py")
-from django.db import models
 
 
 class TenantCredentials(models.Model):
@@ -127,7 +125,7 @@ class TenantCredentials(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'agent"."tenant_credentials'  # <-- importante para esquema
+        db_table = 'agent"."tenant_credentials'
         verbose_name = "Tenant credentials"
         verbose_name_plural = "Tenant credentials"
 
@@ -150,17 +148,19 @@ class TenantCredentials(models.Model):
         except cls.DoesNotExist:
             return None
 
+
 class WhitelistCountryPreference(models.Model):
     """
-    Mapea la tabla física agent.whitelist_country_preference (creada a mano en PostgreSQL).
+    Mapea la tabla física agent.whitelist_country_preference.
     Guarda la lista de países (valores de IPWhitelist.pais) que el usuario quiere ver
-    en la whitelist, por tenant.
+    en la whitelist. Debe existir un único registro por usuario.
     """
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="whitelist_country_prefs",
     )
+    # Mantienes el tenant por si quieres saber con cuál se guardó la preferencia
     tenant = models.ForeignKey(
         Tenant,
         on_delete=models.CASCADE,
@@ -178,7 +178,13 @@ class WhitelistCountryPreference(models.Model):
     class Meta:
         managed = False
         db_table = 'agent"."whitelist_country_preference'
-        unique_together = ("user", "tenant")
+        # Lógica de negocio: un solo registro por usuario
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user"],
+                name="uniq_whitelist_country_pref_per_user",
+            )
+        ]
         verbose_name = "Preferencia de países de whitelist"
         verbose_name_plural = "Preferencias de países de whitelist"
 

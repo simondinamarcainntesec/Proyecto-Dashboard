@@ -59,6 +59,51 @@ def _annotate_norm_field(qs, field_name: str, alias: str):
     return qs.annotate(**{alias: cleaned})
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Normalización y lógica de severidad (msg_severity + severity)
+# ──────────────────────────────────────────────────────────────────────────────
+
+CRITICAL_TERMS = ["critical", "critico", "crítica", "critica"]
+HIGH_TERMS = ["high", "alto"]
+MEDIUM_TERMS = ["medium", "medio", "media"]
+LOW_TERMS = ["low", "bajo"]
+INFO_TERMS = ["info", "informational", "informacion", "información"]
+
+# términos que reconocemos como severidades "normales" en msg_severity
+KNOWN_SEVERITY_TERMS = (
+    CRITICAL_TERMS
+    + HIGH_TERMS
+    + MEDIUM_TERMS
+    + LOW_TERMS
+    + INFO_TERMS
+)
+
+
+def _annotate_severity_fields(qs):
+    """
+    Anota:
+      - msg_severity -> msg_sev_norm
+      - severity     -> sev_norm
+    usando la misma limpieza que el resto del proyecto.
+    """
+    qs = _annotate_norm_field(qs, "msg_severity", "msg_sev_norm")
+    qs = _annotate_norm_field(qs, "severity", "sev_norm")
+    return qs
+
+
+# Filtro reutilizable para "alarmas críticas":
+# - msg_severity es crítico, O
+# - msg_severity no es una severidad conocida (vacío, notice, alert, etc.)
+#   y severity indica crítico
+CRITICAL_FILTER = (
+    Q(msg_sev_norm__in=CRITICAL_TERMS)
+    | (
+        ~Q(msg_sev_norm__in=KNOWN_SEVERITY_TERMS)
+        & Q(sev_norm__in=CRITICAL_TERMS)
+    )
+)
+
+
 def _get_user_telegram_id(user) -> str | None:
     val = getattr(user, "telegram_id", None)
     if val:
@@ -100,15 +145,18 @@ def _parse_country_codes(raw: str) -> list[str]:
 def _save_country_pref(user, tenant, paises: list[str]) -> None:
     """
     Guarda en agent.whitelist_country_preference la lista de países (nombres)
-    seleccionados por usuario + tenant.
-    Si paises es [], deja registrada la preferencia vacía (filtro limpio).
+    seleccionados por usuario (UN REGISTRO POR USER).
+
+    - Siempre hay un único registro por user.
+    - El campo tenant se actualiza con el tenant activo en el momento de guardar.
+    - Si paises es [], se deja la preferencia vacía (filtro limpio).
     """
     from django.utils import timezone as _tz
 
     WhitelistCountryPreference.objects.update_or_create(
         user=user,
-        tenant=tenant,
         defaults={
+            "tenant": tenant,
             "paises": paises,
             "updated_at": _tz.now(),
         },
@@ -271,15 +319,17 @@ def _build_severity_summary(qs):
     """
     Devuelve una lista de dicts con los niveles de severidad y sus conteos.
     Niveles: critical, high, medium, low, info, na (Sin información / N/A).
-    Siempre filtrados por el mismo tenant que venga en la QS.
+
+    - Primero intenta clasificar usando msg_severity.
+    - Si msg_severity está vacío o cae en 'na/desconocido', usa severity.
     """
     if qs is None:
         return []
 
-    base = _annotate_norm_field(qs, "msg_severity", "sev_norm")
+    base = _annotate_severity_fields(qs)
 
     dist = (
-        base.values("sev_norm")
+        base.values("msg_sev_norm", "sev_norm")
         .annotate(total=Count("id"))
         .order_by()
     )
@@ -293,24 +343,33 @@ def _build_severity_summary(qs):
         "na": 0,
     }
 
+    def classify(raw: str) -> str:
+        raw = (raw or "").strip()
+        if not raw or raw.lower() in {"n/a", "na", "none", "desconocido"}:
+            return "na"
+
+        r = raw.lower()
+        if r in CRITICAL_TERMS:
+            return "critical"
+        if r in HIGH_TERMS:
+            return "high"
+        if r in MEDIUM_TERMS:
+            return "medium"
+        if r in LOW_TERMS:
+            return "low"
+        if r in INFO_TERMS:
+            return "info"
+        return "na"
+
     for row in dist:
-        raw = (row.get("sev_norm") or "").strip()
+        msg_raw = row.get("msg_sev_norm") or ""
+        sev_raw = row.get("sev_norm") or ""
         n = row.get("total") or 0
 
-        if not raw or raw in {"n/a", "na", "none", "desconocido"}:
-            key = "na"
-        elif raw in {"critical", "critico", "crítica", "critica"}:
-            key = "critical"
-        elif raw in {"high", "alto"}:
-            key = "high"
-        elif raw in {"medium", "medio", "media"}:
-            key = "medium"
-        elif raw in {"low", "bajo"}:
-            key = "low"
-        elif raw in {"info", "informational", "informacion", "información"}:
-            key = "info"
-        else:
-            key = "na"
+        key = classify(msg_raw)
+        # si msg_severity está vacío o cae en 'na', usamos severity
+        if (not msg_raw) or key == "na":
+            key = classify(sev_raw)
 
         counts[key] += n
 
@@ -382,11 +441,12 @@ def home_index(request):
         dt_to_utc_exclusive = datetime.now(tz=dt_timezone.utc)
         try:
             qs_base = make_base_qs(dt_from_utc, dt_to_utc_exclusive)
+            # anotamos msg_severity + severity normalizados
+            qs_base = _annotate_severity_fields(qs_base)
 
             alarms_total = qs_base.count()
-            alarms_critical_total = qs_base.filter(
-                msg_severity__iexact="critical"
-            ).count()
+            # KPI Alarmas críticas usando msg_severity + fallback a severity
+            alarms_critical_total = qs_base.filter(CRITICAL_FILTER).count()
 
             daily_qs = qs_base.exclude(event_time__isnull=True)
             daily = (
@@ -395,7 +455,7 @@ def home_index(request):
                 .values("day")
                 .annotate(
                     total=Count("id"),
-                    critical=Count("id", filter=Q(msg_severity__iexact="critical")),
+                    critical=Count("id", filter=CRITICAL_FILTER),
                 )
                 .order_by("day")
             )
@@ -413,11 +473,11 @@ def home_index(request):
                     Alarm.objects.all(), "tags", "norm_aotag"
                 )
                 base_fb = qs_fallback.filter(norm_aotag=norm_tid)
+                # anotamos severidades también en el fallback
+                base_fb = _annotate_severity_fields(base_fb)
 
                 alarms_total = base_fb.count()
-                alarms_critical_total = base_fb.filter(
-                    msg_severity__iexact="critical"
-                ).count()
+                alarms_critical_total = base_fb.filter(CRITICAL_FILTER).count()
 
                 daily_fb = (
                     base_fb
@@ -426,7 +486,7 @@ def home_index(request):
                     .values("day")
                     .annotate(
                         total=Count("id"),
-                        critical=Count("id", filter=Q(msg_severity__iexact="critical")),
+                        critical=Count("id", filter=CRITICAL_FILTER),
                     )
                     .order_by("day")
                 )
@@ -536,7 +596,7 @@ def home_index(request):
             logger.exception("[HOME WHITELIST] Error guardando preferencias de países: %s", e)
 
     elif has_countries_param:
-        # Viene el parámetro 'countries' PERO vacío → limpiar preferencia
+        # Viene el parámetro 'countries' PERO vacío → limpiar preferencia (lista vacía)
         selected_paises = []
         try:
             _save_country_pref(user, tenant, [])
@@ -544,9 +604,9 @@ def home_index(request):
             logger.exception("[HOME WHITELIST] Error limpiando preferencias de países: %s", e)
 
     else:
-        # No viene 'countries' en la URL → cargar lo que haya guardado
+        # No viene 'countries' en la URL → cargar lo que haya guardado para el usuario
         try:
-            pref = WhitelistCountryPreference.objects.get(user=user, tenant=tenant)
+            pref = WhitelistCountryPreference.objects.get(user=user)
             selected_paises = pref.paises or []
         except WhitelistCountryPreference.DoesNotExist:
             selected_paises = []
@@ -1008,7 +1068,7 @@ def _stream_blacklist_txt_response() -> HttpResponse:
         body += "\n"
 
     resp = HttpResponse(body, content_type="text/plain; charset=utf-8")
-    resp["Content-Disposition"] = 'attachment; filename=\"blacklist.txt\"'
+    resp["Content-Disposition"] = 'attachment; filename="blacklist.txt"'
     resp["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     resp["Pragma"] = "no-cache"
     return resp

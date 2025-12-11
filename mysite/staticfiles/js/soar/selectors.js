@@ -176,54 +176,62 @@ export function selectTrendByHourPayload(selfIgnore = false){
 }
 
 /* === KPI (sin cambios funcionales) === */
-export function computeKPIs(){
+export function computeKPIs() {
   const st = getState();
   const all = getEvents().filter(r => passesFilters(r, st, {}));
 
   const total = all.length;
 
+  // 1) % bloqueadas
   let blocked = 0;
-  for (const r of all){
+  for (const r of all) {
     const a = norm(prettyActionLabel(r?.security_action ?? r?.action));
-    if (["blocked","block","deny","denied","drop","dropped","timeout","reset"].includes(a)) blocked += 1;
+    if (["blocked","block","deny","denied","drop","dropped","timeout","reset"].includes(a)) {
+      blocked += 1;
+    }
   }
-  const pctBlocked = total ? Math.round((blocked/total)*100) : 0;
+  const pctBlocked = total ? Math.round((blocked / total) * 100) : 0;
 
-  const dmap = {}; for (const r of all){ const k = safe(homog(r?.device)); dmap[k]=(dmap[k]||0)+1; }
-  const topDevice = Object.entries(dmap).sort((a,b)=>b[1]-a[1])[0]?.[0] || "N/A";
+  // 2) Top dispositivo
+  const dmap = {};
+  for (const r of all) {
+    const k = safe(homog(r?.device));
+    dmap[k] = (dmap[k] || 0) + 1;
+  }
+  const topDevice = Object.entries(dmap).sort((a, b) => b[1] - a[1])[0]?.[0] || "N/A";
 
-  const smap = {}; for (const r of all){ const k = norm(homog(r?.severity)); smap[k]=(smap[k]||0)+1; }
-  const domSeverity = Object.entries(smap).sort((a,b)=>b[1]-a[1])[0]?.[0] || "n/a";
+  // 3) Severidad dominante
+  const smap = {};
+  for (const r of all) {
+    const k = norm(homog(r?.severity));
+    smap[k] = (smap[k] || 0) + 1;
+  }
+  const domSeverity = Object.entries(smap).sort((a, b) => b[1] - a[1])[0]?.[0] || "n/a";
 
-  const validDated = all
-    .map(r => ({ d: String(r?.date ?? "").trim(), c: String(r?.srccountry ?? "").trim() }))
-    .filter(x => x.d && norm(x.d) !== "n/a");
+  // 4) País top incidentes (mismo criterio que el donut, pero filtrando Reserved/NA)
+  const isValidCountry = (c) => {
+    const n = norm(c);
+    // vacío, "n/a" o "reserved" se ignoran SIEMPRE
+    return !!n && n !== "n/a" && n !== "reserved";
+  };
+
+  const countryMap = {};
+  for (const r of all) {
+    const raw = String(r?.srccountry ?? "").trim();
+    if (!isValidCountry(raw)) continue;
+    countryMap[raw] = (countryMap[raw] || 0) + 1;
+  }
 
   let topCountryToday = "N/A";
-  if (validDated.length){
-    const lastDay = validDated.map(x => x.d).sort().at(-1);
-    const cmap = {};
-    for (const r of validDated){
-      if (r.d !== lastDay) continue;
-      const c = r.c && norm(r.c) !== "n/a" ? r.c : "";
-      if (!c) continue;
-      cmap[c] = (cmap[c] || 0) + 1;
-    }
-    if (Object.keys(cmap).length){
-      topCountryToday = Object.entries(cmap).sort((a,b)=>b[1]-a[1])[0][0];
-    } else {
-      const gmap = {};
-      for (const r of validDated){
-        const c = r.c && norm(r.c) !== "n/a" ? r.c : "";
-        if (!c) continue;
-        gmap[c] = (gmap[c] || 0) + 1;
-      }
-      topCountryToday = Object.entries(gmap).sort((a,b)=>b[1]-a[1])[0]?.[0] || "N/A";
-    }
+  if (Object.keys(countryMap).length) {
+    // mismo criterio que el donut: top país del conjunto completo filtrado
+    topCountryToday = Object.entries(countryMap).sort((a, b) => b[1] - a[1])[0][0];
   }
 
   return { total, pctBlocked, topDevice, domSeverity, topCountryToday };
 }
+
+
 
 // =======================
 // Top IPs (src / dst)

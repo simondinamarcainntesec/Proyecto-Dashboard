@@ -17,7 +17,8 @@
   <link rel="stylesheet" href="{% static 'css/site24x7_dashboard.css' %}?v={% now 'U' %}">
 </head>
 
-<body class="layout">
+<body class="layout" data-username="{{ request.user.username|default:'anon' }}">
+
   <!-- Overlay -->
   <div id="loading-overlay" role="status" aria-live="polite" aria-label="Cargando">
     <div class="loading-card">
@@ -103,6 +104,7 @@
           <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
           </svg>
+          <span id="coachDotInnMonitor" class="coachmark-dot hidden"></span>
         </summary>
         <div class="tenant-list nav-submenu">
           <a class="tenant-option nav-subitem {% if url_name == 'monitor_status' %}is-active{% endif %}"
@@ -141,6 +143,8 @@
   <div class="content">
     <!-- Topbar -->
     <header class="topbar">
+      <div class="iframe-click-shield"></div>
+
       <div class="top-left">
         <h1 class="top-title">
           Tenant:
@@ -171,6 +175,7 @@
       <div class="top-right">
         <button class="btn ghost" title="Actualizar" id="btn-refresh">⟳</button>
 
+        <!-- Menú usuario (igual que en Tiempo Real) -->
         <div class="user-menu" id="userMenu">
           <button type="button" id="userButton" class="user-button">
             <div class="user-avatar">
@@ -197,9 +202,13 @@
     <!-- Contenido principal -->
     <section class="wrap">
       <div class="card">
-        <div class="card-head">
+        <!-- Cabecera de la card con título + botón de tema estilo login -->
+        <div class="card-head site24x7-card-head">
           <h3>Dashboard Inn-Monitor</h3>
+          <!-- MISMO ID Y ESTILO QUE EN LOGIN -->
+          <button id="theme-switcher"></button>
         </div>
+
         <div class="card-body">
           {% if not iframe_url %}
             <div class="empty-state">
@@ -210,7 +219,8 @@
               </div>
             </div>
           {% else %}
-            <div class="iframe-container">
+            {# crop-header para ocultar header verde #}
+            <div class="iframe-container crop-header">
               <iframe src="{{ iframe_url }}" loading="lazy"></iframe>
             </div>
           {% endif %}
@@ -219,9 +229,12 @@
     </section>
   </div>
 
-  <!-- JS base -->
-  <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
-  <script defer src="{% static 'js/page-loader-universal.js' %}?v={% now 'U' %}"></script>
+    <!-- IMPORTANTE: el dropdown debe cargarse después del HTML -->
+  <script src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
+  <script src="{% static 'js/page-loader-universal.js' %}?v={% now 'U' %}"></script>
+  <script src="{% static 'js/theme-switcher.js' %}?v={% now 'U' %}"></script>
+  
+
 
   {% include 'partials/config_notificaciones_modal.html' %}
   {% include 'partials/cred_modal.html' %}

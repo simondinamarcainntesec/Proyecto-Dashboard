@@ -9,8 +9,17 @@ function toggleCountryModal(show) {
 
   if (show) {
     modal.classList.remove('hidden');
+
     // Sincronizar estado de checkboxes en base a URL/localStorage
     initCountryModalFromState();
+
+    // Aplicar filtro actual del buscador (si hubiera texto escrito)
+    var searchInput = document.getElementById('countrySearch');
+    var term = '';
+    if (searchInput) {
+      term = (searchInput.value || '').toLowerCase().trim();
+    }
+    filterCountries(term);
   } else {
     modal.classList.add('hidden');
   }
@@ -130,6 +139,13 @@ function resetCountryFilter() {
     }
   });
 
+  // Limpiar buscador visualmente y mostrar todos los países
+  var searchInput = document.getElementById('countrySearch');
+  if (searchInput) {
+    searchInput.value = '';
+  }
+  filterCountries('');
+
   try {
     localStorage.removeItem('whitelistCountries');
   } catch (e) {
@@ -159,5 +175,29 @@ document.addEventListener('change', function (event) {
     if (pill) {
       pill.classList.toggle('is-selected', cb.checked);
     }
+  }
+});
+
+// ===============================
+// Buscador de países en el modal
+// ===============================
+
+// Función helper para aplicar el filtro a los pills
+function filterCountries(term) {
+  term = (term || '').toLowerCase().trim();
+  var pills = document.querySelectorAll('#countryModal .country-pill');
+
+  pills.forEach(function (pill) {
+    var name = (pill.textContent || '').toLowerCase();
+    // Mostrar solo los que contengan el término
+    pill.style.display = name.indexOf(term) !== -1 ? '' : 'none';
+  });
+}
+
+// Escuchar cambios de texto en el input de búsqueda
+document.addEventListener('input', function (event) {
+  if (event.target && event.target.id === 'countrySearch') {
+    var term = event.target.value;
+    filterCountries(term);
   }
 });

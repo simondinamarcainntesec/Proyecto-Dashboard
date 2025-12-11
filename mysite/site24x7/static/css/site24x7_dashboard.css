@@ -1,12 +1,53 @@
+/* ============================================================
+   Altura total del documento
+============================================================ */
 html,
 body {
   height: 100%;
 }
 
+/* ============================================================
+   Cabecera de la card (Dashboard Inn-Monitor)
+============================================================ */
+.site24x7-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem; /* separa texto y botón */
+}
+
+/* Botón cambio de tema */
+#theme-switcher {
+  padding: 8px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  border: 1px solid var(--border, #ddd);
+  background-color: transparent;
+  font-size: 1.2rem;
+  color: var(--text, #e5e7eb);
+  transition: color 0.3s, border-color 0.3s, background-color 0.3s;
+  margin-left: 0; /* queda pegado al título gracias al gap */
+}
+
+#theme-switcher:hover {
+  background-color: rgba(148, 163, 184, 0.15);
+}
+
+[data-theme="dark"] #theme-switcher {
+  border-color: #444;
+}
+
+/* ============================================================
+   Iframe container
+============================================================ */
 .iframe-container {
+  position: relative;
   width: 100%;
-  height: calc(100vh - 160px); /* ajusta si quieres más/menos alto según el header */
-  background: #fff;
+  height: calc(100vh - 220px);
+  background: #020617;
+  border-radius: 16px;
+  border: 1px solid #1e293b;
+  overflow: hidden;
+  padding: 0;
 }
 
 .iframe-container iframe {
@@ -14,5 +55,63 @@ body {
   height: 100%;
   border: 0;
   display: block;
-  background: #fff;
+  background: #ffffff;
+  transition: filter 0.25s ease;
+}
+
+[data-theme="dark"] .iframe-container iframe {
+  filter: invert(0.9) hue-rotate(180deg) contrast(1.05);
+  transform: translateZ(0);
+}
+
+/* Recorte del header verde de Site24x7 */
+.iframe-container.crop-header iframe {
+  position: relative;
+  top: -50px;
+  height: calc(100% + 50px);
+}
+
+/* ============================================================
+   Topbar + User Dropdown
+============================================================ */
+.topbar {
+  position: relative;
+  z-index: 50; /* por encima del resto del contenido */
+}
+
+/* El menú de usuario genera un nuevo contexto de posicionamiento */
+.user-menu {
+  position: relative;
+  z-index: 900;
+}
+
+/* IMPORTANTE:
+   No redefinimos estilos visuales del dropdown, solo la capa.
+   El diseño (background, bordes, etc.) lo da user_dropdown.css */
+.user-menu .dropdown-menu {
+  z-index: 1000 !important; /* por encima del resto (e iframe) */
+}
+
+/* Si el JS añade clases tipo is-open/open/active,
+   solo nos aseguramos del z-index */
+.user-menu.is-open .dropdown-menu,
+.user-menu.open .dropdown-menu,
+.user-menu.active .dropdown-menu {
+  z-index: 1000 !important;
+}
+
+/* ============================================================
+   Capa anti-iframe (solo por seguridad, no afecta estilos)
+============================================================ */
+.iframe-click-shield {
+  position: absolute;
+  top: 0;
+  right: 0;
+
+  width: 280px;
+  height: 120px;
+
+  background: transparent;
+  pointer-events: none;
+  z-index: 500;
 }

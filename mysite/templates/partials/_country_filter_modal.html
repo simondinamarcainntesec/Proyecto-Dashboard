@@ -17,6 +17,10 @@
         Selecciona los países cuyos rangos de IP quieres visualizar en la whitelist.
       </p>
 
+      {# Buscador de países #}
+      <div class="country-search-wrapper">
+        <input type="text" id="countrySearch" class="country-search-input home-ip-input" placeholder="Buscar país..." autocomplete="off"/>
+      </div>
       <div class="country-grid">
         {# Recorremos todos los países entregados por el view #}
         {% for c in whitelist_countries %}
