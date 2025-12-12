@@ -22,5 +22,10 @@ urlpatterns = [
     path("blacklist.txt", views.blacklist_txt, name="blacklist_txt"),
     path("blacklist", home_views.blacklist_txt, name="blacklist_download_root"),
     path("home/blacklist/page/", views.blacklist_download_page, name="blacklist_download_page"),
-    
+    path("config/notificaciones/", views.config_notificaciones, name="config_notificaciones"),
+    path(
+        "whitelist/save-countries/",
+        views.whitelist_save_countries,
+        name="whitelist_save_countries",
+    ),    
 ]

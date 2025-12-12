@@ -14,7 +14,8 @@ from django.http import HttpResponseRedirect
 
 from tenants.decorators import tenant_required
 from tenants.models import Tenant
-from home.models import TenantCredentials  # credenciales del portal
+from home.models import TenantCredentials, WhitelistCountryPreference  # ← incluye pref de países
+from home.countries import ALL_COUNTRIES  # ← lista de países para el modal
 
 from .charts import (
     build_trend_data,
@@ -328,6 +329,24 @@ def dashboard_view(request):
     ).lower()
     if user_tenant_name == "inntesec":
         context["all_tenants"] = Tenant.objects.all().order_by("name")
+
+    # ==============================
+    # Países para el modal de whitelist
+    # ==============================
+    selected_paises = []
+    try:
+        pref = WhitelistCountryPreference.objects.get(user=request.user)
+        selected_paises = pref.paises or []
+    except WhitelistCountryPreference.DoesNotExist:
+        selected_paises = []
+    except Exception as e:
+        logger.exception(
+            "[DASHBOARD] Error leyendo preferencias de países: %s", e
+        )
+        selected_paises = []
+
+    context["whitelist_countries"] = ALL_COUNTRIES
+    context["selected_paises"] = selected_paises
 
     resp = render(request, "dashboard/dashboard.html", context)
     resp["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"

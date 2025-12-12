@@ -1,4 +1,6 @@
+# site24x7/services.py
 import json
+import os
 import ssl
 import urllib.request
 from pathlib import Path
@@ -6,29 +8,61 @@ from typing import Any, List, Dict
 
 import requests
 
-# =========================
-# Configuración TOKEN WEBHOOK
-# =========================
-TOKEN_URL = "https://iaproductivo.inntesec.cl/webhook/3c850e31-e699-4fa6-9fed-513d4ccd281b"
-SECRET = "@L^E4$h!f^r1VmwD#c1B#C8XzM#B4pON"
-HEADER_NAME = "passkey"
-VERIFY_SSL = True
+# ============================================================
+# Config desde variables de entorno
+# (mismo webhook que Logs360, pero separado por claridad)
+#
+# Esperados en .env:
+#   SITE24X7_WEBHOOK_URL
+#   SITE24X7_WEBHOOK_SECRET
+#   SITE24X7_WEBHOOK_HEADER_NAME  (opcional, default "passkey")
+#   SITE24X7_API_BASE_URL         (opcional)
+#   SITE24X7_VERIFY_SSL           (opcional, "True"/"False")
+# ============================================================
+
+WEBHOOK_URL = os.environ.get("SITE24X7_WEBHOOK_URL", "").strip()
+WEBHOOK_SECRET = os.environ.get("SITE24X7_WEBHOOK_SECRET", "") or ""
+WEBHOOK_HEADER_NAME = os.environ.get("SITE24X7_WEBHOOK_HEADER_NAME", "passkey")
+
+SITE24X7_BASE_URL = os.environ.get(
+    "SITE24X7_API_BASE_URL",
+    "https://www.site24x7.com/api",
+).rstrip("/")
+
+VERIFY_SSL = os.environ.get("SITE24X7_VERIFY_SSL", "True").lower() == "true"
 
 TOKEN_FILE = Path(__file__).resolve().parent / "token.txt"
 
+AnyType = Any  # alias simple para tipado
+
+# Claves posibles donde puede venir el token
 CANDIDATE_KEYS = {
-    "acces_token", "access_token", "token",
-    "access-token", "access token",
-    "ACCESS_TOKEN", "Access_Token",
+    "acces_token",
+    "access_token",
+    "token",
+    "access_token",
+    "access-token",
+    "access token",
+    "access_token".upper(),
+    "access_token".title(),
+    "access_token".capitalize(),
+    "access_token".replace("_", ""),
+    "access_token".replace("_", "-"),
 }
+CANDIDATE_KEYS.update(
+    {
+        "access_token",
+        "access-token",
+        "access token",
+        "access_token".upper(),
+        "access_token".title(),
+        "acces_token",
+        "Access_Token",
+        "ACCESS_TOKEN",
+    }
+)
 
-# =========================
-# Configuración Site24x7
-# =========================
-SITE24X7_BASE_URL = "https://www.site24x7.com/api"
 CURRENT_STATUS_PATH = "/msp/customers/monitors/status"  # Customer Wise Monitor Status
-
-AnyType = Any  # alias solo para tipado
 
 
 # -----------------------------------
@@ -36,17 +70,16 @@ AnyType = Any  # alias solo para tipado
 # -----------------------------------
 def collect_tokens(obj: Any) -> List[str]:
     """
-    Recorre recursivamente un dict/list buscando posibles tokens
-    en claves tipo 'access_token', 'token', etc.
-    Devuelve una lista de tokens en el orden en que aparecen.
+    Recorre el JSON y junta todos los posibles tokens.
     """
     found: List[str] = []
 
     if isinstance(obj, dict):
+        lowered = {k.lower() for k in CANDIDATE_KEYS}
         for k, v in obj.items():
             if isinstance(k, str):
                 key_norm = k.strip().lower()
-                if key_norm in {k.lower() for k in CANDIDATE_KEYS} and isinstance(v, str) and v.strip():
+                if key_norm in lowered and isinstance(v, str) and v.strip():
                     found.append(v.strip())
             found.extend(collect_tokens(v))
 
@@ -59,12 +92,15 @@ def collect_tokens(obj: Any) -> List[str]:
 
 def get_site24x7_token() -> str:
     """
-    Llama al webhook, parsea la respuesta y toma SIEMPRE el 3er token
-    si hay 3 o más; si no, toma el último disponible.
+    Llama al webhook y devuelve el token de Site24x7.
+    Siempre toma el 3er token; si no hay 3, usa el último.
     """
-    headers = {HEADER_NAME: SECRET}
-    req = urllib.request.Request(url=TOKEN_URL, method="GET", headers=headers)
+    if not WEBHOOK_URL:
+        raise RuntimeError("SITE24X7_WEBHOOK_URL no está configurada.")
+
+    headers = {WEBHOOK_HEADER_NAME: WEBHOOK_SECRET}
     ctx = ssl.create_default_context() if VERIFY_SSL else ssl._create_unverified_context()
+    req = urllib.request.Request(url=WEBHOOK_URL, method="GET", headers=headers)
 
     try:
         with urllib.request.urlopen(req, timeout=20, context=ctx) as resp:
@@ -73,43 +109,37 @@ def get_site24x7_token() -> str:
     except Exception as e:
         raise RuntimeError(f"Error al llamar al webhook de token: {e}")
 
-    if status // 100 != 2:
-        raise RuntimeError(f"Webhook de token respondió HTTP {status}")
-
     text = body.decode("utf-8", errors="replace").strip()
 
-    # Intentar JSON primero
+    if status // 100 != 2:
+        raise RuntimeError(f"Webhook de token respondió HTTP {status}: {text}")
+
+    # Intentar JSON como en el script original
     try:
         data = json.loads(text)
         tokens = collect_tokens(data)
-        if tokens:
-            if len(tokens) >= 3:
-                chosen = tokens[2]  # 3er token
-            else:
-                chosen = tokens[-1]  # el último disponible
 
-            # guardar a archivo por compatibilidad
-            try:
-                TOKEN_FILE.write_text(chosen, encoding="utf-8")
-            except Exception:
-                pass
+        if not tokens:
+            raise RuntimeError("No se encontraron tokens en el JSON del webhook.")
 
-            return chosen
+        # 3er token para Site24x7 (si existe), si no, el último
+        if len(tokens) >= 3:
+            chosen = tokens[2]
+        else:
+            chosen = tokens[-1]
 
-        # No se encontraron tokens explícitos, usar cuerpo tal cual
-        if text:
-            try:
-                TOKEN_FILE.write_text(text, encoding="utf-8")
-            except Exception:
-                pass
-            return text
+        try:
+            TOKEN_FILE.write_text(chosen, encoding="utf-8")
+        except Exception:
+            # Si falla el guardado no rompemos el flujo
+            pass
 
-        raise RuntimeError("No se encontró token en la respuesta del webhook.")
+        return chosen
 
     except json.JSONDecodeError:
-        # No era JSON, tratamos el cuerpo como token simple
+        # Si no es JSON, usamos el cuerpo como token simple
         if not text:
-            raise RuntimeError("Respuesta vacía del webhook de token.")
+            raise RuntimeError("Respuesta vacía del webhook de token (no es JSON).")
         try:
             TOKEN_FILE.write_text(text, encoding="utf-8")
         except Exception:
@@ -122,8 +152,7 @@ def get_site24x7_token() -> str:
 # -----------------------------------
 def fetch_customer_status(access_token: str, zaaid: str) -> Dict[str, AnyType]:
     """
-    Llama a /msp/customers/monitors/status y devuelve el bloque del cliente
-    que corresponde al zaaid indicado.
+    Llama a /msp/customers/monitors/status y devuelve el cliente del zaaid.
     """
     headers = {
         "Accept": "application/json; version=2.0",
@@ -135,21 +164,17 @@ def fetch_customer_status(access_token: str, zaaid: str) -> Dict[str, AnyType]:
     resp.raise_for_status()
     data = resp.json()
 
-    # data["data"] es una lista de clientes, buscamos el zaaid
     customers = data.get("data", [])
     for customer in customers:
         if str(customer.get("zaaid")) == str(zaaid):
             return customer
 
-    # Si no lo encontramos, devolvemos un dict vacío
-    return {}
+    return {}  # no encontrado
 
 
 def build_counters(monitors: List[Dict[str, AnyType]]) -> Dict[str, int]:
     """
-    A partir de la lista de monitores arma los contadores tipo:
-    abajo, crítico, problema, arriba, suspendidos.
-    Basado en el campo integer 'status'.
+    A partir de los monitores arma contadores por status.
     """
     counters = {
         "down": 0,       # 0

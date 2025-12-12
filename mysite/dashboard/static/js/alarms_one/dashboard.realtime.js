@@ -6,7 +6,6 @@ import "./data.js";
 
 import {
   getActiveCountsForDonut,
-  // calcKpis, // <- no lo usamos para evitar que pise los valores
   actionDataForCurrentFilter,
   msgSeverityDataForCurrentFilter,
   levelDataForCurrentFilter,
@@ -24,14 +23,14 @@ import { mountLevelBar } from "./charts/level.js";
 import { renderSubtypeBar } from "./charts/subtype.js";
 import { renderLogDescriptionBar } from "./charts/logDescription.js";
 
-function isEmptyState() { return !!document.querySelector(".empty-state"); }
+function isEmptyState() {
+  return !!document.querySelector(".empty-state");
+}
 
 // ======================================================
 // 1) Inicialización global
 // ======================================================
-console.log("[realtime] Iniciando dashboard AlarmsOne (tiempo real)...");
 setupChartJSDefaults(window.Chart);
-console.log("[realtime] Chart.js detectado:", !!window.Chart);
 
 // ======================================================
 // 2) KPIs
@@ -43,20 +42,26 @@ function formatHourRange(h) {
   return `${hh}:00–${hh}:59 ${ampm}`;
 }
 
+// Igual que en selectors.js
+function isCriticalKey(k) {
+  const kk = String(k || "").trim().toLowerCase();
+  return (
+    kk === "critical" ||
+    kk === "critico" ||
+    kk === "critica" ||
+    kk === "crítica"
+  );
+}
+
 // --- Helpers para obtener data venga de donde venga ---
 function readJSON(id) {
   try {
     const el = document.getElementById(id);
     if (!el) return null;
     return JSON.parse(el.textContent);
-  } catch { return null; }
-}
-
-function firstNonEmpty(...objs) {
-  for (const o of objs) {
-    if (o && typeof o === "object" && Object.keys(o).length) return o;
+  } catch {
+    return null;
   }
-  return {};
 }
 
 function getDataCtx() {
@@ -91,22 +96,27 @@ function sumVals(obj) {
 function renderKPIs() {
   const { sev, msg, devCounts } = getDataCtx();
 
-  const total   = sumVals(sev);
-  const high    = Number(msg.critical || 0); // usar CRITICAL de msg_severity
-  // Si quieres (high + critical) desde msg_severity, usa:
-  // const high = Number(msg.high || 0) + Number(msg.critical || 0);
-  const devices = Object.keys(devCounts).length;
+  const total = sumVals(sev);
 
-  const elTotal   = $("#kpi-total");
-  const elHigh    = $("#kpi-high");
+  // Alta severidad = suma de los severity que sean "critical/critico/..."
+  const high = Object.entries(sev || {}).reduce((acc, [k, v]) => {
+    return acc + (isCriticalKey(k) ? Number(v) || 0 : 0);
+  }, 0);
+
+  const devices = Object.keys(devCounts || {}).length;
+
+  const elTotal = $("#kpi-total");
+  const elHigh = $("#kpi-high");
   const elDevices = $("#kpi-devices");
-  if (elTotal)   elTotal.textContent = total;
-  if (elHigh)    elHigh.textContent = high;
+  if (elTotal) elTotal.textContent = total;
+  if (elHigh) elHigh.textContent = high;
   if (elDevices) elDevices.textContent = devices;
 
   const { hour } = getPeakHour();
   const elPeak = document.getElementById("kpi-peak-hour");
-  if (elPeak) elPeak.textContent = (hour == null) ? "—" : formatHourRange(hour);
+  if (elPeak) {
+    elPeak.textContent = hour == null ? "—" : formatHourRange(hour);
+  }
 }
 
 // ======================================================
@@ -114,7 +124,6 @@ function renderKPIs() {
 // ======================================================
 function updateAll() {
   const st = getState();
-  console.log("[realtime] Estado actual:", st);
 
   // KPIs
   renderKPIs();
@@ -127,12 +136,19 @@ function updateAll() {
 
   // Barras
   renderActionBar(actionDataForCurrentFilter(st));
-  renderMsgSeverityBar(msgSeverityDataForCurrentFilter(st), st.msgSeverityFilter);
+  renderMsgSeverityBar(
+    msgSeverityDataForCurrentFilter(st),
+    st.msgSeverityFilter
+  );
   renderHourly(st);
-  renderSubtypeBar(subtypeDataForCurrentFilter(st), st.subtypeFilter);
-  renderLogDescriptionBar(logDescriptionDataForCurrentFilter(st), st.logDescriptionFilter);
-
-  console.log("[realtime] Gráficos actualizados correctamente ✅");
+  renderSubtypeBar(
+    subtypeDataForCurrentFilter(st),
+    st.subtypeFilter
+  );
+  renderLogDescriptionBar(
+    logDescriptionDataForCurrentFilter(st),
+    st.logDescriptionFilter
+  );
 }
 
 // ======================================================
@@ -153,7 +169,8 @@ function wireTableSort() {
       rows.sort((a, b) => {
         const av = a.children[idx].innerText.trim();
         const bv = b.children[idx].innerText.trim();
-        if (type === "number") return asc ? Number(av) - Number(bv) : Number(bv) - Number(av);
+        if (type === "number")
+          return asc ? Number(av) - Number(bv) : Number(bv) - Number(av);
         return asc ? av.localeCompare(bv) : bv.localeCompare(av);
       });
       tbody.innerHTML = "";
@@ -170,14 +187,17 @@ let unmountLevel = null;
 function boot() {
   if (isEmptyState()) {
     const btn = document.getElementById("btn-empty-ok");
-    if (btn) btn.addEventListener("click", () => {
-      window.location.href = document.getElementById("link-historico")?.getAttribute("href") || "/dashboard/";
-    });
-    console.log("[realtime] Empty-state: sin gráficos que montar.");
+    if (btn) {
+      btn.addEventListener("click", () => {
+        window.location.href =
+          document
+            .getElementById("link-historico")
+            ?.getAttribute("href") || "/dashboard/";
+      });
+    }
     return;
   }
 
-  console.log("[realtime] DOM listo → inicializando...");
   wireTableSort();
 
   const levelEl = document.getElementById("levelBar");
@@ -199,7 +219,6 @@ if (document.readyState === "loading") {
 // ======================================================
 onStateChange(() => {
   if (isEmptyState()) return;
-  console.log("[realtime] Cambio detectado en filtros → refrescando...");
   updateAll();
 });
 
@@ -207,11 +226,11 @@ onStateChange(() => {
 // 7) Botón refresh (topbar)
 // ======================================================
 (function () {
-  const r = document.getElementById('btn-refresh');
+  const r = document.getElementById("btn-refresh");
   if (!r) return;
-  r.addEventListener('click', () => {
+  r.addEventListener("click", () => {
     const params = new URLSearchParams(window.location.search);
-    params.set('_', Date.now().toString());
+    params.set("_", Date.now().toString());
     window.location.search = params.toString();
   });
 })();
@@ -220,18 +239,31 @@ onStateChange(() => {
 // 8) EXPOSE & MIRROR STATE (para los modales)
 // ======================================================
 (function exposeRealtimeState() {
-  window.getState = () => { try { return getState(); } catch { return {}; } };
+  window.getState = () => {
+    try {
+      return getState();
+    } catch {
+      return {};
+    }
+  };
   function mirrorToBody(st) {
-    const b = document.body; if (!b) return;
-    b.dataset.severityFilter        = st.severityFilter || "";
-    b.dataset.deviceFilter          = st.deviceFilter || "";
-    b.dataset.actionFilter          = st.actionFilter || "";
-    b.dataset.hourFilter            = st.hourFilter || "";
-    b.dataset.msgSeverityFilter     = st.msgSeverityFilter || "";
-    b.dataset.levelFilter           = st.levelFilter || "";
-    b.dataset.subtypeFilter         = st.subtypeFilter || "";
-    b.dataset.logDescriptionFilter  = st.logDescriptionFilter || "";
+    const b = document.body;
+    if (!b) return;
+    b.dataset.severityFilter = st.severityFilter || "";
+    b.dataset.deviceFilter = st.deviceFilter || "";
+    b.dataset.actionFilter = st.actionFilter || "";
+    b.dataset.hourFilter = st.hourFilter || "";
+    b.dataset.msgSeverityFilter = st.msgSeverityFilter || "";
+    b.dataset.levelFilter = st.levelFilter || "";
+    b.dataset.subtypeFilter = st.subtypeFilter || "";
+    b.dataset.logDescriptionFilter =
+      st.logDescriptionFilter || "";
   }
-  try { mirrorToBody(getState()); } catch {}
-  onStateChange((st) => { window.__APP_STATE = st; mirrorToBody(st); });
+  try {
+    mirrorToBody(getState());
+  } catch {}
+  onStateChange((st) => {
+    window.__APP_STATE = st;
+    mirrorToBody(st);
+  });
 })();

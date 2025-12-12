@@ -12,6 +12,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="{% static 'css/config_notificaciones_modal.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/cred_modal.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/country_filter_modal.css' %}?v={% now 'U' %}">
 </head>
 
 <body class="layout soar" data-page-slug="soar_dashboard">
@@ -138,6 +139,9 @@
             href="{% url 'cambiar_contrasena' %}">🔒 Cambiar contraseña</a>
           <a class="tenant-option nav-subitem" href="#" onclick="toggleCredModal(true)">🔑 Credenciales</a>
           <a class="tenant-option nav-subitem" href="#" onclick="toggleConfigModal(true)">🔔 Notificaciones</a>
+          <a class="tenant-option nav-subitem" href="#" onclick="toggleCountryModal(true)">
+          🌎 Filtro países whitelist
+          </a>
         </div>
       </details>
     </nav>
@@ -421,8 +425,10 @@
   <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/soar/page-loader-universal.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/home_portal.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/country_filter_modal.js' %}?v={% now 'U' %}"></script>
 
   {% include 'partials/config_notificaciones_modal.html' %}
+  {% include 'partials/_country_filter_modal.html' %}
   {% include 'partials/cred_modal.html' %}
 </body>
 </html>

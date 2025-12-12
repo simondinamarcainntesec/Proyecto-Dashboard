@@ -17,8 +17,9 @@ from urllib.parse import urlparse
 
 from .models import IncidenteSOAR
 
-# 👇 NUEVO: credenciales de blacklist/portal
-from home.models import TenantCredentials  # noqa
+# 👇 NUEVO: credenciales de blacklist/portal + preferencias de países
+from home.models import TenantCredentials, WhitelistCountryPreference  # noqa
+from home.countries import ALL_COUNTRIES
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +139,7 @@ def _make_incidents_csv_response(iterable, tenant, scope: str) -> HttpResponse:
     filename = f"soar_incidentes_{tenant_slug}_{scope}_{today_str}.csv"
 
     response = HttpResponse(content_type="text/csv; charset=utf-8")
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    response["Content-Disposition"] = f'attachment; filename=\"{filename}\"'
 
     writer = csv.writer(response)
     # Cabecera: enfocada en resumen, fecha/hora, severidad e ID
@@ -212,6 +213,19 @@ def incidents_list(request):
     if user_tenant and user_tenant.name.lower() == "inntesec":
         tenants_list = Tenant.objects.all().order_by("name")
 
+    # ==============================
+    # Países para el modal de whitelist
+    # ==============================
+    selected_paises = []
+    try:
+        pref = WhitelistCountryPreference.objects.get(user=request.user)
+        selected_paises = pref.paises or []
+    except WhitelistCountryPreference.DoesNotExist:
+        selected_paises = []
+    except Exception as e:
+        logger.exception("[SOAR_INCIDENTS] Error leyendo preferencias de países: %s", e)
+        selected_paises = []
+
     context = {
         "page_obj": page_obj,
         "q": q,
@@ -221,6 +235,9 @@ def incidents_list(request):
         "tenant": tenant,
         "all_tenants": tenants_list,
         "cred": cred,  # 👈 para el partial de credenciales
+        # 👇 Para el modal de países (mismo contrato que en home/dashboard/realtime)
+        "whitelist_countries": ALL_COUNTRIES,
+        "selected_paises": selected_paises,
     }
     return render(request, "soar_incidents/list.html", context)
 

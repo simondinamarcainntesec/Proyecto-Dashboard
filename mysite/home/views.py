@@ -10,9 +10,11 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.db.models import F, Value, TextField, Q, Count
 from django.db.models.functions import Lower, Replace, Trim, Cast, TruncDate
+from django.db import transaction
 import json
+
 from tenants.decorators import tenant_required
-from tenants.models import Tenant, TenantUser
+from tenants.models import Tenant, TenantUser, NotificationChannelPreference
 
 from inyeccion_api.models import Alarm
 from soar_incidents.models import IncidenteSOAR
@@ -24,7 +26,6 @@ from .models import (
     WhitelistCountryPreference,
 )
 from .countries import ALL_COUNTRIES, COUNTRY_BY_CODE
-
 from dashboard.charts import make_base_qs
 import requests
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
@@ -398,7 +399,6 @@ def _build_severity_summary(qs):
 
     return summary
 
-
 @login_required
 @tenant_required
 def home_index(request):
@@ -441,11 +441,9 @@ def home_index(request):
         dt_to_utc_exclusive = datetime.now(tz=dt_timezone.utc)
         try:
             qs_base = make_base_qs(dt_from_utc, dt_to_utc_exclusive)
-            # anotamos msg_severity + severity normalizados
             qs_base = _annotate_severity_fields(qs_base)
 
             alarms_total = qs_base.count()
-            # KPI Alarmas críticas usando msg_severity + fallback a severity
             alarms_critical_total = qs_base.filter(CRITICAL_FILTER).count()
 
             daily_qs = qs_base.exclude(event_time__isnull=True)
@@ -473,7 +471,6 @@ def home_index(request):
                     Alarm.objects.all(), "tags", "norm_aotag"
                 )
                 base_fb = qs_fallback.filter(norm_aotag=norm_tid)
-                # anotamos severidades también en el fallback
                 base_fb = _annotate_severity_fields(base_fb)
 
                 alarms_total = base_fb.count()
@@ -571,50 +568,24 @@ def home_index(request):
         except Exception as e:
             logger.exception("[HOME] Error búsqueda blacklist: %s", e)
 
-    # =======================
-    # WHITELIST (tabla + filtros por país + modal)
-    # =======================
+    # =================================================
+    # WHITELIST (tabla + modal; países solo preferencia)
+    # =================================================
     whitelist_results = IPWhitelist.objects.none()
     whitelist_not_found_terms: list[str] = []
     show_whitelist_modal = False
 
-    # 1) Determinar países seleccionados (preferencias)
-    has_countries_param = "countries" in request.GET
-    raw_country_codes = (request.GET.get("countries") or "").strip()
-    codes_from_query = _parse_country_codes(raw_country_codes)
-
-    if codes_from_query:
-        # Hay países en la URL → convertir códigos ISO a nombres en español y guardar
-        selected_paises = [
-            COUNTRY_BY_CODE[code]
-            for code in codes_from_query
-            if code in COUNTRY_BY_CODE
-        ]
-        try:
-            _save_country_pref(user, tenant, selected_paises)
-        except Exception as e:
-            logger.exception("[HOME WHITELIST] Error guardando preferencias de países: %s", e)
-
-    elif has_countries_param:
-        # Viene el parámetro 'countries' PERO vacío → limpiar preferencia (lista vacía)
+    # 1) Leer países seleccionados desde las preferencias (NO usamos ?countries= aquí)
+    try:
+        pref = WhitelistCountryPreference.objects.get(user=user)
+        selected_paises = pref.paises or []
+    except WhitelistCountryPreference.DoesNotExist:
         selected_paises = []
-        try:
-            _save_country_pref(user, tenant, [])
-        except Exception as e:
-            logger.exception("[HOME WHITELIST] Error limpiando preferencias de países: %s", e)
+    except Exception as e:
+        logger.exception("[HOME WHITELIST] Error leyendo preferencias de países: %s", e)
+        selected_paises = []
 
-    else:
-        # No viene 'countries' en la URL → cargar lo que haya guardado para el usuario
-        try:
-            pref = WhitelistCountryPreference.objects.get(user=user)
-            selected_paises = pref.paises or []
-        except WhitelistCountryPreference.DoesNotExist:
-            selected_paises = []
-        except Exception as e:
-            logger.exception("[HOME WHITELIST] Error leyendo preferencias de países: %s", e)
-            selected_paises = []
-
-    # 2) Base: whitelist del tenant (listado)
+    # 2) Base: whitelist del tenant (listado)  → sin filtro por país, solo tenant
     whitelist_table = IPWhitelist.objects.all()
     if tenant:
         t_name = (getattr(tenant, "name", "") or "").strip()
@@ -634,11 +605,7 @@ def home_index(request):
         else:
             whitelist_table = IPWhitelist.objects.none()
 
-    # 3) Aplicar filtro por países seleccionados (si hay)
-    if selected_paises:
-        whitelist_table = whitelist_table.filter(pais__in=selected_paises)
-
-    # 4) Búsqueda dentro de la whitelist del tenant (filtrada o no por país)
+    # 3) Búsqueda dentro de la whitelist del tenant (sin países)
     if whitelist_terms:
         try:
             q_wl = Q()
@@ -667,7 +634,6 @@ def home_index(request):
         except Exception as e:
             logger.exception("[HOME] Error búsqueda whitelist: %s", e)
     else:
-        # Sin búsqueda: mostramos todo el whitelist del tenant (filtrado por país si aplica)
         whitelist_results = whitelist_table
 
     # =======================
@@ -682,10 +648,42 @@ def home_index(request):
     except Exception as e:
         logger.exception("[HOME] Error obteniendo credenciales del tenant: %s", e)
 
+    # ============================
+    # Preferencias de notificación
+    # ============================
+    tel_baja = tel_media = tel_alta = tel_critica = False
+    mail_baja = mail_media = mail_alta = mail_critica = False
+    tg_baja = tg_media = tg_alta = tg_critica = False
+
+    try:
+        notif_pref = NotificationChannelPreference.objects.get(user=user)
+        t = notif_pref.telefono or {}
+        m = notif_pref.correo or {}
+        g = notif_pref.telegram or {}
+
+        tel_baja = bool(t.get("baja"))
+        tel_media = bool(t.get("media"))
+        tel_alta = bool(t.get("alta"))
+        tel_critica = bool(t.get("critica"))
+
+        mail_baja = bool(m.get("baja"))
+        mail_media = bool(m.get("media"))
+        mail_alta = bool(m.get("alta"))
+        mail_critica = bool(m.get("critica"))
+
+        tg_baja = bool(g.get("baja"))
+        tg_media = bool(g.get("media"))
+        tg_alta = bool(g.get("alta"))
+        tg_critica = bool(g.get("critica"))
+
+    except NotificationChannelPreference.DoesNotExist:
+        pass
+    except Exception as e:
+        logger.exception("[HOME] Error leyendo NotificationChannelPreference: %s", e)
+
     ctx = {
         "tenant": tenant,
         "all_tenants": all_tenants,
-        # Permiso para ver la parte de monitorización
         "can_view_monitoring": can_view_monitoring,
         # KPIs
         "alarms_total": alarms_total,
@@ -693,11 +691,11 @@ def home_index(request):
         "soar_total": soar_total,
         "telegram_total": telegram_total,
         "debug_user_telegram_id": user_tid or "",
-        # Serie diaria para el gráfico (JSON para el template)
+        # Serie diaria
         "alarms_daily_labels_json": json.dumps(alarms_daily_labels),
         "alarms_daily_total_json": json.dumps(alarms_daily_total),
         "alarms_daily_critical_json": json.dumps(alarms_daily_critical),
-        # Resumen de severidad
+        # Resumen severidad
         "severity_summary": severity_summary,
         # Blacklist
         "blacklist_q": blacklist_q_raw,
@@ -705,7 +703,7 @@ def home_index(request):
         "blacklist_removed": blacklist_removed_raw,
         "blacklist_removed_terms": blacklist_removed_terms,
         "blacklist_results": blacklist_results,
-        # Whitelist (tabla + modal + filtro países)
+        # Whitelist
         "whitelist_q": whitelist_q_raw,
         "whitelist_terms": whitelist_terms,
         "whitelist_removed": whitelist_removed_raw,
@@ -718,9 +716,21 @@ def home_index(request):
         "selected_paises": selected_paises,
         # Credenciales TXT
         "cred": cred,
+        # Preferencias notificaciones
+        "tel_baja": tel_baja,
+        "tel_media": tel_media,
+        "tel_alta": tel_alta,
+        "tel_critica": tel_critica,
+        "mail_baja": mail_baja,
+        "mail_media": mail_media,
+        "mail_alta": mail_alta,
+        "mail_critica": mail_critica,
+        "tg_baja": tg_baja,
+        "tg_media": tg_media,
+        "tg_alta": tg_alta,
+        "tg_critica": tg_critica,
     }
     return render(request, "home/index.html", ctx)
-
 
 @login_required
 @tenant_required
@@ -1238,3 +1248,194 @@ def blacklist_download_post(request):
     _upsert_whitelist_from_download(request, creds)
 
     return _stream_blacklist_txt_response()
+
+
+@login_required
+@require_http_methods(["POST"])
+def config_notificaciones(request):
+    """
+    Guarda las preferencias de notificación del usuario actual.
+    Soporta llamadas vía AJAX (fetch con X-Requested-With) y POST normal.
+    """
+    user = request.user
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+    logger.info("[CONFIG NOTIF] POST recibido para user_id=%s", getattr(user, "id", None))
+
+    try:
+        # -------------------------
+        # Toggles principales
+        # -------------------------
+        alarma_telefono = bool(request.POST.get("Alarma_Telefono"))
+        alarma_correo = bool(request.POST.get("Alarma_Correo"))
+        alarma_telegram = bool(request.POST.get("Alarma_Telegram"))
+
+        logger.info(
+            "[CONFIG NOTIF] Toggles -> tel=%s mail=%s tg=%s",
+            alarma_telefono,
+            alarma_correo,
+            alarma_telegram,
+        )
+
+        # -------------------------
+        # Severidades Teléfono
+        # -------------------------
+        tel_conf = {
+            "baja": bool(request.POST.get("sev_tel_baja")),
+            "media": bool(request.POST.get("sev_tel_media")),
+            "alta": bool(request.POST.get("sev_tel_alta")),
+            "critica": bool(request.POST.get("sev_tel_critica")),
+        }
+        if not alarma_telefono:
+            # Si el canal está apagado, forzamos severidades en False
+            tel_conf = {k: False for k in tel_conf}
+
+        # -------------------------
+        # Severidades Correo
+        # -------------------------
+        mail_conf = {
+            "baja": bool(request.POST.get("sev_mail_baja")),
+            "media": bool(request.POST.get("sev_mail_media")),
+            "alta": bool(request.POST.get("sev_mail_alta")),
+            "critica": bool(request.POST.get("sev_mail_critica")),
+        }
+        if not alarma_correo:
+            mail_conf = {k: False for k in mail_conf}
+
+        # -------------------------
+        # Severidades Telegram
+        # -------------------------
+        tg_conf = {
+            "baja": bool(request.POST.get("sev_tg_baja")),
+            "media": bool(request.POST.get("sev_tg_media")),
+            "alta": bool(request.POST.get("sev_tg_alta")),
+            "critica": bool(request.POST.get("sev_tg_critica")),
+        }
+        if not alarma_telegram:
+            tg_conf = {k: False for k in tg_conf}
+
+        logger.info(
+            "[CONFIG NOTIF] Tel=%s Mail=%s Tg=%s",
+            tel_conf,
+            mail_conf,
+            tg_conf,
+        )
+
+        # -------------------------
+        # Franja horaria (solo Teléfono)
+        # -------------------------
+        raw_hora_inicio = (request.POST.get("hora_inicio") or "").strip()
+        raw_hora_fin = (request.POST.get("hora_fin") or "").strip()
+
+        if alarma_telefono:
+            # Solo actualizamos la franja cuando el canal Teléfono está activo
+            hora_inicio = raw_hora_inicio or user.hora_inicio
+            hora_fin = raw_hora_fin or user.hora_fin
+        else:
+            # Si el canal Teléfono está apagado, NO tocamos las horas
+            # para evitar guardar '' en un TimeField / campo incompatible.
+            hora_inicio = None
+            hora_fin = None
+        logger.info(
+            "[CONFIG NOTIF] Franja -> inicio='%s' fin='%s' (alarma_telefono=%s)",
+            hora_inicio,
+            hora_fin,
+            alarma_telefono,
+        )
+
+        with transaction.atomic():
+            # Actualizar flags en el usuario
+            user.Alarma_Telefono = alarma_telefono
+            user.Alarma_Correo = alarma_correo
+            user.Alarma_Telegram = alarma_telegram
+            user.hora_inicio = hora_inicio
+            user.hora_fin = hora_fin
+            user.save(
+                update_fields=[
+                    "Alarma_Telefono",
+                    "Alarma_Correo",
+                    "Alarma_Telegram",
+                    "hora_inicio",
+                    "hora_fin",
+                ]
+            )
+            logger.info("[CONFIG NOTIF] Usuario actualizado OK (user_id=%s)", user.id)
+
+            # Preferencias de severidad en tenants.NotificationChannelPreference
+            pref, created = NotificationChannelPreference.objects.get_or_create(
+                user=user
+            )
+            pref.telefono = tel_conf
+            pref.correo = mail_conf
+            pref.telegram = tg_conf
+            pref.save(update_fields=["telefono", "correo", "telegram"])
+
+            logger.info(
+                "[CONFIG NOTIF] Pref guardadas OK (pref_id=%s, created=%s)",
+                getattr(pref, "id", None),
+                created,
+            )
+
+        if is_ajax:
+            return JsonResponse({"ok": True}, status=200)
+
+        return HttpResponseRedirect(reverse("home:index"))
+
+    except Exception:
+        logger.exception("[CONFIG NOTIF] Error guardando preferencias (500)")
+        if is_ajax:
+            return JsonResponse(
+                {"ok": False, "message": "Error interno al guardar preferencias."},
+                status=500,
+            )
+        return HttpResponseRedirect(reverse("home:index"))
+    except Exception:
+        logger.exception("[CONFIG NOTIF] Error guardando preferencias (500)")
+        if is_ajax:
+            return JsonResponse(
+                {"ok": False, "message": "Error interno al guardar preferencias."},
+                status=500,
+            )
+        return HttpResponseRedirect(reverse("home:index"))
+
+@login_required
+@tenant_required
+@require_http_methods(["POST"])
+def whitelist_save_countries(request):
+    """
+    Guarda las preferencias de países de whitelist vía AJAX.
+    Espera en POST:
+      - countries: string tipo "CL,AR,US"
+    """
+    user = request.user
+    tenant = getattr(request, "tenant", None)
+
+    raw_country_codes = (request.POST.get("countries") or "").strip()
+    codes_from_query = _parse_country_codes(raw_country_codes)
+
+    selected_paises = [
+        COUNTRY_BY_CODE[code]
+        for code in codes_from_query
+        if code in COUNTRY_BY_CODE
+    ]
+
+    try:
+        _save_country_pref(user, tenant, selected_paises)
+        logger.info(
+            "[HOME WHITELIST AJAX] Preferencias países guardadas para user_id=%s: %s",
+            getattr(user, "id", None),
+            selected_paises,
+        )
+        return JsonResponse(
+            {"ok": True, "selected_paises": selected_paises},
+            status=200,
+        )
+    except Exception as e:
+        logger.exception(
+            "[HOME WHITELIST AJAX] Error guardando preferencias de países: %s",
+            e,
+        )
+        return JsonResponse(
+            {"ok": False, "message": "Error interno al guardar preferencias de países."},
+            status=500,
+        )

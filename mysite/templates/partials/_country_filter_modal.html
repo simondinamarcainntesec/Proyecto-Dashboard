@@ -1,6 +1,11 @@
 {# templates/partials/_country_filter_modal.html #}
 
-<div id="countryModal" class="modal-overlay hidden" onclick="backdropClickCountry(event)">
+<div
+  id="countryModal"
+  class="modal-overlay hidden"
+  onclick="backdropClickCountry(event)"
+  data-save-url="{% url 'home:whitelist_save_countries' %}"
+>
   <div class="modal-card">
     {# Toast interno para feedback al guardar #}
     <div id="countrySaveToast" class="save-toast hidden">
@@ -19,8 +24,15 @@
 
       {# Buscador de países #}
       <div class="country-search-wrapper">
-        <input type="text" id="countrySearch" class="country-search-input home-ip-input" placeholder="Buscar país..." autocomplete="off"/>
+        <input
+          type="text"
+          id="countrySearch"
+          class="country-search-input"
+          placeholder="Buscar país..."
+          autocomplete="off"
+        />
       </div>
+
       <div class="country-grid">
         {# Recorremos todos los países entregados por el view #}
         {% for c in whitelist_countries %}

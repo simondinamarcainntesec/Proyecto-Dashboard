@@ -172,5 +172,7 @@ class NotificationChannelPreference(models.Model):
         return f"Preferencias de notificación de {self.user}"
 
     class Meta:
-        # Nombre final en Postgres: schema agent + tabla notification_channel_preference
-        db_table = 'agent"."notification_channel_preference'
+        # Tabla REAL en Postgres
+        db_table = 'agent"."tenants_notificationchannelpreference'
+        # Muy importante: que Django NO toque esta tabla
+        managed = False

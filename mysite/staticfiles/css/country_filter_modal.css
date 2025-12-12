@@ -251,6 +251,34 @@
    Específico: Filtro de países (whitelist)
    ========================================================== */
 
+/* Wrapper del buscador de países (similar a ip-input-group pero en modal) */
+.country-search-wrapper {
+  margin-top: 0.75rem;
+}
+
+/* Input de búsqueda de países (mismo estilo que .ip-input) */
+.country-search-input {
+  width: 100%;
+  padding: 0.6rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #020617;
+  color: var(--text);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.country-search-input::placeholder {
+  color: var(--muted);
+}
+
+.country-search-input:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.4);
+}
+
+/* Grid de países */
 .country-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));

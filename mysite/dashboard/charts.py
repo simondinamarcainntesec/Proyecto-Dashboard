@@ -311,19 +311,36 @@ def build_device_by_action(dt_from=None, dt_to=None, top_n=10, qs_base=None):
 
 
 def build_kpis(dt_from=None, dt_to=None, qs_base=None):
+    """
+    KPIs principales del dashboard:
+      - kpi_total         -> total de alarmas en el rango
+      - kpi_high          -> "Severidad crítica" (usa msg_severity y/o severity)
+      - kpi_dispositivos  -> dispositivos únicos
+    """
     qs = qs_base if qs_base is not None else _base_qs(dt_from, dt_to)
+
+    # Regex para detectar valores equivalentes a "critical"
+    CRIT_RE = r"^(critical|critico|crítica|critica)$"
+
     agg = qs.aggregate(
         total=Count("id"),
-        # ← ahora contamos CRITICAL desde msg_severity (no desde severity)
-        crit_=Count("id", filter=Q(msg_severity__iexact="critical")),
+        # Cuenta como crítica si EITHER msg_severity o severity son críticos
+        crit=Count(
+            "id",
+            filter=(
+                Q(msg_severity__iregex=CRIT_RE) |
+                Q(severity__iregex=CRIT_RE)
+            ),
+        ),
         dispositivos=Count("device_name", distinct=True),
     )
+
     return {
         "kpi_total": agg.get("total") or 0,
-        # “Alta Severidad” = CRITICAL de msg_severity (como pediste)
-        "kpi_high": agg.get("crit_") or 0,
+        "kpi_high": agg.get("crit") or 0,          # Severidad crítica
         "kpi_dispositivos": agg.get("dispositivos") or 0,
     }
+
 
 
 # =========================

@@ -15,8 +15,9 @@ from tenants.decorators import tenant_required
 from tenants.models import Tenant
 from .models import IaSoar
 
-# 👇 NUEVO: credenciales de blacklist/portal
-from home.models import TenantCredentials  # noqa
+# 👇 Credenciales de blacklist/portal
+from home.models import TenantCredentials, WhitelistCountryPreference
+from home.countries import ALL_COUNTRIES
 
 logger = logging.getLogger(__name__)
 CL_TZ = pytz.timezone("America/Santiago")
@@ -32,9 +33,11 @@ def _normalize_string_local(s: str) -> str:
         out = out.replace(ch, "")
     return out.lower()
 
+
 def _normalize_tenant_aotag(tenant) -> str:
     raw = getattr(tenant, "alarms_one_id", "") or ""
     return _normalize_string_local(raw)
+
 
 def _annotate_norm_aotag(qs):
     cleaned = Cast(F("aotag"), TextField())
@@ -43,6 +46,7 @@ def _annotate_norm_aotag(qs):
     cleaned = Trim(cleaned, output_field=TextField())
     cleaned = Lower(cleaned, output_field=TextField())
     return qs.annotate(norm_aotag=cleaned)
+
 
 # ============ Fechas ============
 def _parse_iso_dt_local(s: str) -> Optional[datetime]:
@@ -59,13 +63,19 @@ def _parse_iso_dt_local(s: str) -> Optional[datetime]:
         dt = dt.astimezone(CL_TZ)
     return dt
 
+
 def _default_range_now_30d() -> Tuple[datetime, datetime]:
     now = datetime.now(CL_TZ)
-    start = (now - timedelta(days=30)).replace(hour=0, minute=0, second=0, microsecond=0)
+    start = (now - timedelta(days=30)).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
     end = now
     return start, end
 
-def _normalize_range(from_qs: Optional[str], to_qs: Optional[str]) -> Tuple[datetime, datetime, str, str]:
+
+def _normalize_range(
+    from_qs: Optional[str], to_qs: Optional[str]
+) -> Tuple[datetime, datetime, str, str]:
     if not from_qs and not to_qs:
         f, t = _default_range_now_30d()
     else:
@@ -74,6 +84,7 @@ def _normalize_range(from_qs: Optional[str], to_qs: Optional[str]) -> Tuple[date
     f = f.replace(hour=0, minute=0, second=0, microsecond=0)
     t = t.replace(hour=23, minute=59, second=59, microsecond=0)
     return f, t, f.strftime("%Y-%m-%d"), t.strftime("%Y-%m-%d")
+
 
 # ============================================================
 # Dashboard SOAR
@@ -85,7 +96,7 @@ def dashboard_soar(request):
     norm_tid = _normalize_tenant_aotag(tenant) if tenant else ""
 
     q_from = request.GET.get("from")
-    q_to   = request.GET.get("to")
+    q_to = request.GET.get("to")
     f_dt, t_dt, from_date_str, to_date_str = _normalize_range(q_from, q_to)
 
     logger.info(
@@ -111,14 +122,18 @@ def dashboard_soar(request):
 
         qs = qs.order_by("-date")[:20000]
 
-        # 🔴 IMPORTANTE: ahora incluimos alarm_id
+        # Incluir alarm_id
         rows = list(
             qs.values(
-                "alarm_id",          # ← agregado
-                "date", "time",
-                "device", "service", "proto",
+                "alarm_id",
+                "date",
+                "time",
+                "device",
+                "service",
+                "proto",
                 "srccountry",
-                "srcip", "dstip",
+                "srcip",
+                "dstip",
                 "aotag",
                 "severity",
                 "security_action",
@@ -130,7 +145,7 @@ def dashboard_soar(request):
         logger.exception("[SOAR] Error consultando IaSoar: %s", e)
         rows = []
 
-    # 👇 NUEVO: obtener credenciales activas del tenant (igual que en los otros dashboards)
+    # Credenciales activas del tenant
     cred = None
     try:
         if tenant:
@@ -140,10 +155,24 @@ def dashboard_soar(request):
     except Exception as e:
         logger.exception("[SOAR] Error obteniendo credenciales del tenant: %s", e)
 
+    # Selector de tenants para Inntesec
     tenants_list = []
     user_tenant = getattr(request.user, "tenant", None)
     if user_tenant and user_tenant.name.lower() == "inntesec":
         tenants_list = Tenant.objects.all().order_by("name")
+
+    # ==============================
+    # Países para el modal de whitelist
+    # ==============================
+    selected_paises = []
+    try:
+        pref = WhitelistCountryPreference.objects.get(user=request.user)
+        selected_paises = pref.paises or []
+    except WhitelistCountryPreference.DoesNotExist:
+        selected_paises = []
+    except Exception as e:
+        logger.exception("[SOAR] Error leyendo preferencias de países: %s", e)
+        selected_paises = []
 
     ctx = {
         "tenant": tenant,
@@ -152,6 +181,9 @@ def dashboard_soar(request):
         "from_date_str": from_date_str,
         "to_date_str": to_date_str,
         "request": request,
-        "cred": cred,  # 👈 para el modal de credenciales en dashboardsoar.html
+        "cred": cred,
+        # Países para el modal de whitelist
+        "whitelist_countries": ALL_COUNTRIES,
+        "selected_paises": selected_paises,
     }
     return render(request, "soar_dashboard/dashboardsoar.html", ctx)

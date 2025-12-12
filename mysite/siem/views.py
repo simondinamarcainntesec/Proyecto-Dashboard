@@ -13,8 +13,9 @@ from tenants.models import Tenant
 
 from .log360_service import obtener_alertas_logs360
 
-# <<< NUEVO: importamos las credenciales del portal
-from home.models import TenantCredentials  # noqa
+# <<< NUEVO: credenciales del portal + preferencias de países
+from home.models import TenantCredentials, WhitelistCountryPreference  # noqa
+from home.countries import ALL_COUNTRIES
 
 logger = logging.getLogger(__name__)
 
@@ -146,6 +147,19 @@ def alerts_logs360_view(request):
     paginator = Paginator(alerts, 50)
     page_obj = paginator.get_page(request.GET.get("page") or 1)
 
+    # ==============================
+    # Países para el modal de whitelist
+    # ==============================
+    selected_paises = []
+    try:
+        pref = WhitelistCountryPreference.objects.get(user=request.user)
+        selected_paises = pref.paises or []
+    except WhitelistCountryPreference.DoesNotExist:
+        selected_paises = []
+    except Exception as e:
+        logger.exception("[LOGS360] Error leyendo preferencias de países: %s", e)
+        selected_paises = []
+
     context = {
         "tenant": tenant,
         "all_tenants": tenants_list,
@@ -171,6 +185,11 @@ def alerts_logs360_view(request):
 
         # <<< NUEVO: credenciales para el modal parcial
         "cred": cred,
+        # >>> FIN NUEVO
+
+        # <<< NUEVO: datos para el modal de países (misma API que en otros módulos)
+        "whitelist_countries": ALL_COUNTRIES,
+        "selected_paises": selected_paises,
         # >>> FIN NUEVO
     }
     return render(request, "siem/alerts_list.html", context)

@@ -19,9 +19,12 @@ from django.urls import NoReverseMatch, reverse
 from django.utils.html import escape
 from django.views.decorators.http import require_GET
 
-from home.models import TenantCredentials
 from tenants.decorators import tenant_required
 from tenants.models import Tenant
+
+from home.models import TenantCredentials, WhitelistCountryPreference
+from home.countries import ALL_COUNTRIES
+
 from .realtime_transform import build_realtime_context
 
 logger = logging.getLogger(__name__)
@@ -44,20 +47,44 @@ def _today_range_ms_scl():
 
 
 def _get_token_via_script_local():
+    """
+    Ejecuta obtener_token.py y devuelve el token por stdout.
+
+    FIX: este flujo (Realtime / AlarmsOne) debe usar el PRIMER token del webhook.
+    Para no romper otros flujos que usan el segundo, le pedimos explícitamente
+    --index 0 al script.
+    """
     script_path = "/home/inntesec-ia/Proyecto-Dashboard/obtener_token.py"
-    out = subprocess.run(
-        ["python3", script_path],
-        capture_output=True,
-        text=True,
-        timeout=25,
-    )
+
+    try:
+        out = subprocess.run(
+            ["python3", script_path, "--index", "0"],  # ✅ PRIMER token
+            capture_output=True,
+            text=True,
+            timeout=25,
+        )
+    except Exception as e:
+        logger.exception("[REALTIME] Error ejecutando obtener_token.py: %s", e)
+        raise RuntimeError(f"Error ejecutando obtener_token.py: {e}") from e
+
     if out.returncode != 0:
+        logger.error(
+            "[REALTIME] obtener_token.py falló exit=%s stderr=%s",
+            out.returncode,
+            (out.stderr or out.stdout),
+        )
         raise RuntimeError(
             f"obtener_token.py exit={out.returncode} stderr={out.stderr or out.stdout}"
         )
+
     token = (out.stdout or "").strip()
     if not token:
+        logger.error(
+            "[REALTIME] obtener_token.py devolvió stdout vacío. stderr=%s",
+            out.stderr,
+        )
         raise RuntimeError("obtener_token.py devolvió vacío")
+
     return token
 
 
@@ -426,6 +453,21 @@ def realtime_page(request):
         if user_tenant and user_tenant.name.lower() == "inntesec":
             tenants_list = Tenant.objects.all().order_by("name")
 
+        # ==============================
+        # Países para el modal de whitelist
+        # ==============================
+        selected_paises = []
+        try:
+            pref = WhitelistCountryPreference.objects.get(user=request.user)
+            selected_paises = pref.paises or []
+        except WhitelistCountryPreference.DoesNotExist:
+            selected_paises = []
+        except Exception as e:
+            logger.exception(
+                "[REALTIME] Error leyendo preferencias de países: %s", e
+            )
+            selected_paises = []
+
         page_ctx = {
             "tenant": tenant,
             "hist_url": hist_url,
@@ -434,6 +476,10 @@ def realtime_page(request):
             "kpi_dispositivos": kpi_dev,
             "all_tenants": tenants_list,
             "cred": cred,
+            # Países para el modal
+            "whitelist_countries": ALL_COUNTRIES,
+            "selected_paises": selected_paises,
+            # Contexto realtime original
             **ctx,
         }
         return render(request, "dashboard/realtime.html", page_ctx)
@@ -602,10 +648,8 @@ def realtime_alarms_by_subtype(request):
                     "eventtime": dt.isoformat()
                     if isinstance(dt, datetime)
                     else str(dt or ""),
-
                     "severity": _lc(value_for_column(a, "severity")),
                     "msg_severity": _lc(ext.get("Severity") or ""),
-
                     "device": (
                         ext.get("Device Name") or ext.get("Device") or ""
                     ).strip(),

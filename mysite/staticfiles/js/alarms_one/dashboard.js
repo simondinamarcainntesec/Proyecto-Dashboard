@@ -3,9 +3,10 @@ import { setupChartJSDefaults } from "./theme.js";
 import { $ } from "./utils.js";
 import { getState, onStateChange } from "./state.js";
 import "./data.js";
-import { getPeakHour } from "./selectors.js";
 
 import {
+  getPeakHour,
+  calcKpis,
   getActiveCountsForDonut,
   trendDataForCurrentFilter,
   actionDataForCurrentFilter,
@@ -28,12 +29,10 @@ import { renderLogDescriptionBar } from "./charts/logDescription.js";
 // ======================================================
 // 1) Inicialización global
 // ======================================================
-console.log("[dashboard] Iniciando dashboard AlarmsOne (histórico)...");
 setupChartJSDefaults(window.Chart);
-console.log("[dashboard] Chart.js detectado:", !!window.Chart);
 
 // ======================================================
-// 2) Helpers KPIs (robustos)
+// 2) Helpers KPIs
 // ======================================================
 function formatHourRange(h) {
   const hour = Number(h);
@@ -42,62 +41,26 @@ function formatHourRange(h) {
   return `${hh}:00–${hh}:59 ${ampm}`;
 }
 
-function readJSON(id) {
-  try {
-    const el = document.getElementById(id);
-    if (!el) return null;
-    return JSON.parse(el.textContent);
-  } catch { return null; }
-}
-
-function getDataCtx() {
-  const st  = getState() || {};
-  const ctx = st.ctx || st.data || st;
-
-  const sev =
-    ctx.severity_counts ||
-    ctx.severityCountsRaw ||
-    readJSON("severity-counts") ||
-    {};
-
-  const msg =
-    ctx.msg_severity_counts ||
-    ctx.msgSeverityCountsRaw ||
-    readJSON("msg-severity-counts") ||
-    {};
-
-  const devCounts =
-    ctx.device_counts ||
-    ctx.deviceCountsAll ||
-    readJSON("device-counts") ||
-    {};
-
-  return { sev, msg, devCounts };
-}
-
-function sumVals(obj) {
-  return Object.values(obj || {}).reduce((a, n) => a + Number(n || 0), 0);
-}
-
 function renderKPIs() {
-  const { sev, msg, devCounts } = getDataCtx();
+  const state = getState() || {};
 
-  // Total = suma de severities “clásicos”
-  const total   = sumVals(sev);
-  // Alta Severidad = CRITICAL desde msg_severity (igual que realtime)
-  const high    = Number(msg.critical || 0);
-  const devices = Object.keys(devCounts).length;
+  // Total / crítica / dispositivos usando la misma lógica de selectors.js
+  const { total, high, devices } = calcKpis(state);
 
   const elTotal   = $("#kpi-total");
   const elHigh    = $("#kpi-high");
   const elDevices = $("#kpi-devices");
-  if (elTotal)   elTotal.textContent = total;
-  if (elHigh)    elHigh.textContent = high;
-  if (elDevices) elDevices.textContent = devices;
 
-  const { hour } = getPeakHour();  // { hour, count }
+  if (elTotal)   elTotal.textContent   = total ?? 0;
+  if (elHigh)    elHigh.textContent    = high ?? 0;
+  if (elDevices) elDevices.textContent = devices ?? 0;
+
+  // Hora con más alarmas (usa data.* directamente)
+  const { hour } = getPeakHour();
   const elPeak = document.getElementById("kpi-peak-hour");
-  if (elPeak) elPeak.textContent = (hour == null) ? "—" : formatHourRange(hour);
+  if (elPeak) {
+    elPeak.textContent = hour == null ? "—" : formatHourRange(hour);
+  }
 }
 
 // ======================================================
@@ -105,15 +68,15 @@ function renderKPIs() {
 // ======================================================
 function updateAll() {
   const st = getState();
-  console.log("[dashboard] Estado actual:", st);
 
+  // KPIs
   renderKPIs();
 
   // Trend por día (histórico)
   const trendConf = trendDataForCurrentFilter(st);
   renderTrend(trendConf);
 
-  // Donut de severidad
+  // Donut de severidad (siempre usando todos los segmentos)
   renderDonut(st, getActiveCountsForDonut(st));
 
   // Tabla dispositivos
@@ -121,12 +84,19 @@ function updateAll() {
 
   // Barras
   renderActionBar(actionDataForCurrentFilter(st));
-  renderMsgSeverityBar(msgSeverityDataForCurrentFilter(st), st.msgSeverityFilter);
+  renderMsgSeverityBar(
+    msgSeverityDataForCurrentFilter(st),
+    st.msgSeverityFilter
+  );
   renderHourly(st);
-  renderSubtypeBar(subtypeDataForCurrentFilter(st), st.subtypeFilter);
-  renderLogDescriptionBar(logDescriptionDataForCurrentFilter(st), st.logDescriptionFilter);
-
-  console.log("[dashboard] Gráficos actualizados correctamente ✅");
+  renderSubtypeBar(
+    subtypeDataForCurrentFilter(st),
+    st.subtypeFilter
+  );
+  renderLogDescriptionBar(
+    logDescriptionDataForCurrentFilter(st),
+    st.logDescriptionFilter
+  );
 }
 
 // ======================================================
@@ -160,7 +130,9 @@ function wireTableSort() {
       rows.sort((a, b) => {
         const av = a.children[idx].innerText.trim();
         const bv = b.children[idx].innerText.trim();
-        if (type === "number") return asc ? Number(av) - Number(bv) : Number(bv) - Number(av);
+        if (type === "number") {
+          return asc ? Number(av) - Number(bv) : Number(bv) - Number(av);
+        }
         return asc ? av.localeCompare(bv) : bv.localeCompare(av);
       });
       tbody.innerHTML = "";
@@ -175,7 +147,6 @@ function wireTableSort() {
 let unmountLevel = null;
 
 function boot() {
-  console.log("[dashboard] DOM listo → inicializando (histórico)...");
   wireDateFilter();
   wireTableSort();
 
@@ -196,7 +167,6 @@ if (document.readyState === "loading") {
 // 6) Redibujo ante cambios de filtros
 // ======================================================
 onStateChange(() => {
-  console.log("[dashboard] Cambio detectado en filtros → refrescando...");
   updateAll();
 });
 
@@ -204,11 +174,11 @@ onStateChange(() => {
 // 7) Botón refresh
 // ======================================================
 (function () {
-  const r = document.getElementById('btn-refresh');
+  const r = document.getElementById("btn-refresh");
   if (!r) return;
-  r.addEventListener('click', () => {
+  r.addEventListener("click", () => {
     const params = new URLSearchParams(window.location.search);
-    params.set('_', Date.now().toString());
+    params.set("_", Date.now().toString());
     window.location.search = params.toString();
   });
 })();

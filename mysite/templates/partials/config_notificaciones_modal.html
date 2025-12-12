@@ -14,7 +14,7 @@
     </div>
 
     <!-- Formulario -->
-    <form method="POST" id="configForm" action="{% url 'config_notificaciones' %}">
+    <form method="POST" id="configForm" action="{% url 'home:config_notificaciones' %}">
       {% csrf_token %}
       <div class="modal-body">
 

@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="{% static 'css/config_notificaciones_modal.css' %}?v={% now 'U' %}">
   <link rel="shortcut icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
   <link rel="stylesheet" href="{% static 'css/cred_modal.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/country_filter_modal.css' %}?v={% now 'U' %}">
 </head>
 
 <body class="layout" data-username="{{ request.user.username|default:'anon' }}">
@@ -36,7 +37,7 @@
       {% if tenant and tenant.alarms_one_id %}
 
       <a id="homeNav" class="nav-item {% if request.resolver_match.app_name == 'home' %}is-active{% endif %}"
-         href="{% url 'home:index' %}">
+        href="{% url 'home:index' %}">
         <span class="nav-ico">🏠</span>Home
         <span id="coachDotHome" class="coachmark-dot hidden"></span>
       </a>
@@ -54,9 +55,9 @@
         </summary>
         <div class="tenant-list nav-submenu">
           <a class="tenant-option nav-subitem {% if url_name == 'dashboard_alarmsone' %}is-active{% endif %}"
-             href="{% url 'dashboard:dashboard_alarmsone' %}">Dashboard</a>
+            href="{% url 'dashboard:dashboard_alarmsone' %}">Dashboard</a>
           <a class="tenant-option nav-subitem {% if url_name == 'dashboard_realtime' %}is-active{% endif %}"
-             href="{% url 'dashboard:dashboard_realtime' %}">Tiempo Real</a>
+            href="{% url 'dashboard:dashboard_realtime' %}">Tiempo Real</a>
         </div>
       </details>
       {% endwith %}
@@ -74,9 +75,9 @@
         </summary>
         <div class="tenant-list nav-submenu">
           <a class="tenant-option nav-subitem {% if app_name == 'soar_dashboard' %}is-active{% endif %}"
-             href="{% url 'soar_dashboard:dashboard' %}">Dashboard</a>
+            href="{% url 'soar_dashboard:dashboard' %}">Dashboard</a>
           <a class="tenant-option nav-subitem {% if app_name == 'soar_incidents' %}is-active{% endif %}"
-             href="{% url 'soar_incidents:list' %}">Eventos</a>
+            href="{% url 'soar_incidents:list' %}">Eventos</a>
         </div>
       </details>
       {% endwith %}
@@ -86,8 +87,9 @@
       {% with siem_id=raw_siem_id|stringformat:"s" %}
       {% if siem_id and siem_id != "0" and siem_id != "null" and siem_id != "NULL" and siem_id != "None" %}
       <a class="nav-item {% if request.resolver_match.app_name == 'siem' %}is-active{% endif %}"
-         href="{% url 'siem:alerts_logs360' %}">
+        href="{% url 'siem:alerts_logs360' %}">
         <span class="nav-ico">🧠</span>SIEM
+        <span id="coachDotSiem" class="coachmark-dot hidden"></span>
       </a>
       {% endif %}
       {% endwith %}
@@ -101,20 +103,20 @@
       {% if site_id and site_id != "0" and site_id != "null" and site_id != "NULL" and site_id != "None" %}
       {% with url_name=request.resolver_match.url_name %}
       <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.app_name == 'site24x7' %}open{% endif %}>
-        <summary
-          class="nav-item {% if request.resolver_match.app_name == 'site24x7' %}is-active{% endif %}">
+        <summary class="nav-item {% if request.resolver_match.app_name == 'site24x7' %}is-active{% endif %}">
           <span class="nav-ico">📡</span>Inn-Monitor
           <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
           </svg>
+          <span id="coachDotInnMonitor" class="coachmark-dot hidden"></span>
         </summary>
         <div class="tenant-list nav-submenu">
           <a class="tenant-option nav-subitem {% if url_name == 'monitor_status' %}is-active{% endif %}"
-             href="{% url 'site24x7:monitor_status' %}">
+            href="{% url 'site24x7:monitor_status' %}">
             Monitores
           </a>
           <a class="tenant-option nav-subitem {% if url_name == 'dashboard' %}is-active{% endif %}"
-             href="{% url 'site24x7:dashboard' %}">
+            href="{% url 'site24x7:dashboard' %}">
             Dashboard
           </a>
         </div>
@@ -137,9 +139,12 @@
         </summary>
         <div class="tenant-list nav-submenu">
           <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}"
-             href="{% url 'cambiar_contrasena' %}">🔒 Cambiar contraseña</a>
+            href="{% url 'cambiar_contrasena' %}">🔒 Cambiar contraseña</a>
           <a class="tenant-option nav-subitem" href="#" onclick="toggleCredModal(true)">🔑 Credenciales</a>
           <a class="tenant-option nav-subitem" href="#" onclick="toggleConfigModal(true)">🔔 Notificaciones</a>
+          <a class="tenant-option nav-subitem" href="#" onclick="toggleCountryModal(true)">
+          🌎 Filtro países whitelist
+          </a>
         </div>
       </details>
     </nav>
@@ -441,7 +446,9 @@
 
   <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/home_portal.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/country_filter_modal.js' %}?v={% now 'U' %}"></script>
   {% include 'partials/config_notificaciones_modal.html' %}
+  {% include 'partials/_country_filter_modal.html' %}
   {% include 'partials/cred_modal.html' %}
 </body>
 

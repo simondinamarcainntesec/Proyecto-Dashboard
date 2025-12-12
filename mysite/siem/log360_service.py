@@ -5,38 +5,61 @@ import urllib.request
 from datetime import date, timedelta
 from typing import Any, List, Optional, Tuple
 
+import os
 import requests
 
 # ============================================================
-# 🧩 CONFIG WEBHOOK TOKEN (misma lógica que obtener_token_final_v2.py)
+# Configuración desde variables de entorno
 # ============================================================
 
-URL_WEBHOOK = "https://iaproductivo.inntesec.cl/webhook/3c850e31-e699-4fa6-9fed-513d4ccd281b"
-SECRET = "@L^E4$h!f^r1VmwD#c1B#C8XzM#B4pON"
-HEADER_NAME = "passkey"
-VERIFY_SSL = True
+WEBHOOK_URL = os.environ.get("LOG360_WEBHOOK_URL", "").strip()
+WEBHOOK_SECRET = os.environ.get("LOG360_WEBHOOK_SECRET", "") or ""
+WEBHOOK_HEADER_NAME = os.environ.get("LOG360_WEBHOOK_HEADER_NAME", "passkey")
 
+BASE_URL = os.environ.get(
+    "LOG360_API_BASE_URL",
+    "https://log360cloud.manageengine.com/api/v2",
+).rstrip("/")
+
+VERIFY_SSL = os.environ.get("LOG360_VERIFY_SSL", "True").lower() == "true"
+PAGE_LIMIT = int(os.environ.get("LOG360_PAGE_LIMIT", "50"))
+MAX_ALERTS = int(os.environ.get("LOG360_MAX_ALERTS", "10000"))
+
+# ============================================================
+# Detección de tokens desde el webhook n8n
+# ============================================================
+
+# Claves posibles donde puede venir el token
 CANDIDATE_KEYS = {
-    "acces_token", "access_token", "token",
-    "access_token", "access-token", "access token",
-    "access_token".upper(), "access_token".title(), "access_token".capitalize(),
-    "access_token".replace("_", ""), "access_token".replace("_", "-"),
-}
-CANDIDATE_KEYS.update({
+    "acces_token",
+    "access_token",
+    "token",
     "access_token",
     "access-token",
     "access token",
     "access_token".upper(),
     "access_token".title(),
-    "acces_token",
-    "Access_Token",
-    "ACCESS_TOKEN",
-})
+    "access_token".capitalize(),
+    "access_token".replace("_", ""),
+    "access_token".replace("_", "-"),
+}
+CANDIDATE_KEYS.update(
+    {
+        "access_token",
+        "access-token",
+        "access token",
+        "access_token".upper(),
+        "access_token".title(),
+        "acces_token",
+        "Access_Token",
+        "ACCESS_TOKEN",
+    }
+)
 
 
 def collect_tokens(obj: Any) -> List[str]:
     """
-    Recorre recursivamente y devuelve todos los tokens encontrados, en orden.
+    Recorre el JSON y devuelve todos los tokens encontrados, en orden.
     """
     found: List[str] = []
     if isinstance(obj, dict):
@@ -55,14 +78,15 @@ def collect_tokens(obj: Any) -> List[str]:
 
 def obtener_token_logs360() -> Tuple[Optional[str], Optional[str]]:
     """
-    Llama al webhook n8n con el header passkey y devuelve el token de Logs360.
+    Llama al webhook n8n y devuelve el token de Logs360.
+    Si hay varios tokens, usa el segundo; si hay uno, usa ese.
     """
-    if "TU-N8N" in URL_WEBHOOK or "XXXXXXXX" in URL_WEBHOOK:
-        return None, "URL_WEBHOOK no configurada en el script."
+    if not WEBHOOK_URL or "TU-N8N" in WEBHOOK_URL or "XXXXXXXX" in WEBHOOK_URL:
+        return None, "LOG360_WEBHOOK_URL no está configurada."
 
-    headers = {HEADER_NAME: SECRET}
+    headers = {WEBHOOK_HEADER_NAME: WEBHOOK_SECRET}
     ctx = ssl.create_default_context() if VERIFY_SSL else ssl._create_unverified_context()
-    req = urllib.request.Request(url=URL_WEBHOOK, method="GET", headers=headers)
+    req = urllib.request.Request(url=WEBHOOK_URL, method="GET", headers=headers)
 
     try:
         with urllib.request.urlopen(req, timeout=20, context=ctx) as resp:
@@ -76,54 +100,38 @@ def obtener_token_logs360() -> Tuple[Optional[str], Optional[str]]:
     if status // 100 != 2:
         return None, f"HTTP {status} al llamar webhook. Cuerpo: {text}"
 
-    # 1) Intentar JSON
+    # Intentar JSON
     try:
         data = json.loads(text)
-        tokens = collect_tokens(data)
-
-        print("=== TOKENS ENCONTRADOS EN WEBHOOK ===")
-        if not tokens:
-            print("(ninguno)")
-        else:
-            for idx, tk in enumerate(tokens, start=1):
-                print(f"  {idx}) {tk[:20]}... (largo={len(tk)})")
-        print("======================================")
-
-        if tokens:
-            # 2º token = Logs360
-            chosen = tokens[1] if len(tokens) >= 2 else tokens[0]
-            print(f"[INFO] Token Logs360 elegido empieza con: {chosen[:20]}...")
-            return chosen, None
-
-        if text:
-            return None, "No se encontraron tokens en el JSON del webhook."
-        return None, "No se encontró token en el JSON y el cuerpo está vacío."
-
     except Exception:
-        # 2) No es JSON → usar el cuerpo como token
+        # Si no es JSON pero hay texto, se usa como token directo
         if text:
-            print("[WARN] La respuesta del webhook NO es JSON válido. Se usa el cuerpo como token.")
-            print(text[:200])
             return text, None
-
         return None, "La respuesta del webhook no es JSON y está vacía."
 
+    tokens = collect_tokens(data)
+
+    if not tokens:
+        if text:
+            return None, "No se encontraron tokens en el JSON del webhook."
+        return None, "Respuesta vacía del webhook."
+
+    # Segundo token si hay 2 o más (Logs360), si no el único
+    if len(tokens) >= 2:
+        chosen = tokens[1]
+    else:
+        chosen = tokens[0]
+
+    return chosen, None
+
 
 # ============================================================
-# 🧩 CONFIG LOG360 ALERTS
+# Helpers de rango y orden
 # ============================================================
-
-BASE_URL = "https://log360cloud.manageengine.com/api/v2"
-DEFAULT_ACCOUNT_ID = "897671591"  # Inntesec Lab
-PAGE_LIMIT = 50                   # queremos 50 como tope
-MAX_ALERTS = 10000
-
 
 def _build_range(from_date: date, to_date: date) -> Tuple[str, str]:
     """
-    Construye start_time / end_time en formato ISO8601 con 'Z':
-    start_time = YYYY-MM-DDT00:00:00Z
-    end_time   = YYYY-MM-DDT23:59:59Z
+    Construye start_time / end_time ISO8601 con Z para Logs360.
     """
     start_time = f"{from_date.isoformat()}T00:00:00Z"
     end_time = f"{to_date.isoformat()}T23:59:59Z"
@@ -132,11 +140,15 @@ def _build_range(from_date: date, to_date: date) -> Tuple[str, str]:
 
 def _parse_time_for_sort(alert: dict) -> str:
     """
-    Devuelve el campo 'Time' (o variante) como string para ordenar.
+    Devuelve el campo Time como string para ordenar.
     """
     t = alert.get("Time") or alert.get("time") or ""
     return str(t)
 
+
+# ============================================================
+# Consulta de alertas a Logs360
+# ============================================================
 
 def obtener_alertas_logs360(
     query: str = "",
@@ -147,29 +159,28 @@ def obtener_alertas_logs360(
     """
     Devuelve (lista_alertas, error_msg, start_time, end_time, acc_id_usado).
 
-    MODO ACTUAL:
-      - Ignora from_date/to_date que vengan del formulario.
-      - Siempre usa un rango fijo (últimos 30 días).
-      - Va paginando, pero corta apenas llegue a 50 alertas.
-      - Ordena por Time desc y devuelve solo esas 50 (o menos si no hay más).
+    Modo actual:
+    - Ignora from_date / to_date del formulario.
+    - Usa siempre un rango fijo de últimos 30 días.
+    - Pagina, pero corta al llegar a PAGE_LIMIT.
     """
-
-    # 1) Token desde webhook
+    # Token desde webhook
     token, err_token = obtener_token_logs360()
     if not token:
         return [], f"No se pudo obtener token: {err_token or 'desconocido'}", "", "", ""
 
-    # 2) Forzar SIEMPRE rango: últimos 30 días, independiente de lo que venga en los parámetros
+    # Account ID debe venir desde el tenant
+    acc_id = (account_id or "").strip()
+    if not acc_id:
+        return [], "Account ID de Logs360 no configurado para este tenant.", "", "", ""
+
+    # Rango forzado: últimos 30 días
     today = date.today()
-    RANGE_DAYS = 30  # puedes cambiar a 31 si quieres
+    RANGE_DAYS = 30
     forced_to = today
     forced_from = today - timedelta(days=RANGE_DAYS)
 
-    # Este rango es el que REALMENTE se usa en la consulta
     start_time, end_time = _build_range(forced_from, forced_to)
-
-    # 3) Account ID (desde tenant o fallback)
-    acc_id = (account_id or "").strip() or DEFAULT_ACCOUNT_ID
 
     print("========== SIEM / Django ==========")
     print(f"[SIEM] Account ID        : {acc_id}")
@@ -194,7 +205,7 @@ def obtener_alertas_logs360(
             "start_time": start_time,
             "end_time": end_time,
             "from": current_from,
-            "limit": PAGE_LIMIT,      # 50
+            "limit": PAGE_LIMIT,
             "response_type": "client",
         }
 
@@ -211,18 +222,26 @@ def obtener_alertas_logs360(
             return todos, f"Error de red al llamar /alerts: {e}", start_time, end_time, acc_id
 
         print(f"[SIEM] /alerts HTTP status: {resp.status_code}")
-        try:
-            print(f"[SIEM] /alerts raw body   : {resp.text[:500]}")
-        except Exception:
-            pass
 
         if resp.status_code // 100 != 2:
-            return todos, f"HTTP {resp.status_code} al llamar /alerts: {resp.text}", start_time, end_time, acc_id
+            return (
+                todos,
+                f"HTTP {resp.status_code} al llamar /alerts: {resp.text}",
+                start_time,
+                end_time,
+                acc_id,
+            )
 
         try:
             data = resp.json()
         except ValueError:
-            return todos, f"La respuesta de /alerts no es JSON: {resp.text[:1000]}", start_time, end_time, acc_id
+            return (
+                todos,
+                f"La respuesta de /alerts no es JSON: {resp.text[:1000]}",
+                start_time,
+                end_time,
+                acc_id,
+            )
 
         if "error" in data:
             err = data.get("error") or {}
@@ -234,32 +253,37 @@ def obtener_alertas_logs360(
             if detail:
                 msg += f" — {detail}"
 
-            print(f"[SIEM] /alerts JSON error : {json.dumps(err, ensure_ascii=False)}")
             return todos, msg, start_time, end_time, acc_id
 
         batch = data.get("data") or []
         if not isinstance(batch, list):
-            return todos, f"Estructura inesperada de /alerts: {json.dumps(data, ensure_ascii=False)[:1000]}", start_time, end_time, acc_id
+            return (
+                todos,
+                f"Estructura inesperada de /alerts: {json.dumps(data, ensure_ascii=False)[:1000]}",
+                start_time,
+                end_time,
+                acc_id,
+            )
 
-        # Acumulamos
+        # Acumulamos resultados
         todos.extend(batch)
 
-        # 💥 Apenas tengas 50, cortas (para no seguir paginando 1 mes completo)
-        if len(todos) >= PAGE_LIMIT:
-            todos = todos[:PAGE_LIMIT]  # por si nos pasamos
+        # Cortar por PAGE_LIMIT o MAX_ALERTS
+        if len(todos) >= PAGE_LIMIT or len(todos) >= MAX_ALERTS:
+            todos = todos[: min(PAGE_LIMIT, MAX_ALERTS)]
             break
 
-        # Si vino menos que el límite, la API ya no tiene más páginas
+        # Si vino menos que el límite, no hay más páginas
         if len(batch) < PAGE_LIMIT:
             break
 
-        # Pasamos a la siguiente página
+        # Siguiente página
         current_from += PAGE_LIMIT
 
-    # 🔻 Ordenar lo que tengamos (máx 50) por fecha/hora descendente
+    # Ordenar por Time desc
     todos.sort(key=_parse_time_for_sort, reverse=True)
 
-    # Por seguridad, aseguramos que nunca devolvemos más de 50
+    # Asegurar máximo PAGE_LIMIT
     if len(todos) > PAGE_LIMIT:
         todos = todos[:PAGE_LIMIT]
 
