@@ -415,12 +415,25 @@ def _filter_for_request_tenant(request, alarms: list[dict]) -> list[dict]:
 @login_required
 @tenant_required
 def realtime_page(request):
+    tenant = getattr(request, "tenant", None)
+
     try:
         try:
             hist_url = reverse("dashboard_alarmsone")
         except NoReverseMatch:
             hist_url = "/dashboard/alarmsone/"
+    except Exception:
+        hist_url = "/dashboard/alarmsone/"
 
+    # Valores por defecto (por si hay error)
+    ctx: dict = {}
+    kpi_total = 0
+    kpi_high = 0
+    kpi_dev = 0
+    error_public: str | None = None
+
+    # Intentar obtener alarmas en tiempo real
+    try:
         _, _, alarms = _fetch_alarms_today_direct()
         alarms = _filter_for_request_tenant(request, alarms)
         ctx = build_realtime_context(
@@ -433,69 +446,77 @@ def realtime_page(request):
         kpi_high = int(msgsev.get("critical", 0))
         kpi_dev = len(ctx.get("device_counts", {}))
 
-        # Credenciales activas del tenant
-        cred = None
-        tenant = getattr(request, "tenant", None)
-        try:
-            if tenant:
-                cred = TenantCredentials.get_active_for_tenant(
-                    int(getattr(tenant, "id", 0))
-                )
-        except Exception as e:
-            logger.exception(
-                "[REALTIME] Error obteniendo credenciales del tenant: %s",
-                e,
-            )
-
-        # Selector de tenants para Inntesec
-        tenants_list = []
-        user_tenant = getattr(request.user, "tenant", None)
-        if user_tenant and user_tenant.name.lower() == "inntesec":
-            tenants_list = Tenant.objects.all().order_by("name")
-
-        # ==============================
-        # Países para el modal de whitelist
-        # ==============================
-        selected_paises = []
-        try:
-            pref = WhitelistCountryPreference.objects.get(user=request.user)
-            selected_paises = pref.paises or []
-        except WhitelistCountryPreference.DoesNotExist:
-            selected_paises = []
-        except Exception as e:
-            logger.exception(
-                "[REALTIME] Error leyendo preferencias de países: %s", e
-            )
-            selected_paises = []
-
-        page_ctx = {
-            "tenant": tenant,
-            "hist_url": hist_url,
-            "kpi_total": kpi_total,
-            "kpi_high": kpi_high,
-            "kpi_dispositivos": kpi_dev,
-            "all_tenants": tenants_list,
-            "cred": cred,
-            # Países para el modal
-            "whitelist_countries": ALL_COUNTRIES,
-            "selected_paises": selected_paises,
-            # Contexto realtime original
-            **ctx,
-        }
-        return render(request, "dashboard/realtime.html", page_ctx)
-    except httpx.HTTPStatusError as e:
-        return HttpResponseBadRequest(
-            f"realtime_page error: HTTP {e.response.status_code}: {e}"
-        )
     except Exception as e:
-        return HttpResponseBadRequest(
-            f"realtime_page error: {type(e).__name__}: {e}"
+        # Incluye errores de token, 401/403, etc.
+        logger.exception(
+            "[REALTIME] Error construyendo dashboard realtime: %s",
+            e,
         )
+        error_public = (
+            "No fue posible obtener las alarmas en tiempo real para este tenant."
+        )
+        # ctx queda vacío y KPIs en 0 → el template entra en el bloque de 'error'
+
+    # Credenciales activas del tenant
+    cred = None
+    try:
+        if tenant:
+            cred = TenantCredentials.get_active_for_tenant(
+                int(getattr(tenant, "id", 0))
+            )
+    except Exception as e:
+        logger.exception(
+            "[REALTIME] Error obteniendo credenciales del tenant: %s",
+            e,
+        )
+
+    # Selector de tenants para Inntesec (según el tenant del USUARIO, no el activo)
+    tenants_list = []
+    try:
+        base_tenant = getattr(request.user, "tenant", None)
+        if base_tenant and base_tenant.name.lower() == "inntesec":
+            tenants_list = Tenant.objects.all().order_by("name")
+    except Exception:
+        tenants_list = []
+
+    # Países para el modal de whitelist
+    selected_paises = []
+    try:
+        pref = WhitelistCountryPreference.objects.get(user=request.user)
+        selected_paises = pref.paises or []
+    except WhitelistCountryPreference.DoesNotExist:
+        selected_paises = []
+    except Exception as e:
+        logger.exception(
+            "[REALTIME] Error leyendo preferencias de países: %s", e
+        )
+        selected_paises = []
+
+    page_ctx = {
+        "tenant": tenant,
+        "hist_url": hist_url,
+        "kpi_total": kpi_total,
+        "kpi_high": kpi_high,
+        "kpi_dispositivos": kpi_dev,
+        "all_tenants": tenants_list,
+        "cred": cred,
+        "whitelist_countries": ALL_COUNTRIES,
+        "selected_paises": selected_paises,
+        # error genérico para el template (None si todo OK)
+        "error": error_public,
+        # contexto realtime original
+        **ctx,
+    }
+    return render(request, "dashboard/realtime.html", page_ctx)
 
 
 @login_required
 @tenant_required
 def realtime_data(request):
+    """
+    Endpoint JSON para refrescar datos realtime desde el frontend.
+    En caso de error retorna ok=False con mensaje genérico.
+    """
     try:
         _, _, alarms = _fetch_alarms_today_direct()
         alarms = _filter_for_request_tenant(request, alarms)
@@ -503,13 +524,17 @@ def realtime_data(request):
             alarms, value_for_column, tzname="America/Santiago"
         )
         return JsonResponse({"ok": True, "data": ctx}, json_dumps_params={"indent": 2})
-    except httpx.HTTPStatusError as e:
-        return HttpResponseBadRequest(
-            f"realtime_data error: HTTP {e.response.status_code}: {e}"
-        )
     except Exception as e:
-        return HttpResponseBadRequest(
-            f"realtime_data error: {type(e).__name__}: {e}"
+        logger.exception("[REALTIME] realtime_data error: %s", e)
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": (
+                    "No fue posible obtener los datos de tiempo real en este momento. "
+                    "Por favor, contacte con un administrador."
+                ),
+            },
+            status=502,
         )
 
 
@@ -667,9 +692,16 @@ def realtime_alarms_by_subtype(request):
             json_dumps_params={"indent": 2},
         )
     except Exception as e:
-        logger.exception("realtime_alarms_by_subtype error")
-        return HttpResponseBadRequest(
-            f"realtime_alarms_by_subtype error: {type(e).__name__}: {e}"
+        logger.exception("[REALTIME] realtime_alarms_by_subtype error: %s", e)
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": (
+                    "No fue posible obtener el listado de alarmas en tiempo real. "
+                    "Por favor, contacte con un administrador."
+                ),
+            },
+            status=502,
         )
 
 
@@ -770,9 +802,16 @@ def realtime_alarm_log_table(request):
 
         return JsonResponse({"ok": True, "meta": meta, "html": html})
     except Exception as e:
-        logger.exception("realtime_alarm_log_table failed")
-        return HttpResponseBadRequest(
-            f"realtime_alarm_log_table error: {type(e).__name__}: {e}"
+        logger.exception("[REALTIME] realtime_alarm_log_table failed: %s", e)
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": (
+                    "No fue posible obtener el detalle del log en este momento. "
+                    "Por favor, contacte con un administrador."
+                ),
+            },
+            status=502,
         )
 
 

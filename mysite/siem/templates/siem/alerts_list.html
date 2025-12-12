@@ -229,7 +229,7 @@
     </header>
 
     {% if not service_enabled %}
-      <!-- ======= SIN SERVICIO ======= -->
+      <!-- ======= SIN SERVICIO CONFIGURADO ======= -->
       <section class="empty-state">
         <div class="empty-card">
           <h2>Servicio SIEM no disponible</h2>
@@ -241,24 +241,31 @@
         </div>
       </section>
     {% else %}
-      <!-- Tarjeta de resumen en vez de filtros -->
-      <section class="alerts-summary">
-        <div class="alerts-summary-card">
-          <span class="alerts-summary-dot"></span>
-          <span class="alerts-summary-text">Últimas 50 alertas</span>
-        </div>
-      </section>
+      {% if error %}
+        {# Error genérico cuando falla la consulta a Logs360 #}
+        <section class="empty-state">
+          <div class="empty-card">
+            <h2>Servicio SIEM no disponible</h2>
+            <p>
+              Ha ocurrido un problema al consultar las alertas de
+              <strong>Logs360 SIEM</strong>.
+            </p>
+            <p>Por favor, contacte con un administrador.</p>
+          </div>
+        </section>
+      {% else %}
+        <!-- Tarjeta de resumen en vez de filtros -->
+        <section class="alerts-summary">
+          <div class="alerts-summary-card">
+            <span class="alerts-summary-dot"></span>
+            <span class="alerts-summary-text">Últimas 50 alertas</span>
+          </div>
+        </section>
 
-      <!-- Tabla -->
-      <section class="wrap">
-        <div class="card">
-          <div class="card-body">
-
-            {% if error %}
-              <div class="error">
-                {{ error }}
-              </div>
-            {% endif %}
+        <!-- Tabla -->
+        <section class="wrap">
+          <div class="card">
+            <div class="card-body">
 
             {% if page_obj|length > 0 %}
               <div class="table-wrap">
@@ -367,19 +374,18 @@
                 {% endif %}
               </div>
             {% else %}
-              {% if not error %}
-                <section class="empty-state">
-                  <div class="empty-card">
-                    <h2>Sin alertas disponibles</h2>
-                    <p>No se encontraron alertas para el rango consultado.</p>
-                  </div>
-                </section>
-              {% endif %}
+              <section class="empty-state">
+                <div class="empty-card">
+                  <h2>Sin alertas disponibles</h2>
+                  <p>No se encontraron alertas para el rango consultado.</p>
+                </div>
+              </section>
             {% endif %}
           </div>
 
         </div>
       </section>
+      {% endif %}
     {% endif %}
   </div>
 
@@ -438,7 +444,7 @@
   <script defer src="{% static 'js/page-loader-universal.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/siem_alerts.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/home_portal.js' %}?v={% now 'U' %}"></script>
-  <!-- 👇 NUEVO: export CSV SIEM -->
+  <!-- export CSV SIEM -->
   <script defer src="{% static 'js/siem_export.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/country_filter_modal.js' %}?v={% now 'U' %}"></script>
   {% include 'partials/config_notificaciones_modal.html' %}

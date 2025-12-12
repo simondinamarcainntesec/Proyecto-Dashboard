@@ -216,20 +216,63 @@
     </header>
 
     {# ===== Estados especiales ===== #}
-    {% if not tenant.site24x7_id %}
+    {% if not tenant %}
       <section class="empty-state">
         <div class="empty-card">
-          <h2>Servicio no disponible</h2>
-          <p>La empresa <strong>{{ tenant.name|default:"—" }}</strong> no tiene configurado <code>site24x7_id</code>.</p>
-          <p>Contacte a un administrador para habilitar el servicio.</p>
+          <h2>Servicio Inn-Monitor no disponible</h2>
+          <p>No se pudo determinar el tenant para este usuario.</p>
+          <p>Por favor, contacte con un administrador.</p>
+          <button id="btn-empty-ok"
+                  class="btn primary"
+                  data-home-url="{% url 'home:index' %}">
+            OK
+          </button>
+        </div>
+      </section>
+    {% elif not tenant.site24x7_id %}
+      <section class="empty-state">
+        <div class="empty-card">
+          <h2>Servicio Inn-Monitor no disponible</h2>
+          <p>
+            La empresa <strong>{{ tenant.name|default:"—" }}</strong>
+            no tiene configurado el servicio de <strong>Site24x7</strong>.
+          </p>
+          <p>Por favor, contacte con un administrador.</p>
+          <button id="btn-empty-ok"
+                  class="btn primary"
+                  data-home-url="{% url 'home:index' %}">
+            OK
+          </button>
         </div>
       </section>
     {% else %}
       {% if error %}
+        {# Error de token / API → mensaje genérico, como SIEM/Realtime #}
         <section class="empty-state">
           <div class="empty-card">
-            <h2>Error al consultar Site24x7</h2>
-            <p>{{ error }}</p>
+            <h2>Servicio Inn-Monitor no disponible</h2>
+            <p>
+              Ocurrió un error inesperado al consultar el estado de monitores
+              para la empresa <strong>{{ tenant.name|default:"—" }}</strong>.
+            </p>
+            <p>Por favor, contacte con un administrador.</p>
+            <button id="btn-empty-ok"
+                    class="btn primary"
+                    data-home-url="{% url 'home:index' %}">
+              OK
+            </button>
+          </div>
+        </section>
+      {% elif total_monitors|default:0 == 0 %}
+        <section class="empty-state">
+          <div class="empty-card">
+            <h2>Sin monitores disponibles</h2>
+            <p>No se encontraron monitores configurados para <strong>{{ tenant.name|default:"—" }}</strong>.</p>
+            <button id="btn-empty-ok"
+                    class="btn primary"
+                    data-home-url="{% url 'home:index' %}">
+              OK
+            </button>
           </div>
         </section>
       {% else %}
@@ -330,10 +373,6 @@
                     <td>{{ m.monitor_type|default:"—" }}</td>
                     <td>{{ m.last_polled_human|default:"—" }}</td>
                   </tr>
-                  {% empty %}
-                  <tr>
-                    <td colspan="4" class="center">No se encontraron monitores para este tenant.</td>
-                  </tr>
                   {% endfor %}
                 </tbody>
               </table>
@@ -350,17 +389,22 @@
   <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/page-loader-universal.js' %}?v={% now 'U' %}"></script>
 
-  {# Librerías de export (igual estilo que dashboard) #}
-  {% if tenant.site24x7_id and not error %}
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script defer src="{% static 'js/site24x7_export.js' %}?v={% now 'U' %}"></script>
-  <script defer src="{% static 'js/country_filter_modal.js' %}?v={% now 'U' %}"></script>
+  {# Botón OK (redirige al home) #}
+  <script defer src="{% static 'js/site24x7_empty_ok.js' %}?v={% now 'U' %}"></script>
+
+  {# Librerías de export (solo cuando hay datos reales) #}
+  {% if tenant and tenant.site24x7_id and not error and total_monitors|default:0 > 0 %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script defer src="{% static 'js/site24x7_export.js' %}?v={% now 'U' %}"></script>
   {% endif %}
+
+  <script defer src="{% static 'js/country_filter_modal.js' %}?v={% now 'U' %}"></script>
 
   {% include 'partials/config_notificaciones_modal.html' %}
   {% include 'partials/_country_filter_modal.html' %}
   {% include 'partials/cred_modal.html' %}
+
 </body>
 
 </html>

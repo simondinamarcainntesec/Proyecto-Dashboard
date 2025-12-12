@@ -288,11 +288,13 @@ def monitor_status(request):
         )
         tenant = tu.tenant if tu else None
 
+    # Dropdown de tenants solo para usuarios cuyo tenant base es Inntesec
     tenants_list = []
-    user_tenant = getattr(request, "tenant", None)
+    user_tenant = getattr(request.user, "tenant", None)
     if user_tenant and getattr(user_tenant, "name", "").lower() == "inntesec":
         tenants_list = Tenant.objects.all().order_by("name")
 
+    # ===== Caso: no se pudo determinar tenant =====
     if tenant is None:
         selected_paises = []
         try:
@@ -307,7 +309,7 @@ def monitor_status(request):
         context = {
             "tenant": None,
             "all_tenants": tenants_list,
-            "error": "No se pudo determinar el tenant para este usuario.",
+            "error": False,
             "customer_name": "",
             "monitors": [],
             "zaaid": "",
@@ -324,6 +326,7 @@ def monitor_status(request):
 
     zaaid = getattr(tenant, "site24x7_id", "")
 
+    # ===== Caso: tenant sin Site24x7 configurado =====
     if not zaaid:
         selected_paises = []
         try:
@@ -338,7 +341,7 @@ def monitor_status(request):
         context = {
             "tenant": tenant,
             "all_tenants": tenants_list,
-            "error": "",
+            "error": False,
             "customer_name": "",
             "monitors": [],
             "zaaid": "",
@@ -353,10 +356,13 @@ def monitor_status(request):
         }
         return render(request, "site24x7/monitor_status.html", context)
 
+    # ===== Caso: error en token / llamada API =====
     try:
         access_token = get_site24x7_token()
         customer = fetch_customer_status(access_token, zaaid)
     except Exception as e:
+        logger.exception("[SITE24X7] Error al consultar Site24x7: %s", e)
+
         selected_paises = []
         try:
             pref = WhitelistCountryPreference.objects.get(user=request.user)
@@ -370,7 +376,7 @@ def monitor_status(request):
         context = {
             "tenant": tenant,
             "all_tenants": tenants_list,
-            "error": f"Error al consultar Site24x7: {e}",
+            "error": True,  # flag genérico para mostrar card de error
             "customer_name": "",
             "monitors": [],
             "zaaid": zaaid or "",
@@ -385,6 +391,7 @@ def monitor_status(request):
         }
         return render(request, "site24x7/monitor_status.html", context)
 
+    # ===== Datos OK =====
     raw_monitors = customer.get("monitors", []) or []
 
     monitors: List[Dict[str, Any]] = []
@@ -408,7 +415,7 @@ def monitor_status(request):
     context = {
         "tenant": tenant,
         "all_tenants": tenants_list,
-        "error": "",
+        "error": False,
         "customer_name": customer.get("customer_name", ""),
         "zaaid": customer.get("zaaid", zaaid),
         "monitors": monitors,

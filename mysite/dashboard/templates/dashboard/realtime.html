@@ -215,6 +215,7 @@
     </header>
 
     {% if not tenant.alarms_one_id %}
+      {# Tenant sin servicio de alarmas contratado #}
       <section class="empty-state">
         <div class="empty-card">
           <h2>Servicio no disponible</h2>
@@ -223,111 +224,126 @@
         </div>
       </section>
     {% else %}
-      {% if kpi_total|default:0 > 0 %}
-
-      <!-- === Área exportable (PDF/CSV) === -->
-      <div id="dashboard-export-area" data-page-slug="dashboard_realtime">
-
-        <section class="grid grid-kpis">
-          <div class="card kpi">
-            <div class="kpi-label">Hora con más alarmas</div>
-            <div class="kpi-value" id="kpi-peak-hour">—</div>
-          </div>
-
-          <div class="card kpi">
-            <div class="kpi-label">Severidad Crítica</div>
-            <div class="kpi-value" id="kpi-high">{{ kpi_high }}</div>
-          </div>
-          <div class="card kpi">
-            <div class="kpi-label">Total Alarmas</div>
-            <div class="kpi-value" id="kpi-total">{{ kpi_total }}</div>
-          </div>
-          <div class="card kpi">
-            <div class="kpi-label">Dispositivos Detectados</div>
-            <div class="kpi-value" id="kpi-devices">{{ kpi_dispositivos }}</div>
+      {% if error %}
+        {# Error de token / API → mismo estilo de mensaje genérico que SIEM #}
+        <section class="empty-state">
+          <div class="empty-card">
+            <h2>Servicio Realtime no disponible</h2>
+            <p>
+              Ocurrió un error inesperado al obtener las alarmas en tiempo real
+              para la empresa <strong>{{ tenant.name|default:"—" }}</strong>.
+            </p>
+            <p>Por favor, contacte con un administrador.</p>
+            <button id="btn-empty-ok" class="btn primary">OK</button>
           </div>
         </section>
-
-        <section class="grid grid-main" id="app">
-          <div class="card chart card--hourly">
-            <div class="card-head between">
-              <h3>Alarmas por hora</h3>
-              <button id="btn-open-hourly-alarms" class="btn ghost-sm" title="Ver alarmas de estas horas">🗂 Ver alarmas</button>
-            </div>
-            <div class="card-body"><canvas id="hourlyChart"></canvas></div>
-          </div>
-
-          <div class="card chart card--donut">
-            <div class="card-head between">
-              <h3>Severidad</h3>
-              <button id="btn-open-severity-alarms" class="btn ghost-sm" title="Ver alarmas de esta severidad">🗂 Ver alarmas</button>
-            </div>
-            <div class="card-body"><canvas id="severityDonut"></canvas></div>
-          </div>
-
-          <div class="card chart card--actions">
-            <div class="card-head between">
-              <h3>Acciones</h3>
-              <button id="btn-open-action-alarms" class="btn ghost-sm" title="Ver alarmas de estas acciones">🗂 Ver alarmas</button>
-            </div>
-            <div class="card-body"><canvas id="actionBar"></canvas></div>
-          </div>
-
-          <div class="card chart card--level">
-            <div class="card-head between">
-              <h3>Level</h3>
-              <button id="btn-open-level-alarms" class="btn ghost-sm" title="Ver alarmas de este level">🗂 Ver alarmas</button>
-            </div>
-            <div class="card-body"><canvas id="levelBar"></canvas></div>
-          </div>
-
-          <div class="card chart card--subtype">
-            <div class="card-head between">
-              <h3>Subtype</h3>
-              <button id="btn-open-subtype-alarms" class="btn ghost-sm" title="Ver alarmas de este Subtype">🗂 Ver alarmas</button>
-            </div>
-            <div class="card-body"><canvas id="subtypeBar"></canvas></div>
-          </div>
-
-          <div class="card table card--table">
-            <div class="card-head between">
-              <h3>Dispositivos recientes</h3>
-            </div>
-            <div class="table-wrap">
-              <table class="datatable" id="device-table">
-                <thead>
-                  <tr>
-                    <th data-sort="text">Dispositivo</th>
-                    <th data-sort="number" class="is-right">Cantidad</th>
-                  </tr>
-                </thead>
-                <tbody id="device-table-body"></tbody>
-              </table>
-            </div>
-            <div class="table-footnote">* Clic en los encabezados para ordenar</div>
-          </div>
-
-          <div class="card chart card--msgsev">
-            <div class="card-head between">
-              <h3>Severidad Alarma</h3>
-              <button id="btn-open-msgsev-alarms" class="btn ghost-sm" title="Ver alarmas de esta severidad (msg)">🗂 Ver alarmas</button>
-            </div>
-            <div class="card-body"><canvas id="msgSeverityBar"></canvas></div>
-          </div>
-        </section>
-
-      </div> <!-- /#dashboard-export-area -->
-
-      <footer class="footnote">Tiempo real (hoy 00:00 → ahora)</footer>
-
       {% else %}
-      <section class="empty-state">
-        <div class="empty-card">
-          <h2>Sin alarmas disponibles</h2>
-          <p>No se encontraron alarmas para <strong>{{ tenant.name|default:"—" }}</strong> hoy.</p>
-          <button id="btn-empty-ok" class="btn primary">OK</button>
-        </div>
-      </section>
+        {% if kpi_total|default:0 > 0 %}
+
+        <!-- === Área exportable (PDF/CSV) === -->
+        <div id="dashboard-export-area" data-page-slug="dashboard_realtime">
+
+          <section class="grid grid-kpis">
+            <div class="card kpi">
+              <div class="kpi-label">Hora con más alarmas</div>
+              <div class="kpi-value" id="kpi-peak-hour">—</div>
+            </div>
+
+            <div class="card kpi">
+              <div class="kpi-label">Severidad Crítica</div>
+              <div class="kpi-value" id="kpi-high">{{ kpi_high }}</div>
+            </div>
+            <div class="card kpi">
+              <div class="kpi-label">Total Alarmas</div>
+              <div class="kpi-value" id="kpi-total">{{ kpi_total }}</div>
+            </div>
+            <div class="card kpi">
+              <div class="kpi-label">Dispositivos Detectados</div>
+              <div class="kpi-value" id="kpi-devices">{{ kpi_dispositivos }}</div>
+            </div>
+          </section>
+
+          <section class="grid grid-main" id="app">
+            <div class="card chart card--hourly">
+              <div class="card-head between">
+                <h3>Alarmas por hora</h3>
+                <button id="btn-open-hourly-alarms" class="btn ghost-sm" title="Ver alarmas de estas horas">🗂 Ver alarmas</button>
+              </div>
+              <div class="card-body"><canvas id="hourlyChart"></canvas></div>
+            </div>
+
+            <div class="card chart card--donut">
+              <div class="card-head between">
+                <h3>Severidad</h3>
+                <button id="btn-open-severity-alarms" class="btn ghost-sm" title="Ver alarmas de esta severidad">🗂 Ver alarmas</button>
+              </div>
+              <div class="card-body"><canvas id="severityDonut"></canvas></div>
+            </div>
+
+            <div class="card chart card--actions">
+              <div class="card-head between">
+                <h3>Acciones</h3>
+                <button id="btn-open-action-alarms" class="btn ghost-sm" title="Ver alarmas de estas acciones">🗂 Ver alarmas</button>
+              </div>
+              <div class="card-body"><canvas id="actionBar"></canvas></div>
+            </div>
+
+            <div class="card chart card--level">
+              <div class="card-head between">
+                <h3>Level</h3>
+                <button id="btn-open-level-alarms" class="btn ghost-sm" title="Ver alarmas de este level">🗂 Ver alarmas</button>
+              </div>
+              <div class="card-body"><canvas id="levelBar"></canvas></div>
+            </div>
+
+            <div class="card chart card--subtype">
+              <div class="card-head between">
+                <h3>Subtype</h3>
+                <button id="btn-open-subtype-alarms" class="btn ghost-sm" title="Ver alarmas de este Subtype">🗂 Ver alarmas</button>
+              </div>
+              <div class="card-body"><canvas id="subtypeBar"></canvas></div>
+            </div>
+
+            <div class="card table card--table">
+              <div class="card-head between">
+                <h3>Dispositivos recientes</h3>
+              </div>
+              <div class="table-wrap">
+                <table class="datatable" id="device-table">
+                  <thead>
+                    <tr>
+                      <th data-sort="text">Dispositivo</th>
+                      <th data-sort="number" class="is-right">Cantidad</th>
+                    </tr>
+                  </thead>
+                  <tbody id="device-table-body"></tbody>
+                </table>
+              </div>
+              <div class="table-footnote">* Clic en los encabezados para ordenar</div>
+            </div>
+
+            <div class="card chart card--msgsev">
+              <div class="card-head between">
+                <h3>Severidad Alarma</h3>
+                <button id="btn-open-msgsev-alarms" class="btn ghost-sm" title="Ver alarmas de esta severidad (msg)">🗂 Ver alarmas</button>
+              </div>
+              <div class="card-body"><canvas id="msgSeverityBar"></canvas></div>
+            </div>
+          </section>
+
+        </div> <!-- /#dashboard-export-area -->
+
+        <footer class="footnote">Tiempo real (hoy 00:00 → ahora)</footer>
+
+        {% else %}
+        <section class="empty-state">
+          <div class="empty-card">
+            <h2>Sin alarmas disponibles</h2>
+            <p>No se encontraron alarmas para <strong>{{ tenant.name|default:"—" }}</strong> hoy.</p>
+            <button id="btn-empty-ok" class="btn primary">OK</button>
+          </div>
+        </section>
+        {% endif %}
       {% endif %}
     {% endif %}
   </div>
