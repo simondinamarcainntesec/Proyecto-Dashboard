@@ -60,7 +60,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'inyeccion_api',
-    'api_client',
     'dashboard',
     'integrations',
 #    'csp',
