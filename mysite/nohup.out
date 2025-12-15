@@ -86275,3 +86275,17 @@ For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/St
 [2025-12-15 17:00:00,002: INFO/ForkPoolWorker-1] 🔑 Solicitando token (primer token) ejecutando obtener_token.py ...
 [2025-12-15 17:00:00,475: INFO/ForkPoolWorker-1] ✅ Token guardado correctamente en token.txt.
 [2025-12-15 17:00:00,475: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_obtener_token[52c4aebb-fce5-4dbe-b1ba-29000fbc0834] succeeded in 0.4731160888914019s: '1000.971a888c0a9a83a933af9b38ac061576.7d96808cd7401475a5ca419ae451da4a'
+[2025-12-15 17:05:00,000: INFO/MainProcess] Scheduler: Sending due task ingesta-api-cada-65-min (integrations.tasks.tarea_ingesta_api)
+[2025-12-15 17:05:00,002: INFO/MainProcess] Task integrations.tasks.tarea_ingesta_api[42246a9b-4277-4877-938e-0d1b6bd611c8] received
+[2025-12-15 17:05:00,003: INFO/ForkPoolWorker-1] 🚀 Inicio de ingesta diaria de API
+[2025-12-15 17:05:00,016: INFO/ForkPoolWorker-1] 🧹 Alarmas antiguas eliminadas: 0
+[2025-12-15 17:05:00,016: INFO/ForkPoolWorker-1] 📅 Trayendo alarmas desde 2025-12-15 00:00:00-03:00 hasta 2025-12-15 14:05:00.003398-03:00 (ms: 1765767600000 → 1765818300003)
+[2025-12-15 17:05:00,970: INFO/ForkPoolWorker-1] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1765767600000&toDate=1765818300003&filter=all&size=200&from=0 "HTTP/1.1 200 "
+[2025-12-15 17:05:01,143: INFO/ForkPoolWorker-1] 📦 Página 1, 200 alarmas cargadas (total: 200)
+[2025-12-15 17:05:01,514: INFO/ForkPoolWorker-1] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1765767600000&toDate=1765818300003&filter=all&size=200&from=200 "HTTP/1.1 200 "
+[2025-12-15 17:05:01,665: INFO/ForkPoolWorker-1] 📦 Página 2, 200 alarmas cargadas (total: 400)
+[2025-12-15 17:05:02,000: INFO/ForkPoolWorker-1] HTTP Request: GET https://alarmsone.manageengine.com/rest/json/listAlarms?fromDate=1765767600000&toDate=1765818300003&filter=all&size=200&from=400 "HTTP/1.1 200 "
+[2025-12-15 17:05:02,142: INFO/ForkPoolWorker-1] 📦 Página 2, 195 alarmas cargadas (total: 595)
+[2025-12-15 17:05:02,142: INFO/ForkPoolWorker-1] 📊 Total alarmas recibidas hoy: 595
+[2025-12-15 17:05:02,670: INFO/ForkPoolWorker-1] ✅ Ingesta diaria completada. Nuevas filas insertadas: 16
+[2025-12-15 17:05:02,672: INFO/ForkPoolWorker-1] Task integrations.tasks.tarea_ingesta_api[42246a9b-4277-4877-938e-0d1b6bd611c8] succeeded in 2.6692697210237384s: None

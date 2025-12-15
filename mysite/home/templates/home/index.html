@@ -202,7 +202,10 @@
           </div>
         </div>
 
-
+        <!-- Retell Call -->
+        <button id="retellStartBtn" class="btn ghost" title="Iniciar llamada (Retell)">📞 Llamar</button>
+        <button id="retellStopBtn" class="btn ghost small" title="Cortar llamada (Retell)">⛔</button>
+        <span id="retellStatus" class="muted" style="margin-left:.5rem; font-size:.9rem;"></span>
 
         <!-- Guía rápida -->
         <button id="showCoachBtn" class="btn ghost" title="Mostrar guía rápida" onclick="window.startInntesecCoach()">
@@ -601,14 +604,26 @@
   {% include 'partials/config_notificaciones_modal.html' %}
   {% include "partials/_country_filter_modal.html" %}
 
+  <!-- Retell wiring -->
   <script type="module">
-  import { wireRetellButtons } from "{% static 'js/retell_call.bundle.js' %}";
-  wireRetellButtons({
-    createUrl: "{% url 'integrations:retell_create_web_call' %}",
-    startBtnId: "retellStartBtn",
-    stopBtnId: "retellStopBtn",
-    statusId: "retellStatus",
-  });
+    (async () => {
+      const statusEl = document.getElementById("retellStatus");
+      const setStatus = (t) => { if (statusEl) statusEl.textContent = t; };
+
+      try {
+        const mod = await import("{% static 'js/retell_call.bundle.js' %}");
+        mod.wireRetellButtons({
+          createUrl: "{% url 'integrations:retell_create_web_call' %}",
+          startBtnId: "retellStartBtn",
+          stopBtnId: "retellStopBtn",
+          statusId: "retellStatus",
+        });
+        setStatus("");
+      } catch (e) {
+        console.error("Retell bundle no cargó:", e);
+        setStatus("Retell: bundle no disponible");
+      }
+    })();
   </script>
 </body>
 </html>
