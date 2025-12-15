@@ -14,3 +14,4 @@ celery_run_log.txt
 env/
 .env
 .venvvenv/
+node_modules/
