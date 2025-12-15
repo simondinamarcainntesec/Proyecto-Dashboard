@@ -14,7 +14,7 @@ from django.utils import timezone
 
 from tenants.decorators import tenant_required
 from tenants.models import Tenant, TenantUser, TenantDashboardEmbed
-
+from .services import fetch_anomaly_summary, fetch_anomaly_by_monitor
 import logging
 
 logger = logging.getLogger(__name__)
@@ -430,6 +430,265 @@ def monitor_status(request):
     }
 
     return render(request, "site24x7/monitor_status.html", context)
+
+def summarize_anomaly_info(anomaly_info: dict) -> dict:
+    """
+    Recibe el bloque anomaly_info de un monitor y devuelve:
+      - total_count: suma de todas las anomalías
+      - top_severity: severidad más alta (Confirmado > Probable > Información)
+      - breakdown: dict con conteo por severidad normalizada: info/likely/confirmed
+    """
+    if not isinstance(anomaly_info, dict):
+        return {
+            "total_count": 0,
+            "top_severity": "—",
+            "breakdown": {"info": 0, "likely": 0, "confirmed": 0},
+        }
+
+    def norm_sev(label: str) -> str:
+        s = (label or "").strip().lower()
+        if s.startswith("info") or s.startswith("información"):
+            return "info"
+        if s.startswith("probable") or s.startswith("likely"):
+            return "likely"
+        if s.startswith("confirm"):
+            return "confirmed"
+        return "other"
+
+    # ranking para decidir "la más grave"
+    sev_rank = {"info": 1, "likely": 2, "confirmed": 3}
+
+    total = 0
+    breakdown = {"info": 0, "likely": 0, "confirmed": 0}
+    top_norm = None
+    top_label_original = "—"
+    top_rank = 0
+
+    for _, sev_block in anomaly_info.items():
+        if not isinstance(sev_block, dict):
+            continue
+
+        try:
+            count = int(sev_block.get("anomaly_count") or 0)
+        except (TypeError, ValueError):
+            count = 0
+
+        label = sev_block.get("severity") or ""
+        norm = norm_sev(label)
+
+        total += count
+
+        if norm in breakdown:
+            breakdown[norm] += count
+
+        rank = sev_rank.get(norm, 0)
+        if rank > top_rank and count > 0:
+            top_rank = rank
+            top_norm = norm
+            top_label_original = label or "—"
+
+    if total == 0:
+        top_label_original = "—"
+
+    return {
+        "total_count": total,
+        "top_severity": top_label_original,
+        "breakdown": breakdown,
+    }
+
+
+@tenant_required
+@login_required
+def anomaly_status(request):
+    """
+    Vista de resumen de anomalías Site24x7.
+    Muestra nombre del monitor, cantidad de anomalías y severidad máxima.
+    """
+    tenant = getattr(request, "tenant", None)
+
+    # fallback igual que monitor_status
+    if tenant is None:
+        tu = (
+            TenantUser.objects
+            .filter(user=request.user)
+            .select_related("tenant")
+            .first()
+        )
+        tenant = tu.tenant if tu else None
+
+    # Dropdown de tenants solo para usuarios cuyo tenant base es Inntesec
+    tenants_list = []
+    user_tenant = getattr(request.user, "tenant", None)
+    if user_tenant and getattr(user_tenant, "name", "").lower() == "inntesec":
+        tenants_list = Tenant.objects.all().order_by("name")
+
+    # Pref países (igual que monitor_status)
+    try:
+        pref = WhitelistCountryPreference.objects.get(user=request.user)
+        selected_paises = pref.paises or []
+    except WhitelistCountryPreference.DoesNotExist:
+        selected_paises = []
+    except Exception as e:
+        logger.exception("[SITE24X7] Error leyendo preferencias de países: %s", e)
+        selected_paises = []
+
+    # ===== Caso: sin tenant =====
+    if tenant is None:
+        context = {
+            "tenant": None,
+            "all_tenants": tenants_list,
+            "error": False,
+            "monitors": [],
+            "total_monitors": 0,
+            "total_anomalies": 0,
+            "count_info": 0,
+            "count_likely": 0,
+            "count_confirmed": 0,
+            "whitelist_countries": ALL_COUNTRIES,
+            "selected_paises": selected_paises,
+        }
+        return render(request, "site24x7/anomaly_status.html", context)
+
+    # ===== Caso: tenant sin Site24x7 =====
+    zaaid = getattr(tenant, "site24x7_id", "")
+    if not zaaid:
+        context = {
+            "tenant": tenant,
+            "all_tenants": tenants_list,
+            "error": False,
+            "monitors": [],
+            "total_monitors": 0,
+            "total_anomalies": 0,
+            "count_info": 0,
+            "count_likely": 0,
+            "count_confirmed": 0,
+            "whitelist_countries": ALL_COUNTRIES,
+            "selected_paises": selected_paises,
+        }
+        return render(request, "site24x7/anomaly_status.html", context)
+
+    # ===== Llamada a API de anomalías =====
+    try:
+        access_token = get_site24x7_token()
+        # period=5 → últimos ~30 días (igual que tu script)
+        summary = fetch_anomaly_summary(
+            access_token,
+            zaaid=zaaid,
+            period=5,
+            monitor_type=None,
+        )
+    except Exception as e:
+        logger.exception("[SITE24X7] Error al consultar anomalías Site24x7: %s", e)
+        context = {
+            "tenant": tenant,
+            "all_tenants": tenants_list,
+            "error": True,  # para mostrar empty-state de error
+            "monitors": [],
+            "total_monitors": 0,
+            "total_anomalies": 0,
+            "count_info": 0,
+            "count_likely": 0,
+            "count_confirmed": 0,
+            "whitelist_countries": ALL_COUNTRIES,
+            "selected_paises": selected_paises,
+        }
+        return render(request, "site24x7/anomaly_status.html", context)
+
+    # ===== Parseo del summary =====
+    raw_monitors = (summary or {}).get("monitors", []) or []
+
+    monitors = []
+    total_anomalies = 0
+    count_info = 0
+    count_likely = 0
+    count_confirmed = 0
+
+    for m in raw_monitors:
+        info = m.get("anomaly_info") or {}
+
+        # Resumimos anomaly_info (que viene con claves "1","2","3")
+        summary_info = summarize_anomaly_info(info)
+
+        monitor_total = summary_info["total_count"]
+        total_anomalies += monitor_total
+
+        breakdown = summary_info["breakdown"]
+        count_info += breakdown.get("info", 0)
+        count_likely += breakdown.get("likely", 0)
+        count_confirmed += breakdown.get("confirmed", 0)
+
+        monitors.append({
+            "monitor_id": m.get("monitor_id"),
+            "display_name": m.get("display_name"),
+            "anomaly_count": monitor_total,
+            "severity": summary_info["top_severity"],  # p.ej. "Confirmado"
+        })
+
+    context = {
+        "tenant": tenant,
+        "all_tenants": tenants_list,
+        "error": False,
+        "monitors": monitors,
+        "total_monitors": len(monitors),
+        "total_anomalies": total_anomalies,
+        "count_info": count_info,
+        "count_likely": count_likely,
+        "count_confirmed": count_confirmed,
+        "whitelist_countries": ALL_COUNTRIES,
+        "selected_paises": selected_paises,
+    }
+    return render(request, "site24x7/anomaly_status.html", context)
+
+@tenant_required
+@login_required
+def anomaly_detail(request):
+    """
+    Detalle de anomalías para un monitor específico (via ?monitor_id=).
+    """
+    monitor_id = request.GET.get("monitor_id")
+    if not monitor_id:
+        # podrías devolver un 400 o un empty-state simple
+        return render(request, "site24x7/anomaly_detail.html", {
+            "error": True,
+            "monitor_id": None,
+            "rows": [],
+        })
+
+    try:
+        access_token = get_site24x7_token()
+        data = fetch_anomaly_by_monitor(
+            access_token,
+            monitor_id=monitor_id,
+            period=3,
+            severity="CONFIRMED,LIKELY,INFO",
+        )
+    except Exception as e:
+        logger.exception("[SITE24X7] Error al consultar detalle de anomalías: %s", e)
+        return render(request, "site24x7/anomaly_detail.html", {
+            "error": True,
+            "monitor_id": monitor_id,
+            "rows": [],
+        })
+
+    table = data.get("anomaly_table_data", []) or []
+
+    # Normalizamos un poco para la tabla
+    rows = []
+    for item in table:
+        ad = item.get("anomaly_data") or {}
+        rows.append({
+            "display_name": item.get("display_name", "—"),
+            "time": ad.get("time", "—"),
+            "severity": ad.get("severity", "—"),
+            "monitor_type": ad.get("monitor_type", "—"),
+            "comment_raw": ad.get("comment", []),  # si después quieres parsear location_comments
+        })
+
+    return render(request, "site24x7/anomaly_detail.html", {
+        "error": False,
+        "monitor_id": monitor_id,
+        "rows": rows,
+    })
 
 
 @tenant_required

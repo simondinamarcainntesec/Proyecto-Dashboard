@@ -173,3 +173,56 @@ body {
     font-size: 1rem;
   }
 }
+
+/* ==========================================================
+   FIX MODAL + ZOOM (poner AL FINAL del CSS que se carga último)
+   ========================================================== */
+
+/* 1) Cuando el modal está abierto, no centres todo el body */
+body:has(.modal-overlay:not(.hidden)) {
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+}
+
+/* 2) Overlay scrolleable y anclado arriba */
+.modal-overlay {
+  align-items: flex-start !important;
+  padding: clamp(12px, 3vh, 28px) !important;
+  overflow: auto !important;
+}
+
+/* 3) Modal con alto máximo del viewport y layout para footer visible */
+.modal-card {
+  width: min(92vw, 480px) !important;
+
+  max-height: calc(100dvh - 2 * clamp(12px, 3vh, 28px)) !important;
+  max-height: calc(100vh - 2 * clamp(12px, 3vh, 28px)) !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+
+  /* si el contenido se desborda, que el modal pueda scrollear */
+  overflow: hidden !important;
+}
+
+/* 4) El contenido (body) es el que scrollea */
+.modal-body {
+  flex: 1 1 auto !important;
+  overflow: auto !important;
+  padding-right: 2px;
+}
+
+/* 5) Botones siempre visibles aunque haya zoom (sticky) */
+.modal-foot {
+  flex: 0 0 auto !important;
+
+  position: sticky !important;
+  bottom: 0 !important;
+
+  background: var(--card, #0f1d35) !important;
+  padding-top: 1rem;
+  padding-bottom: 0.75rem;
+
+  border-top: 1px solid var(--border, #1e293b) !important;
+  z-index: 10;
+}

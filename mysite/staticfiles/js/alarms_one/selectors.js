@@ -258,9 +258,9 @@ export function calcKpis(state) {
   console.debug("[KPI] calcKpis() llamado con state:", state);
 
   // Para KPI usamos los mismos counts que el donut (sin slice por severityFilter)
-  const counts = getCountsForKpi(state);
+  const counts = getCountsForKpi(state) || {};
 
-  let total = Object.values(counts || {}).reduce(
+  let total = Object.values(counts).reduce(
     (a, b) => a + (Number(b) || 0),
     0,
   );
@@ -280,8 +280,66 @@ export function calcKpis(state) {
     }
   }
 
-  // Para la tarjeta “Severidad crítica” sólo contamos la severidad 'critical'
-  const high = Number(counts["critical"] || 0);
+  // ==========================
+  // HIGH (críticos)
+  // 1) Intentar msg_severity SOLO si tiene "critical"
+  // 2) Si no hay "critical" en msg_severity → fallback a severity normal
+  // ==========================
+  let high = 0;
+
+  try {
+    let usedMsg = false;
+
+    // Lógica de la barra de msg_severity
+    const msgData = msgSeverityDataForCurrentFilter(state);
+
+    const hasMsgData =
+      msgData &&
+      Array.isArray(msgData.keys) &&
+      msgData.keys.length > 0 &&
+      Array.isArray(msgData.data);
+
+    if (hasMsgData) {
+      const map = {};
+      msgData.keys.forEach((k, idx) => {
+        map[k] = Number(msgData.data[idx] || 0);
+      });
+
+      const realKey = findKeyCI(map, "critical"); // <- busca "critical" CI
+
+      if (realKey) {
+        high = Number(map[realKey] || 0);
+        usedMsg = true;
+        console.debug("[KPI] high desde msg_severity:", {
+          map,
+          realKey,
+          high,
+        });
+      } else {
+        console.debug(
+          "[KPI] msg_severity tiene datos pero NO 'critical' → usaremos severity normal",
+          { map },
+        );
+      }
+    }
+
+    // Si no se usó msg_severity (porque no había datos o no había 'critical')
+    if (!usedMsg) {
+      const normCounts = normalizeCountsLabels({ ...counts });
+      high = Number(normCounts["critical"] || 0);
+      console.debug(
+        "[KPI] high desde severity (fallback o sin msg_severity crítico):",
+        { normCounts, high },
+      );
+    }
+  } catch (e) {
+    console.error(
+      "[KPI] error calculando high, fallback severity",
+      e,
+    );
+    const normCounts = normalizeCountsLabels({ ...counts });
+    high = Number(normCounts["critical"] || 0);
+  }
 
   const devices = state.deviceFilter
     ? 1
@@ -296,6 +354,8 @@ export function calcKpis(state) {
 
   return { total, high, devices };
 }
+
+
 
 /* =========================================================
  *  (NUEVO) SEVERIDAD ALARMA (barra) → cambia a MSG_SEVERITY si hay level

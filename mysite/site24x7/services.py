@@ -10,7 +10,6 @@ import requests
 
 # ============================================================
 # Config desde variables de entorno
-# (mismo webhook que Logs360, pero separado por claridad)
 #
 # Esperados en .env:
 #   SITE24X7_WEBHOOK_URL
@@ -35,7 +34,25 @@ TOKEN_FILE = Path(__file__).resolve().parent / "token.txt"
 
 AnyType = Any  # alias simple para tipado
 
-# Claves posibles donde puede venir el token
+# ============================================================
+# Constantes de paths de API
+# ============================================================
+
+# Customer Wise Monitor Status
+CURRENT_STATUS_PATH = "/msp/customers/monitors/status"
+
+# Anomaly Dashboard (resumen por monitor / monitor groups)
+ANOMALY_DASHBOARD_PATH = "/reports/anomaly"
+
+# Anomaly Report por monitor
+ANOMALY_MONITOR_PATH = "/reports/anomaly/monitors/type"
+# (Si en el futuro usas por grupo, sería /reports/anomaly/monitor_groups)
+
+
+# ============================================================
+# Claves posibles donde puede venir el token en el JSON del webhook
+# ============================================================
+
 CANDIDATE_KEYS = {
     "acces_token",
     "access_token",
@@ -46,8 +63,8 @@ CANDIDATE_KEYS = {
     "access_token".upper(),
     "access_token".title(),
     "access_token".capitalize(),
-    "access_token".replace("_", ""),
-    "access_token".replace("_", "-"),
+    "access_token".replace("_", ""),   # accesstoken
+    "access_token".replace("_", "-"),  # access-token
 }
 CANDIDATE_KEYS.update(
     {
@@ -62,12 +79,11 @@ CANDIDATE_KEYS.update(
     }
 )
 
-CURRENT_STATUS_PATH = "/msp/customers/monitors/status"  # Customer Wise Monitor Status
 
+# ============================================================
+# Utilidades para extraer el token desde el webhook (n8n)
+# ============================================================
 
-# -----------------------------------
-# Utilidades para extraer el token
-# -----------------------------------
 def collect_tokens(obj: Any) -> List[str]:
     """
     Recorre el JSON y junta todos los posibles tokens.
@@ -94,6 +110,8 @@ def get_site24x7_token() -> str:
     """
     Llama al webhook y devuelve el token de Site24x7.
     Siempre toma el 3er token; si no hay 3, usa el último.
+
+    Se puede reutilizar tanto para Monitors como para Anomalies.
     """
     if not WEBHOOK_URL:
         raise RuntimeError("SITE24X7_WEBHOOK_URL no está configurada.")
@@ -147,9 +165,11 @@ def get_site24x7_token() -> str:
         return text
 
 
-# -----------------------------------
-# Llamado a Site24x7 – Customer Wise Monitor Status
-# -----------------------------------
+# ============================================================
+# Monitores – Customer Wise Monitor Status
+# (por si lo quieres usar desde otros módulos)
+# ============================================================
+
 def fetch_customer_status(access_token: str, zaaid: str) -> Dict[str, AnyType]:
     """
     Llama a /msp/customers/monitors/status y devuelve el cliente del zaaid.
@@ -175,6 +195,13 @@ def fetch_customer_status(access_token: str, zaaid: str) -> Dict[str, AnyType]:
 def build_counters(monitors: List[Dict[str, AnyType]]) -> Dict[str, int]:
     """
     A partir de los monitores arma contadores por status.
+
+    status:
+      0 → down
+      1 → up
+      2 → trouble
+      3 → critical
+      5 → suspended
     """
     counters = {
         "down": 0,       # 0
@@ -198,3 +225,82 @@ def build_counters(monitors: List[Dict[str, AnyType]]) -> Dict[str, int]:
             counters["suspended"] += 1
 
     return counters
+
+
+# ============================================================
+# Anomalías – resumen y detalle (con ZAAID MSP)
+# ============================================================
+
+def fetch_anomaly_summary(
+    access_token: str,
+    zaaid: str,
+    period: int = 3,
+    monitor_type: str | None = None,
+) -> Dict[str, AnyType]:
+    """
+    Llama a /reports/anomaly y devuelve el bloque anomaly_summary.
+
+    IMPORTANTE: en modo MSP hay que pasar zaaid.
+    """
+    headers = {
+        "Accept": "application/json; version=2.0",
+        "Authorization": f"Zoho-oauthtoken {access_token}",
+    }
+
+    params: Dict[str, AnyType] = {
+        "period": period,
+        "zaaid": zaaid,  # <- clave para MSP
+    }
+    if monitor_type:
+        params["monitor_type"] = monitor_type
+
+    url = f"{SITE24X7_BASE_URL}{ANOMALY_DASHBOARD_PATH}"
+    resp = requests.get(url, headers=headers, params=params, timeout=30)
+
+    if resp.status_code != 200:
+        raise RuntimeError(
+            f"Site24x7 /reports/anomaly devolvió {resp.status_code}: {resp.text}"
+        )
+
+    data = resp.json()
+    # La doc dice que viene dentro de data.anomaly_summary
+    return (data.get("data") or {}).get("anomaly_summary") or {}
+
+
+def fetch_anomaly_by_monitor(
+    access_token: str,
+    zaaid: str,
+    monitor_id: str,
+    period: int = 3,
+    severity: str = "CONFIRMED,LIKELY,INFO",
+) -> Dict[str, AnyType]:
+    """
+    Llama a /reports/anomaly/monitors/type para un monitor específico.
+
+    Devuelve el 'data' completo:
+      - anomaly_table_data (detalle)
+      - anomaly_chart_data (serie para gráficos)
+
+    También incluye zaaid porque estamos en modo MSP.
+    """
+    headers = {
+        "Accept": "application/json; version=2.0",
+        "Authorization": f"Zoho-oauthtoken {access_token}",
+    }
+
+    params = {
+        "monitor_id": monitor_id,
+        "period": period,
+        "severity": severity,  # CSV con CONFIRMED,LIKELY,INFO, etc.
+        "zaaid": zaaid,        # <- clave para MSP
+    }
+
+    url = f"{SITE24X7_BASE_URL}{ANOMALY_MONITOR_PATH}"
+    resp = requests.get(url, headers=headers, params=params, timeout=30)
+
+    if resp.status_code != 200:
+        raise RuntimeError(
+            f"Site24x7 /reports/anomaly/monitors/type devolvió {resp.status_code}: {resp.text}"
+        )
+
+    return resp.json().get("data") or {}

@@ -73,6 +73,7 @@ class TenantUser(AbstractUser):
     Alarma_Correo = models.BooleanField(default=False)
     Alarma_Telegram = models.BooleanField(default=False)
     hora_inicio = models.TimeField(null=True, blank=True)
+    phone = models.CharField(max_length=50, null=True, blank=True, help_text="Teléfono del cliente (campo 'Telefono' de la API)")
     hora_fin = models.TimeField(null=True, blank=True)
 
     # ✅ Campo numérico para almacenar el Chat_ID de Telegram

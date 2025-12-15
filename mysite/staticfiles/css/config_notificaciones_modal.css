@@ -1,37 +1,61 @@
 /* ==========================================================
    Modal flotante de Configuración de Notificaciones (Inntesec)
+   FIX ZOOM + footer siempre visible (scope: #configModal)
    ========================================================== */
 
-.modal-overlay {
+/* Overlay */
+#configModal.modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(2, 6, 23, 0.75); /* fondo oscuro semitransparente */
+  background: rgba(2, 6, 23, 0.75);
   backdrop-filter: blur(3px);
+
   display: flex;
   justify-content: center;
-  align-items: center;
+
+  /* clave para zoom: NO centrar vertical, anclar arriba + padding */
+  align-items: flex-start;
+  padding: clamp(12px, 3vh, 28px);
+
+  /* clave: si el viewport queda chico, el overlay puede scrollear */
+  overflow: auto;
+
   z-index: 2000;
   transition: opacity 0.25s ease;
 }
 
-.modal-overlay.hidden {
+#configModal.modal-overlay.hidden {
   opacity: 0;
   pointer-events: none;
 }
 
 /* Tarjeta del modal */
-.modal-card {
-  position: relative; /* importante para posicionar el toast */
+#configModal .modal-card {
+  position: relative; /* para el toast */
   background: var(--card, #0f1d35);
   border: 1px solid var(--border, #1e293b);
   border-radius: 1rem;
   box-shadow: 0 10px 40px rgba(2, 6, 23, 0.6);
-  width: 100%;
-  max-width: 480px;
+
+  /* clave: ancho fluido para zoom */
+  width: min(92vw, 480px);
+
   padding: 1.5rem 1.75rem;
+  color: var(--text, #e5e7eb);
+
   transform: translateY(-10px);
   animation: floatIn 0.3s ease forwards;
-  color: var(--text, #e5e7eb);
+
+  /* clave: limitar alto según viewport */
+  max-height: calc(100dvh - 2 * clamp(12px, 3vh, 28px));
+  max-height: calc(100vh - 2 * clamp(12px, 3vh, 28px)); /* fallback */
+
+  /* clave: layout vertical */
+  display: flex;
+  flex-direction: column;
+
+  /* importante para que el scroll quede dentro del body */
+  overflow: hidden;
 }
 
 @keyframes floatIn {
@@ -40,21 +64,23 @@
 }
 
 /* Cabecera */
-.modal-head {
+#configModal .modal-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.25rem;
+
+  flex: 0 0 auto;
 }
 
-.modal-head h3 {
+#configModal .modal-head h3 {
   font-size: 1.25rem;
   font-weight: 800;
   margin: 0;
   color: var(--text, #e5e7eb);
 }
 
-.close-btn {
+#configModal .close-btn {
   background: transparent;
   border: none;
   font-size: 1.5rem;
@@ -63,18 +89,91 @@
   transition: color 0.2s ease;
 }
 
-.close-btn:hover {
+#configModal .close-btn:hover {
   color: #fff;
 }
 
-/* Cuerpo */
-.modal-body {
+/* ==========================================================
+   CLAVE: el form debe ser flex-column y ocupar el alto disponible
+   ========================================================== */
+#configModal #configForm {
+  display: flex;
+  flex-direction: column;
+
+  /* ocupa el espacio restante bajo el header */
+  flex: 1 1 auto;
+
+  /* CLAVE para que overflow funcione dentro de flex */
+  min-height: 0;
+}
+
+/* Cuerpo (scrolleable) */
+#configModal .modal-body {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+
+  flex: 1 1 auto;
+  overflow: auto;
+
+  /* CLAVE para que no empuje el footer fuera */
+  min-height: 0;
+
+  /* pequeño ajuste visual para scrollbar */
+  padding-right: 2px;
 }
 
-.config-option {
+/* Pie de botones (siempre visible) */
+#configModal .modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+
+  flex: 0 0 auto;
+
+  /* sticky dentro del form */
+  position: sticky;
+  bottom: 0;
+
+  margin-top: 1rem;
+  padding-top: 1rem;
+  padding-bottom: 0.75rem;
+
+  background: var(--card, #0f1d35);
+  border-top: 1px solid var(--border, #1e293b);
+  z-index: 10;
+}
+
+#configModal .modal-foot .btn {
+  border: 1px solid var(--border, #1e293b);
+  border-radius: 10px;
+  padding: 0.45rem 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+#configModal .modal-foot .btn.primary {
+  background: var(--brand, #3b82f6);
+  color: #fff;
+  border-color: var(--brand, #3b82f6);
+}
+
+#configModal .modal-foot .btn.primary:hover {
+  background: #2563eb;
+}
+
+#configModal .modal-foot .btn.ghost {
+  background: transparent;
+  color: var(--text, #e5e7eb);
+}
+
+#configModal .modal-foot .btn.ghost:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Opciones */
+#configModal .config-option {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -86,60 +185,23 @@
   font-weight: 600;
 }
 
-.config-option.is-active {
+#configModal .config-option.is-active {
   background: rgba(59, 130, 246, 0.15);
   border-color: var(--brand, #3b82f6);
   color: #e8eeff;
 }
 
-.switch input {
+#configModal .switch input {
   width: 1.4rem;
   height: 1.4rem;
   accent-color: var(--brand, #3b82f6);
   cursor: pointer;
 }
 
-/* Pie de botones */
-.modal-foot {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
-}
-
-.modal-foot .btn {
-  border: 1px solid var(--border, #1e293b);
-  border-radius: 10px;
-  padding: 0.45rem 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.modal-foot .btn.primary {
-  background: var(--brand, #3b82f6);
-  color: #fff;
-  border-color: var(--brand, #3b82f6);
-}
-
-.modal-foot .btn.primary:hover {
-  background: #2563eb;
-}
-
-.modal-foot .btn.ghost {
-  background: transparent;
-  color: var(--text, #e5e7eb);
-}
-
-.modal-foot .btn.ghost:hover {
-  background: rgba(255, 255, 255, 0.06);
-}
-
 /* ==========================================================
    Toast flotante dentro del modal
    ========================================================== */
-
-.save-toast {
+#configModal .save-toast {
   position: absolute;
   top: 0;
   left: 50%;
@@ -156,30 +218,30 @@
   z-index: 3000;
 }
 
-.save-toast.show {
+#configModal .save-toast.show {
   opacity: 1;
   transform: translate(-50%, 20%);
 }
 
-.save-toast.hidden {
+#configModal .save-toast.hidden {
   display: none;
 }
 
 /* ==========================================================
-   Imagen QR (se muestra junto a la franja horaria)
+   QR Telegram
    ========================================================== */
-.qr-container {
+#configModal .qr-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   margin-top: 14px;
   padding-top: 10px;
-  border-top: 1px dashed var(--color-border);
+  border-top: 1px dashed var(--color-border, rgba(255,255,255,0.18));
   text-align: center;
 }
 
-.qr-image {
+#configModal .qr-image {
   width: 130px;
   height: 130px;
   object-fit: contain;
@@ -188,44 +250,66 @@
   transition: transform 0.25s ease;
 }
 
-.qr-image:hover {
+#configModal .qr-image:hover {
   transform: scale(1.05);
 }
 
-.qr-text {
+#configModal .qr-text {
   font-size: 0.85rem;
-  color: var(--color-muted);
+  color: var(--color-muted, #94a3b8);
 }
 
-.qr-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  margin-top: 14px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--color-border);
-  text-align: center;
-}
-
-.qr-image {
-  width: 130px;
-  height: 130px;
-  object-fit: contain;
-  border-radius: 8px;
-  margin-bottom: 6px;
-  transition: transform 0.25s ease;
-}
-
-.qr-image:hover {
-  transform: scale(1.05);
-}
-
-.qr-text {
-  font-size: 0.85rem;
-  color: var(--color-muted);
-}
-
-.hidden {
+/* Utilidad */
+#configModal .hidden {
   display: none !important;
+}
+
+/* ===== Override final anti-pisadas (Config Modal) ===== */
+
+#configModal.modal-overlay{
+  align-items: flex-start !important;
+  padding: clamp(12px, 3vh, 28px) !important;
+  overflow: auto !important;
+}
+
+#configModal.modal-overlay > .modal-card{
+  width: min(92vw, 480px) !important;
+  max-height: calc(100dvh - 2 * clamp(12px, 3vh, 28px)) !important;
+  max-height: calc(100vh - 2 * clamp(12px, 3vh, 28px)) !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+
+  overflow: hidden !important;
+}
+
+/* CLAVE: el form debe “encajar” dentro del alto del modal */
+#configModal.modal-overlay > .modal-card > #configForm{
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+}
+
+/* Área scrolleable */
+#configModal.modal-overlay > .modal-card > #configForm > .modal-body{
+  flex: 1 1 auto !important;
+  overflow: auto !important;
+  min-height: 0 !important;
+}
+
+/* Botones siempre visibles */
+#configModal.modal-overlay > .modal-card > #configForm > .modal-foot{
+  flex: 0 0 auto !important;
+
+  position: sticky !important;
+  bottom: 0 !important;
+
+  background: var(--card, #0f1d35) !important;
+  border-top: 1px solid var(--border, #1e293b) !important;
+
+  padding-top: 1rem !important;
+  padding-bottom: 0.75rem !important;
+
+  z-index: 50 !important;
 }

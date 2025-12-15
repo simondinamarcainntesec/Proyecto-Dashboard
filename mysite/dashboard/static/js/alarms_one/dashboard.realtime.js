@@ -12,6 +12,7 @@ import {
   subtypeDataForCurrentFilter,
   logDescriptionDataForCurrentFilter,
   getPeakHour,
+  calcKpis, // ✅ Usamos el mismo calcKpis que en el histórico
 } from "./selectors.js";
 
 import { renderDonut } from "./charts/donut.js";
@@ -42,75 +43,22 @@ function formatHourRange(h) {
   return `${hh}:00–${hh}:59 ${ampm}`;
 }
 
-// Igual que en selectors.js
-function isCriticalKey(k) {
-  const kk = String(k || "").trim().toLowerCase();
-  return (
-    kk === "critical" ||
-    kk === "critico" ||
-    kk === "critica" ||
-    kk === "crítica"
-  );
-}
-
-// --- Helpers para obtener data venga de donde venga ---
-function readJSON(id) {
-  try {
-    const el = document.getElementById(id);
-    if (!el) return null;
-    return JSON.parse(el.textContent);
-  } catch {
-    return null;
-  }
-}
-
-function getDataCtx() {
-  const st = getState() || {};
-  const ctx = st.ctx || st.data || st; // a veces viene anidado
-
-  const sev =
-    ctx.severity_counts ||
-    ctx.severityCountsRaw ||
-    readJSON("severity-counts") ||
-    {};
-
-  const msg =
-    ctx.msg_severity_counts ||
-    ctx.msgSeverityCountsRaw ||
-    readJSON("msg-severity-counts") ||
-    {};
-
-  const devCounts =
-    ctx.device_counts ||
-    ctx.deviceCountsAll ||
-    readJSON("device-counts") ||
-    {};
-
-  return { sev, msg, devCounts };
-}
-
-function sumVals(obj) {
-  return Object.values(obj || {}).reduce((a, n) => a + Number(n || 0), 0);
-}
-
 function renderKPIs() {
-  const { sev, msg, devCounts } = getDataCtx();
+  const state = getState() || {};
 
-  const total = sumVals(sev);
-
-  // Alta severidad = suma de los severity que sean "critical/critico/..."
-  const high = Object.entries(sev || {}).reduce((acc, [k, v]) => {
-    return acc + (isCriticalKey(k) ? Number(v) || 0 : 0);
-  }, 0);
-
-  const devices = Object.keys(devCounts || {}).length;
+  // ✅ MISMA LÓGICA QUE EL HISTÓRICO
+  // calcKpis ya implementa la prioridad:
+  // - usa msg_severity cuando corresponde
+  // - cae a severity cuando msg_severity está vacío
+  const { total, high, devices } = calcKpis(state);
 
   const elTotal = $("#kpi-total");
   const elHigh = $("#kpi-high");
   const elDevices = $("#kpi-devices");
-  if (elTotal) elTotal.textContent = total;
-  if (elHigh) elHigh.textContent = high;
-  if (elDevices) elDevices.textContent = devices;
+
+  if (elTotal) elTotal.textContent = total ?? 0;
+  if (elHigh) elHigh.textContent = high ?? 0;
+  if (elDevices) elDevices.textContent = devices ?? 0;
 
   const { hour } = getPeakHour();
   const elPeak = document.getElementById("kpi-peak-hour");
@@ -267,3 +215,4 @@ onStateChange(() => {
     mirrorToBody(st);
   });
 })();
+
