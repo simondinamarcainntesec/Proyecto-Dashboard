@@ -1,0 +1,54 @@
+{# Este template NO tiene <html> ni <body>.
+   Solo se inyecta dentro del cuerpo del modal en anomaly_status.html #}
+
+{% if error %}
+  <p class="muted">No se pudo cargar el detalle de anomalías para este monitor.</p>
+{% elif rows %}
+  <div class="table-wrap">
+    <table class="tbl" id="tbl-anomaly-rows">
+      <thead>
+        <tr>
+          <th>Fecha / hora</th>
+          <th>Severidad</th>
+          <th>Tipo de monitor</th>
+          <th>Resumen</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr
+          data-time="{{ r.time|default:'—'|escape }}"
+          data-severity="{{ r.severity|default:'—'|escape }}"
+          data-monitor-type="{{ r.monitor_type|default:'—'|escape }}"
+          data-detail="{{ r.detail|default:'—'|escape }}"
+        >
+          <td class="mono nowrap">{{ r.time|default:"—" }}</td>
+          <td class="nowrap">
+            <span class="pill
+              {% with sev=r.severity|default:""|lower %}
+                {% if 'confirm' in sev %}sev-high
+                {% elif 'probable' in sev or 'likely' in sev %}sev-medium
+                {% elif 'info' in sev or 'información' in sev %}sev-low
+                {% else %}sev-na{% endif %}
+              {% endwith %}
+            ">
+              {{ r.severity|default:"—" }}
+            </span>
+          </td>
+          <td class="w-240" title="{{ r.monitor_type }}">{{ r.monitor_type|default:"—" }}</td>
+          <td class="w-320" title="{{ r.detail }}">{{ r.detail|default:"—"|truncatechars:90 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="block" id="anom-detail-panel">
+    <h4>Detalle seleccionado</h4>
+    <p id="anom-detail-text" class="muted">
+      Haz clic en una fila de la tabla para ver el detalle completo de la anomalía.
+    </p>
+  </div>
+{% else %}
+  <p class="muted">No hay anomalías para el periodo seleccionado en este monitor.</p>
+{% endif %}

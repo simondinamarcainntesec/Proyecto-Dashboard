@@ -149,22 +149,20 @@ class TenantCredentials(models.Model):
             return None
 
 
+
 class WhitelistCountryPreference(models.Model):
     """
-    Mapea la tabla física agent.whitelist_country_preference.
-    Guarda la lista de países (valores de IPWhitelist.pais) que el usuario quiere ver
-    en la whitelist. Debe existir un único registro por usuario.
+    Mapea agent.whitelist_country_preference.
+
+    Guarda la lista de países (valores de IPWhitelist.pais) que se quiere ver en la whitelist.
+    Debe existir un único registro por tenant.
     """
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="whitelist_country_prefs",
-    )
-    # Mantienes el tenant por si quieres saber con cuál se guardó la preferencia
+
     tenant = models.ForeignKey(
         Tenant,
         on_delete=models.CASCADE,
         related_name="whitelist_country_prefs",
+        db_column="tenant_id",  # <-- FK a public.tenants_tenant.id
     )
 
     paises = ArrayField(
@@ -178,15 +176,14 @@ class WhitelistCountryPreference(models.Model):
     class Meta:
         managed = False
         db_table = 'agent"."whitelist_country_preference'
-        # Lógica de negocio: un solo registro por usuario
         constraints = [
             models.UniqueConstraint(
-                fields=["user"],
-                name="uniq_whitelist_country_pref_per_user",
+                fields=["tenant"],
+                name="uniq_whitelist_country_pref_per_tenant",
             )
         ]
         verbose_name = "Preferencia de países de whitelist"
         verbose_name_plural = "Preferencias de países de whitelist"
 
     def __str__(self):
-        return f"{self.user} · {self.tenant} · {', '.join(self.paises or [])}"
+        return f"{self.tenant} · {', '.join(self.paises or [])}"

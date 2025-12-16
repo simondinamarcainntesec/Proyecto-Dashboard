@@ -107,9 +107,7 @@ def alerts_logs360_view(request):
     cred = None
     try:
         if tenant:
-            cred = TenantCredentials.get_active_for_tenant(
-                int(getattr(tenant, "id", 0))
-            )
+            cred = TenantCredentials.get_active_for_tenant(int(getattr(tenant, "id", 0)))
     except Exception as e:
         logger.exception("[LOGS360] Error obteniendo credenciales del tenant: %s", e)
 
@@ -161,15 +159,21 @@ def alerts_logs360_view(request):
     paginator = Paginator(alerts, 50)
     page_obj = paginator.get_page(request.GET.get("page") or 1)
 
-    # países para el modal de whitelist
-    selected_paises = []
+    # ==============================
+    # Países para el modal de whitelist (POR TENANT, NO POR USER)
+    # ==============================
+    selected_paises: list[str] = []
     try:
-        pref = WhitelistCountryPreference.objects.get(user=request.user)
-        selected_paises = pref.paises or []
-    except WhitelistCountryPreference.DoesNotExist:
-        selected_paises = []
+        effective_tenant_for_pref = tenant or getattr(request.user, "tenant", None)
+        if effective_tenant_for_pref:
+            pref = WhitelistCountryPreference.objects.filter(
+                tenant=effective_tenant_for_pref
+            ).first()
+            selected_paises = (pref.paises or []) if pref else []
+        else:
+            selected_paises = []
     except Exception as e:
-        logger.exception("[LOGS360] Error leyendo preferencias de países: %s", e)
+        logger.exception("[LOGS360] Error leyendo preferencias de países (tenant): %s", e)
         selected_paises = []
 
     context = {

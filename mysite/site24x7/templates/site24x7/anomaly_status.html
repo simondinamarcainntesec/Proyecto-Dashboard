@@ -5,7 +5,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Anomalías por monitor</title>
+  <title>Inn-Monitor – Anomalías</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v={% now 'U' %}">
@@ -15,10 +15,11 @@
   <link rel="stylesheet" href="{% static 'css/cred_modal.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/site24x7.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/country_filter_modal.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/site24x7_anomalies.css' %}?v={% now 'U' %}">
 </head>
 
 <body class="layout">
-  <!-- Overlay -->
+  <!-- Overlay de carga -->
   <div id="loading-overlay" role="status" aria-live="polite" aria-label="Cargando">
     <div class="loading-card">
       <div class="spinner" aria-hidden="true"></div>
@@ -33,105 +34,101 @@
     </div>
 
     <nav class="nav">
+      {# ================= HOME / ALARMAS (solo si tiene alarms_one) ================ #}
       {% if tenant and tenant.alarms_one_id %}
+        <a id="homeNav"
+           class="nav-item {% if request.resolver_match.app_name == 'home' %}is-active{% endif %}"
+           href="{% url 'home:index' %}">
+          <span class="nav-ico">🏠</span>Home
+          <span id="coachDotHome" class="coachmark-dot hidden"></span>
+        </a>
 
-      <a id="homeNav" class="nav-item {% if request.resolver_match.app_name == 'home' %}is-active{% endif %}"
-        href="{% url 'home:index' %}">
-        <span class="nav-ico">🏠</span>Home
-        <span id="coachDotHome" class="coachmark-dot hidden"></span>
-      </a>
+        {% with url_name=request.resolver_match.url_name %}
+          <details class="tenant-dropdown nav-dropdown"
+                   {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}open{% endif %}>
+            <summary id="alarmsSummary"
+              class="nav-item {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}is-active{% endif %}">
+              <span class="nav-ico">📊</span>Alarmas
+              <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+              </svg>
+              <span id="coachDotAlarms" class="coachmark-dot hidden"></span>
+            </summary>
+            <div class="tenant-list nav-submenu">
+              <a class="tenant-option nav-subitem {% if url_name == 'dashboard_alarmsone' %}is-active{% endif %}"
+                 href="{% url 'dashboard:dashboard_alarmsone' %}">Dashboard</a>
+              <a class="tenant-option nav-subitem {% if url_name == 'dashboard_realtime' %}is-active{% endif %}"
+                 href="{% url 'dashboard:dashboard_realtime' %}">Tiempo Real</a>
+            </div>
+          </details>
+        {% endwith %}
 
-      {# ===== Alarmas ===== #}
-      {% with url_name=request.resolver_match.url_name %}
-      <details class="tenant-dropdown nav-dropdown" {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}open{% endif %}>
-        <summary id="alarmsSummary"
-          class="nav-item {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}is-active{% endif %}">
-          <span class="nav-ico">📊</span>Alarmas
-          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
-          </svg>
-          <span id="coachDotAlarms" class="coachmark-dot hidden"></span>
-        </summary>
-        <div class="tenant-list nav-submenu">
-          <a class="tenant-option nav-subitem {% if url_name == 'dashboard_alarmsone' %}is-active{% endif %}"
-            href="{% url 'dashboard:dashboard_alarmsone' %}">Dashboard</a>
-          <a class="tenant-option nav-subitem {% if url_name == 'dashboard_realtime' %}is-active{% endif %}"
-            href="{% url 'dashboard:dashboard_realtime' %}">Tiempo Real</a>
-        </div>
-      </details>
-      {% endwith %}
+        {% with app_name=request.resolver_match.app_name %}
+          <details class="tenant-dropdown nav-dropdown"
+                   {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' %}open{% endif %}>
+            <summary id="soarSummary"
+              class="nav-item {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' %}is-active{% endif %}">
+              <span class="nav-ico">🚨</span>SOAR
+              <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+              </svg>
+              <span id="coachDotSoar" class="coachmark-dot hidden"></span>
+            </summary>
+            <div class="tenant-list nav-submenu">
+              <a class="tenant-option nav-subitem {% if app_name == 'soar_dashboard' %}is-active{% endif %}"
+                 href="{% url 'soar_dashboard:dashboard' %}">Dashboard</a>
+              <a class="tenant-option nav-subitem {% if app_name == 'soar_incidents' %}is-active{% endif %}"
+                 href="{% url 'soar_incidents:list' %}">Eventos</a>
+            </div>
+          </details>
+        {% endwith %}
 
-      {# ===== SOAR ===== #}
-      {% with app_name=request.resolver_match.app_name %}
-      <details class="tenant-dropdown nav-dropdown" {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' %}open{% endif %}>
-        <summary id="soarSummary"
-          class="nav-item {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' %}is-active{% endif %}">
-          <span class="nav-ico">🚨</span>SOAR
-          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
-          </svg>
-          <span id="coachDotSoar" class="coachmark-dot hidden"></span>
-        </summary>
-        <div class="tenant-list nav-submenu">
-          <a class="tenant-option nav-subitem {% if app_name == 'soar_dashboard' %}is-active{% endif %}"
-            href="{% url 'soar_dashboard:dashboard' %}">Dashboard</a>
-          <a class="tenant-option nav-subitem {% if app_name == 'soar_incidents' %}is-active{% endif %}"
-            href="{% url 'soar_incidents:list' %}">Eventos</a>
-        </div>
-      </details>
-      {% endwith %}
-
-      {# ===== SIEM ===== #}
-      {% with raw_siem_id=tenant.logs360siem_id|default_if_none:"" %}
-      {% with siem_id=raw_siem_id|stringformat:"s" %}
-      {% if siem_id and siem_id != "0" and siem_id != "null" and siem_id != "NULL" and siem_id != "None" %}
-      <a class="nav-item {% if request.resolver_match.app_name == 'siem' %}is-active{% endif %}"
-        href="{% url 'siem:alerts_logs360' %}">
-        <span class="nav-ico">🧠</span>SIEM
-        <span id="coachDotSiem" class="coachmark-dot hidden"></span>
-      </a>
+        {% with raw_siem_id=tenant.logs360siem_id|default_if_none:"" %}
+          {% with siem_id=raw_siem_id|stringformat:"s" %}
+            {% if siem_id and siem_id != "0" and siem_id != "null" and siem_id != "NULL" and siem_id != "None" %}
+              <a class="nav-item {% if request.resolver_match.app_name == 'siem' %}is-active{% endif %}"
+                 href="{% url 'siem:alerts_logs360' %}">
+                <span class="nav-ico">🧠</span>SIEM
+                <span id="coachDotSiem" class="coachmark-dot hidden"></span>
+              </a>
+            {% endif %}
+          {% endwith %}
+        {% endwith %}
       {% endif %}
-      {% endwith %}
-      {% endwith %}
-      {% endif %}
 
-      {# ===== Site24x7 / Inn-Monitor ===== #}
+      {# ================= INN-MONITOR / SITE24x7 ================= #}
       {% if tenant %}
-      {% with raw_site_id=tenant.site24x7_id|default_if_none:"" %}
-      {% with site_id=raw_site_id|stringformat:"s" %}
-      {% if site_id and site_id != "0" and site_id != "null" and site_id != "NULL" and site_id != "None" %}
-      {% with url_name=request.resolver_match.url_name %}
-      <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.app_name == 'site24x7' %}open{% endif %}>
-        <summary class="nav-item {% if request.resolver_match.app_name == 'site24x7' %}is-active{% endif %}">
-          <span class="nav-ico">📡</span>Inn-Monitor
-          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
-          </svg>
-          <span id="coachDotInnMonitor" class="coachmark-dot hidden"></span>
-        </summary>
-        <div class="tenant-list nav-submenu">
-          <a class="tenant-option nav-subitem {% if url_name == 'monitor_status' %}is-active{% endif %}"
-            href="{% url 'site24x7:monitor_status' %}">
-            Monitores
-          </a>
-          <a class="tenant-option nav-subitem {% if url_name == 'anomaly_status' %}is-active{% endif %}"
-            href="{% url 'site24x7:anomaly_status' %}">
-            Anomalías
-          </a>
-          <a class="tenant-option nav-subitem {% if url_name == 'dashboard' %}is-active{% endif %}"
-            href="{% url 'site24x7:dashboard' %}">
-            Dashboard
-          </a>
-        </div>
-      </details>
-      {% endwith %}
-      {% endif %}
-      {% endwith %}
-      {% endwith %}
+        {% with raw_site_id=tenant.site24x7_id|default_if_none:"" %}
+          {% with site_id=raw_site_id|stringformat:"s" %}
+            {% if site_id and site_id != "0" and site_id != "null" and site_id != "NULL" and site_id != "None" %}
+              {% with url_name=request.resolver_match.url_name %}
+                <details class="tenant-dropdown nav-dropdown"
+                         {% if request.resolver_match.app_name == 'site24x7' %}open{% endif %}>
+                  <summary class="nav-item {% if request.resolver_match.app_name == 'site24x7' %}is-active{% endif %}">
+                    <span class="nav-ico">📡</span>Inn-Monitor
+                    <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+                    </svg>
+                    <span id="coachDotInnMonitor" class="coachmark-dot hidden"></span>
+                  </summary>
+                  <div class="tenant-list nav-submenu">
+                    <a class="tenant-option nav-subitem {% if url_name == 'monitor_status' %}is-active{% endif %}"
+                       href="{% url 'site24x7:monitor_status' %}">Monitores</a>
+                    <a class="tenant-option nav-subitem {% if url_name == 'anomaly_status' %}is-active{% endif %}"
+                       href="{% url 'site24x7:anomaly_status' %}">Anomalías</a>
+                    <a class="tenant-option nav-subitem {% if url_name == 'dashboard' %}is-active{% endif %}"
+                       href="{% url 'site24x7:dashboard' %}">Dashboard</a>
+                  </div>
+                </details>
+              {% endwith %}
+            {% endif %}
+          {% endwith %}
+        {% endwith %}
       {% endif %}
 
-      {# ===== Configuración ===== #}
-      <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.url_name == 'cambiar_contrasena' %}open{% endif %}>
+      {# ================= CONFIG ================= #}
+      <details class="tenant-dropdown nav-dropdown"
+               {% if request.resolver_match.url_name == 'cambiar_contrasena' %}open{% endif %}>
         <summary id="settingsSummary"
           class="nav-item {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}">
           <span class="nav-ico">⚙️</span>Configuración
@@ -142,12 +139,10 @@
         </summary>
         <div class="tenant-list nav-submenu">
           <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}"
-            href="{% url 'cambiar_contrasena' %}">🔒 Cambiar contraseña</a>
+             href="{% url 'cambiar_contrasena' %}">🔒 Cambiar contraseña</a>
           <a class="tenant-option nav-subitem" href="#" onclick="toggleCredModal(true)">🔑 Credenciales</a>
           <a class="tenant-option nav-subitem" href="#" onclick="toggleConfigModal(true)">🔔 Notificaciones</a>
-          <a class="tenant-option nav-subitem" href="#" onclick="toggleCountryModal(true)">
-            🌎 Filtro países whitelist
-          </a>
+          <a class="tenant-option nav-subitem" href="#" onclick="toggleCountryModal(true)">🌎 Filtro países whitelist</a>
         </div>
       </details>
     </nav>
@@ -161,40 +156,31 @@
         <h1 class="top-title">
           Tenant:
           {% if request.user.tenant.name|lower == "inntesec" %}
-          <details class="tenant-dropdown">
-            <summary class="tenant-summary">
-              {{ tenant.name }}
-              <span class="caret">▼</span>
-            </summary>
-            <div class="tenant-list">
-              {% for t in all_tenants %}
-              <form method="post" action="{% url 'dashboard:switch_tenant' t.id %}">
-                {% csrf_token %}
-                <input type="hidden" name="next" value="{{ request.path }}">
-                <button type="submit" class="tenant-option {% if tenant.id == t.id %}is-active{% endif %}">
-                  {{ t.name }}
-                </button>
-              </form>
-              {% endfor %}
-            </div>
-          </details>
+            <details class="tenant-dropdown">
+              <summary class="tenant-summary">
+                {{ tenant.name }}
+                <span class="caret">▼</span>
+              </summary>
+              <div class="tenant-list">
+                {% for t in all_tenants %}
+                  <form method="post" action="{% url 'dashboard:switch_tenant' t.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <button type="submit" class="tenant-option {% if tenant.id == t.id %}is-active{% endif %}">
+                      {{ t.name }}
+                    </button>
+                  </form>
+                {% endfor %}
+              </div>
+            </details>
           {% else %}
-          <span class="top-tenant">{{ tenant.name }}</span>
+            <span class="top-tenant">{{ tenant.name }}</span>
           {% endif %}
         </h1>
       </div>
 
       <div class="top-right">
-        <button class="btn ghost" title="Actualizar" id="btn-refresh">⟳</button>
-
-        <!-- Menú Exportar -->
-        <div class="export-wrapper">
-          <button class="btn ghost" title="Exportar" id="btn-export-toggle">⬇︎</button>
-          <div class="export-dropdown" id="export-menu">
-            <button type="button" data-export-format="pdf">📄 Exportar PDF</button>
-            <button type="button" data-export-format="csv">📊 Exportar CSV</button>
-          </div>
-        </div>
+        <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
 
         <div class="user-menu" id="userMenu">
           <button type="button" id="userButton" class="user-button">
@@ -219,6 +205,57 @@
       </div>
     </header>
 
+    {# ====================== TOOLBAR FECHAS ====================== #}
+    {% if tenant and tenant.site24x7_id %}
+      <section class="wrap">
+        <section class="toolbar">
+          <form id="date-filter" method="get" action="" class="toolbar-row">
+
+            <div class="group">
+              <button
+                type="submit"
+                class="btn ghost chip-btn {% if period|default:3 == 3 %}is-active{% endif %}"
+                name="period"
+                value="3"
+              >Hoy</button>
+
+              <button
+                type="submit"
+                class="btn ghost chip-btn {% if period|default:3 == 2 %}is-active{% endif %}"
+                name="period"
+                value="2"
+              >Últimos 7 días</button>
+
+              <button
+                type="submit"
+                class="btn ghost chip-btn {% if period|default:3 == 5 %}is-active{% endif %}"
+                name="period"
+                value="5"
+              >Últimos 30 días</button>
+            </div>
+
+            <div class="group">
+              <input type="hidden" name="period" id="inp-period" value="{{ period|default:'3' }}">
+
+              <label class="date-range">
+                <span>Desde</span>
+                <input type="date" name="from" id="inp-from" value="{{ from_date|default:'' }}">
+              </label>
+
+              <label class="date-range">
+                <span>Hasta</span>
+                <input type="date" name="to" id="inp-to" value="{{ to_date|default:'' }}">
+              </label>
+
+              <button type="submit" class="btn primary">Aplicar</button>
+              <a class="btn ghost" href="?">Limpiar</a>
+            </div>
+
+          </form>
+        </section>
+      </section>
+    {% endif %}
+
     {# ===== Estados especiales ===== #}
     {% if not tenant %}
       <section class="empty-state">
@@ -226,13 +263,9 @@
           <h2>Servicio Inn-Monitor no disponible</h2>
           <p>No se pudo determinar el tenant para este usuario.</p>
           <p>Por favor, contacte con un administrador.</p>
-          <button id="btn-empty-ok"
-                  class="btn primary"
-                  data-home-url="{% url 'home:index' %}">
-            OK
-          </button>
         </div>
       </section>
+
     {% elif not tenant.site24x7_id %}
       <section class="empty-state">
         <div class="empty-card">
@@ -242,127 +275,131 @@
             no tiene configurado el servicio de <strong>Site24x7</strong>.
           </p>
           <p>Por favor, contacte con un administrador.</p>
-          <button id="btn-empty-ok"
-                  class="btn primary"
-                  data-home-url="{% url 'home:index' %}">
-            OK
-          </button>
         </div>
       </section>
-    {% else %}
-      {% if error %}
-        <section class="empty-state">
-          <div class="empty-card">
-            <h2>Servicio Inn-Monitor no disponible</h2>
-            <p>
-              Ocurrió un error inesperado al consultar las anomalías
-              para la empresa <strong>{{ tenant.name|default:"—" }}</strong>.
-            </p>
-            <p>Por favor, contacte con un administrador.</p>
-            <button id="btn-empty-ok"
-                    class="btn primary"
-                    data-home-url="{% url 'home:index' %}">
-              OK
-            </button>
-          </div>
-        </section>
-      {% elif total_monitors|default:0 == 0 %}
-        <section class="empty-state">
-          <div class="empty-card">
-            <h2>Sin anomalías registradas</h2>
-            <p>No se encontraron anomalías para <strong>{{ tenant.name|default:"—" }}</strong> en el período seleccionado.</p>
-            <button id="btn-empty-ok"
-                    class="btn primary"
-                    data-home-url="{% url 'home:index' %}">
-              OK
-            </button>
-          </div>
-        </section>
-      {% else %}
 
-      <!-- Contenido principal ENVUELTO para captura -->
-      <section class="wrap" id="dashboard-export-area" data-page-slug="Inn-monitor_Anomalias">
+    {% elif error %}
+      <section class="empty-state">
+        <div class="empty-card">
+          <h2>Servicio Inn-Monitor no disponible</h2>
+          <p>
+            Ocurrió un error inesperado al consultar las anomalías
+            para la empresa <strong>{{ tenant.name|default:"—" }}</strong>.
+          </p>
+          <p>Por favor, contacte con un administrador.</p>
+        </div>
+      </section>
+
+    {% elif total_anomalies|default:0 == 0 %}
+      <section class="empty-state">
+        <div class="empty-card">
+          <h2>Sin anomalías en el período</h2>
+          <p>No se detectaron anomalías para <strong>{{ tenant.name|default:"—" }}</strong> en el rango consultado.</p>
+        </div>
+      </section>
+
+    {% else %}
+
+      {# ✅ KPIs fuera del card de monitores/anomalías (debajo de la barra) #}
+      <section class="wrap">
+        <section class="grid grid-kpis kpis-site24x7">
+          <div class="card kpi">
+            <div class="kpi-top">
+              <span class="kpi-label">Total anomalías</span>
+              <span class="kpi-icon-site kpi-icon-critical">Σ</span>
+            </div>
+            <div class="kpi-value">{{ total_anomalies|default:0 }}</div>
+          </div>
+
+          <div class="card kpi">
+            <div class="kpi-top">
+              <span class="kpi-label">Confirmadas</span>
+              <span class="kpi-icon-site kpi-icon-critical">!</span>
+            </div>
+            <div class="kpi-value">{{ count_confirmed|default:0 }}</div>
+          </div>
+
+          <div class="card kpi">
+            <div class="kpi-top">
+              <span class="kpi-label">Probables</span>
+              <span class="kpi-icon-site kpi-icon-trouble">~</span>
+            </div>
+            <div class="kpi-value">{{ count_likely|default:0 }}</div>
+          </div>
+
+          <div class="card kpi">
+            <div class="kpi-top">
+              <span class="kpi-label">Información</span>
+              <span class="kpi-icon-site kpi-icon-up">i</span>
+            </div>
+            <div class="kpi-value">{{ count_info|default:0 }}</div>
+          </div>
+
+          <div class="card kpi">
+            <div class="kpi-top">
+              <span class="kpi-label">Monitores afectados</span>
+              <span class="kpi-icon-site kpi-icon-suspended">📡</span>
+            </div>
+            <div class="kpi-value">{{ total_monitors|default:0 }}</div>
+          </div>
+        </section>
+      </section>
+
+      {# ✅ Card solo para la tabla (monitores/anomalías) #}
+      <section class="wrap" id="anomalies-export-area" data-page-slug="Inn-monitor_Anomalias">
         <div class="card">
           <div class="card-head">
-            <h3>Anomalías por monitor</h3>
+            <h3>Monitores con anomalías</h3>
+            <p class="meta-inline">
+              Período seleccionado: <strong>{{ period_label|default:"—" }}</strong>
+            </p>
           </div>
 
           <div class="card-body">
-            <!-- KPIs -->
-            <section class="grid grid-kpis kpis-site24x7">
-              <div class="card kpi">
-                <div class="kpi-top">
-                  <span class="kpi-label">Anomalías Info</span>
-                  <span class="kpi-icon-site kpi-icon-up">i</span>
-                </div>
-                <div class="kpi-value">{{ count_info }}</div>
-              </div>
-
-              <div class="card kpi">
-                <div class="kpi-top">
-                  <span class="kpi-label">Anomalías Likely</span>
-                  <span class="kpi-icon-site kpi-icon-trouble">!</span>
-                </div>
-                <div class="kpi-value">{{ count_likely }}</div>
-              </div>
-
-              <div class="card kpi">
-                <div class="kpi-top">
-                  <span class="kpi-label">Anomalías Confirmed</span>
-                  <span class="kpi-icon-site kpi-icon-critical">⚠</span>
-                </div>
-                <div class="kpi-value">{{ count_confirmed }}</div>
-              </div>
-
-              <div class="card kpi">
-                <div class="kpi-top">
-                  <span class="kpi-label">Anomalías totales</span>
-                  <span class="kpi-icon-site kpi-icon-down">Σ</span>
-                </div>
-                <div class="kpi-value">{{ total_anomalies }}</div>
-              </div>
-
-              <div class="card kpi">
-                <div class="kpi-top">
-                  <span class="kpi-label">Monitores con anomalías</span>
-                  <span class="kpi-icon-site kpi-icon-suspended">≡</span>
-                </div>
-                <div class="kpi-value">{{ total_monitors }}</div>
-              </div>
-            </section>
-
-            <!-- Pill "Monitores con anomalías" -->
             <div class="meta-pill-row">
               <span class="meta-pill">
                 <span class="meta-pill-dot"></span>
-                Monitores con anomalías: <strong>{{ total_monitors }}</strong>
+                Monitores con anomalías: <strong>{{ total_monitors|default:0 }}</strong>
               </span>
             </div>
 
-            <!-- Tabla -->
             <div class="table-wrap">
               <table class="tbl" id="tbl-site24x7-anomalies">
                 <thead>
                   <tr>
-                    <th>Nombre del monitor</th>
-                    <th>ID monitor</th>
-                    <th>Cantidad de anomalías</th>
+                    <th>Monitor</th>
+                    <th>Total anomalías</th>
                     <th>Severidad máxima</th>
-                    <th>Acciones</th>
+                    <th class="center">Acción</th>
                   </tr>
                 </thead>
                 <tbody>
                   {% for m in monitors %}
-                  <tr>
-                    <td>{{ m.display_name|default:"—" }}</td>
-                    <td>{{ m.monitor_id|default:"—" }}</td>
-                    <td>{{ m.anomaly_count|default:"0" }}</td>
-                    <td>{{ m.severity|default:"—" }}</td>
-                    <td>
-                      <a href="{% url 'site24x7:anomaly_detail' %}?monitor_id={{ m.monitor_id }}"
-                         class="btn small ghost">
+                  <tr class="js-anomaly-row"
+                      data-monitor-id="{{ m.monitor_id|default:''|escape }}"
+                      data-monitor-name="{{ m.display_name|default:'—'|escape }}">
+                    <td class="w-320" title="{{ m.display_name }}">{{ m.display_name|default:"—" }}</td>
+                    <td class="mono nowrap">{{ m.anomaly_count|default:0 }}</td>
+                    <td class="nowrap">
+                      {% with sev=m.severity|default:""|lower %}
+                        <span class="pill
+                          {% if 'confirm' in sev %}sev-critical
+                          {% elif 'prob' in sev or 'likely' in sev %}sev-medium
+                          {% elif 'info' in sev %}sev-low
+                          {% else %}sev-na{% endif %}">
+                          {{ m.severity|default:"—" }}
+                        </span>
+                      {% endwith %}
+                    </td>
+                    <td class="center">
+                      <button
+                        type="button"
+                        class="btn ghost-sm btn-anom-open"
+                        data-monitor-id="{{ m.monitor_id|default:''|escape }}"
+                        data-monitor-name="{{ m.display_name|default:'—'|escape }}"
+                      >
                         Ver detalle
-                      </a>
+                      </button>
                     </td>
                   </tr>
                   {% endfor %}
@@ -373,30 +410,51 @@
           </div>
         </div>
       </section>
-      {% endif %}
     {% endif %}
+  </div>
+
+  {# ====================== MODALES ====================== #}
+  <div id="anomalyListModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="anom-list-title">
+      <div class="modal-header">
+        <h3 id="anom-list-title">📡 Listado de anomalías</h3>
+        <button class="modal-close" type="button" data-close>&times;</button>
+      </div>
+      <div class="modal-body" id="anomaly-list-body">
+        <div class="block"><p class="muted">Cargando…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="anomalyDetailModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="anom-detail-title">
+      <div class="modal-header">
+        <h3 id="anom-detail-title">📡 Detalle de anomalía</h3>
+        <button class="modal-close" type="button" data-close>&times;</button>
+      </div>
+      <div class="modal-body" id="anomaly-detail-body">
+        <div class="block"><p class="muted">Seleccione una anomalía…</p></div>
+      </div>
+    </div>
   </div>
 
   <!-- JS base -->
   <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/page-loader-universal.js' %}?v={% now 'U' %}"></script>
-
-  {# Botón OK (redirige al home) #}
-  <script defer src="{% static 'js/site24x7_empty_ok.js' %}?v={% now 'U' %}"></script>
-
-  {# Librerías de export (solo cuando hay datos reales) #}
-  {% if tenant and tenant.site24x7_id and not error and total_monitors|default:0 > 0 %}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script defer src="{% static 'js/site24x7_export.js' %}?v={% now 'U' %}"></script>
-  {% endif %}
-
+  <script defer src="{% static 'js/home_portal.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/country_filter_modal.js' %}?v={% now 'U' %}"></script>
+
+  <!-- JS filtros FECHA -->
+  <script defer src="{% static 'js/date_filters.js' %}?v={% now 'U' %}"></script>
+
+  <!-- JS anomalías -->
+  <script defer src="{% static 'js/site24x7_anomalies.js' %}?v={% now 'U' %}"></script>
 
   {% include 'partials/config_notificaciones_modal.html' %}
   {% include 'partials/_country_filter_modal.html' %}
   {% include 'partials/cred_modal.html' %}
 
 </body>
-
 </html>

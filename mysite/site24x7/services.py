@@ -1,4 +1,3 @@
-# site24x7/services.py
 import json
 import os
 import ssl
@@ -7,17 +6,6 @@ from pathlib import Path
 from typing import Any, List, Dict
 
 import requests
-
-# ============================================================
-# Config desde variables de entorno
-#
-# Esperados en .env:
-#   SITE24X7_WEBHOOK_URL
-#   SITE24X7_WEBHOOK_SECRET
-#   SITE24X7_WEBHOOK_HEADER_NAME  (opcional, default "passkey")
-#   SITE24X7_API_BASE_URL         (opcional)
-#   SITE24X7_VERIFY_SSL           (opcional, "True"/"False")
-# ============================================================
 
 WEBHOOK_URL = os.environ.get("SITE24X7_WEBHOOK_URL", "").strip()
 WEBHOOK_SECRET = os.environ.get("SITE24X7_WEBHOOK_SECRET", "") or ""
@@ -28,30 +16,16 @@ SITE24X7_BASE_URL = os.environ.get(
     "https://www.site24x7.com/api",
 ).rstrip("/")
 
-VERIFY_SSL = os.environ.get("SITE24X7_VERIFY_SSL", "True").lower() == "true"
+_raw_verify = (os.environ.get("SITE24X7_VERIFY_SSL", "True") or "").strip().lower()
+VERIFY_SSL = _raw_verify in ("1", "true", "yes", "y", "on")
 
 TOKEN_FILE = Path(__file__).resolve().parent / "token.txt"
 
-AnyType = Any  # alias simple para tipado
+AnyType = Any
 
-# ============================================================
-# Constantes de paths de API
-# ============================================================
-
-# Customer Wise Monitor Status
 CURRENT_STATUS_PATH = "/msp/customers/monitors/status"
-
-# Anomaly Dashboard (resumen por monitor / monitor groups)
 ANOMALY_DASHBOARD_PATH = "/reports/anomaly"
-
-# Anomaly Report por monitor
 ANOMALY_MONITOR_PATH = "/reports/anomaly/monitors/type"
-# (Si en el futuro usas por grupo, sería /reports/anomaly/monitor_groups)
-
-
-# ============================================================
-# Claves posibles donde puede venir el token en el JSON del webhook
-# ============================================================
 
 CANDIDATE_KEYS = {
     "acces_token",
@@ -63,8 +37,8 @@ CANDIDATE_KEYS = {
     "access_token".upper(),
     "access_token".title(),
     "access_token".capitalize(),
-    "access_token".replace("_", ""),   # accesstoken
-    "access_token".replace("_", "-"),  # access-token
+    "access_token".replace("_", ""),
+    "access_token".replace("_", "-"),
 }
 CANDIDATE_KEYS.update(
     {
@@ -80,14 +54,7 @@ CANDIDATE_KEYS.update(
 )
 
 
-# ============================================================
-# Utilidades para extraer el token desde el webhook (n8n)
-# ============================================================
-
 def collect_tokens(obj: Any) -> List[str]:
-    """
-    Recorre el JSON y junta todos los posibles tokens.
-    """
     found: List[str] = []
 
     if isinstance(obj, dict):
@@ -107,12 +74,6 @@ def collect_tokens(obj: Any) -> List[str]:
 
 
 def get_site24x7_token() -> str:
-    """
-    Llama al webhook y devuelve el token de Site24x7.
-    Siempre toma el 3er token; si no hay 3, usa el último.
-
-    Se puede reutilizar tanto para Monitors como para Anomalies.
-    """
     if not WEBHOOK_URL:
         raise RuntimeError("SITE24X7_WEBHOOK_URL no está configurada.")
 
@@ -132,7 +93,6 @@ def get_site24x7_token() -> str:
     if status // 100 != 2:
         raise RuntimeError(f"Webhook de token respondió HTTP {status}: {text}")
 
-    # Intentar JSON como en el script original
     try:
         data = json.loads(text)
         tokens = collect_tokens(data)
@@ -140,22 +100,16 @@ def get_site24x7_token() -> str:
         if not tokens:
             raise RuntimeError("No se encontraron tokens en el JSON del webhook.")
 
-        # 3er token para Site24x7 (si existe), si no, el último
-        if len(tokens) >= 3:
-            chosen = tokens[2]
-        else:
-            chosen = tokens[-1]
+        chosen = tokens[2] if len(tokens) >= 3 else tokens[-1]
 
         try:
             TOKEN_FILE.write_text(chosen, encoding="utf-8")
         except Exception:
-            # Si falla el guardado no rompemos el flujo
             pass
 
         return chosen
 
     except json.JSONDecodeError:
-        # Si no es JSON, usamos el cuerpo como token simple
         if not text:
             raise RuntimeError("Respuesta vacía del webhook de token (no es JSON).")
         try:
@@ -165,15 +119,7 @@ def get_site24x7_token() -> str:
         return text
 
 
-# ============================================================
-# Monitores – Customer Wise Monitor Status
-# (por si lo quieres usar desde otros módulos)
-# ============================================================
-
 def fetch_customer_status(access_token: str, zaaid: str) -> Dict[str, AnyType]:
-    """
-    Llama a /msp/customers/monitors/status y devuelve el cliente del zaaid.
-    """
     headers = {
         "Accept": "application/json; version=2.0",
         "Authorization": f"Zoho-oauthtoken {access_token}",
@@ -189,26 +135,16 @@ def fetch_customer_status(access_token: str, zaaid: str) -> Dict[str, AnyType]:
         if str(customer.get("zaaid")) == str(zaaid):
             return customer
 
-    return {}  # no encontrado
+    return {}
 
 
 def build_counters(monitors: List[Dict[str, AnyType]]) -> Dict[str, int]:
-    """
-    A partir de los monitores arma contadores por status.
-
-    status:
-      0 → down
-      1 → up
-      2 → trouble
-      3 → critical
-      5 → suspended
-    """
     counters = {
-        "down": 0,       # 0
-        "up": 0,         # 1
-        "trouble": 0,    # 2
-        "critical": 0,   # 3
-        "suspended": 0,  # 5
+        "down": 0,
+        "up": 0,
+        "trouble": 0,
+        "critical": 0,
+        "suspended": 0,
     }
 
     for m in monitors:
@@ -227,21 +163,14 @@ def build_counters(monitors: List[Dict[str, AnyType]]) -> Dict[str, int]:
     return counters
 
 
-# ============================================================
-# Anomalías – resumen y detalle (con ZAAID MSP)
-# ============================================================
-
 def fetch_anomaly_summary(
     access_token: str,
     zaaid: str,
     period: int = 3,
     monitor_type: str | None = None,
+    start_ms: int | None = None,
+    end_ms: int | None = None,
 ) -> Dict[str, AnyType]:
-    """
-    Llama a /reports/anomaly y devuelve el bloque anomaly_summary.
-
-    IMPORTANTE: en modo MSP hay que pasar zaaid.
-    """
     headers = {
         "Accept": "application/json; version=2.0",
         "Authorization": f"Zoho-oauthtoken {access_token}",
@@ -249,10 +178,15 @@ def fetch_anomaly_summary(
 
     params: Dict[str, AnyType] = {
         "period": period,
-        "zaaid": zaaid,  # <- clave para MSP
+        "zaaid": zaaid,
     }
+
     if monitor_type:
         params["monitor_type"] = monitor_type
+
+    if start_ms and end_ms:
+        params["start_time"] = int(start_ms)
+        params["end_time"] = int(end_ms)
 
     url = f"{SITE24X7_BASE_URL}{ANOMALY_DASHBOARD_PATH}"
     resp = requests.get(url, headers=headers, params=params, timeout=30)
@@ -263,44 +197,42 @@ def fetch_anomaly_summary(
         )
 
     data = resp.json()
-    # La doc dice que viene dentro de data.anomaly_summary
     return (data.get("data") or {}).get("anomaly_summary") or {}
 
 
 def fetch_anomaly_by_monitor(
     access_token: str,
-    zaaid: str,
     monitor_id: str,
-    period: int = 3,
+    zaaid: str,
+    period: int = 5,
     severity: str = "CONFIRMED,LIKELY,INFO",
+    start_ms: int | None = None,
+    end_ms: int | None = None,
 ) -> Dict[str, AnyType]:
-    """
-    Llama a /reports/anomaly/monitors/type para un monitor específico.
-
-    Devuelve el 'data' completo:
-      - anomaly_table_data (detalle)
-      - anomaly_chart_data (serie para gráficos)
-
-    También incluye zaaid porque estamos en modo MSP.
-    """
     headers = {
         "Accept": "application/json; version=2.0",
         "Authorization": f"Zoho-oauthtoken {access_token}",
     }
 
-    params = {
+    if zaaid:
+        headers["Cookie"] = f"zaaid={zaaid}"
+
+    params: Dict[str, AnyType] = {
         "monitor_id": monitor_id,
         "period": period,
-        "severity": severity,  # CSV con CONFIRMED,LIKELY,INFO, etc.
-        "zaaid": zaaid,        # <- clave para MSP
+        "severity": severity,
     }
+
+    if start_ms and end_ms:
+        params["start_time"] = int(start_ms)
+        params["end_time"] = int(end_ms)
 
     url = f"{SITE24X7_BASE_URL}{ANOMALY_MONITOR_PATH}"
     resp = requests.get(url, headers=headers, params=params, timeout=30)
 
     if resp.status_code != 200:
         raise RuntimeError(
-            f"Site24x7 /reports/anomaly/monitors/type devolvió {resp.status_code}: {resp.text}"
+            f"Site24x7 {ANOMALY_MONITOR_PATH} devolvió {resp.status_code}: {resp.text}"
         )
 
-    return resp.json().get("data") or {}
+    return (resp.json() or {}).get("data") or {}

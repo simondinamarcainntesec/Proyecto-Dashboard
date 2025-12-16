@@ -1,0 +1,498 @@
+/* ===== Toolbar (igual a referencia) ===== */
+.toolbar { padding: 8px 0 14px; }
+
+.toolbar-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  border:1px solid var(--border, #1e293b);
+  border-radius:14px;
+  padding:10px 12px;
+  background:#0c1428; /* igual referencia */
+}
+
+.toolbar-row .group{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.toolbar-row .group:last-child{
+  margin-left:auto;
+  justify-content:flex-end;
+}
+
+/* Chips (misma vibra referencia, aunque uses btn ghost) */
+.toolbar .chip-btn{
+  cursor:pointer;
+  transition: background .15s ease, transform .08s ease, box-shadow .15s ease, border-color .15s ease, color .15s ease;
+  position:relative;
+}
+
+/* si tus chips son .btn.ghost */
+.toolbar .btn.ghost.chip-btn{
+  background: #0d1a36;
+  border: 1px solid var(--border,#1e293b);
+  color: #cbd5e1;
+  padding: .45rem .75rem;
+  border-radius: 12px;
+  font-weight: 800;
+}
+
+.toolbar .btn.ghost.chip-btn:hover{
+  background:#132449;
+  border-color:#2a3b57;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(17, 24, 39, .35);
+}
+
+.toolbar .btn.ghost.chip-btn:active{
+  background:#19305f;
+  transform: translateY(0);
+  box-shadow:none;
+}
+
+.toolbar .btn.ghost.chip-btn:focus-visible{
+  outline:none;
+  box-shadow: 0 0 0 4px rgba(59,130,246,.35);
+}
+
+.toolbar .btn.ghost.chip-btn.is-active{
+  background: linear-gradient(180deg, #16305e 0%, #0f2449 100%);
+  border-color:#3b82f6;
+  color:#e8eeff;
+}
+
+/* Form layout */
+#date-filter{
+  width: 100%;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+/* Rangos de fecha (igual referencia) */
+.date-range{
+  display:flex;
+  gap:6px;
+  align-items:center;
+  background:#0d1a36;
+  border:1px solid var(--border);
+  padding:6px 8px;
+  border-radius:10px;
+  position:relative;
+}
+
+.date-range span{
+  color:#cbd5e1;
+  font-weight:800;
+  font-size:12px;
+  opacity:.95;
+}
+
+.date-range input{
+  background:transparent;
+  border:0;
+  color:#e5e7eb;
+  outline:none;
+  font-weight:700;
+}
+
+/* Icono calendario blanco */
+.date-range input[type="date"]{
+  color-scheme: dark;
+  padding-right: 30px;
+}
+.date-range input[type="date"]::-webkit-calendar-picker-indicator{
+  opacity:0;
+  width:0;height:0;padding:0;margin:0;
+  pointer-events:none;
+}
+.date-range::after{
+  content:"";
+  position:absolute;
+  right:10px;
+  top:50%;
+  width:18px;
+  height:18px;
+  transform:translateY(-50%);
+  background:no-repeat center / contain;
+  pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M7 2a1 1 0 0 0-1 1v1H5a3 3 0 0 0-3 3v11a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3h-1V3a1 1 0 1 0-2 0v1H8V3a1 1 0 0 0-1-1ZM5 7h14a1 1 0 0 1 1 1v2H4V8a1 1 0 0 1 1-1Zm-1 5h16v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-6Z'/%3E%3C/svg%3E");
+}
+
+/* Botones */
+.btn.primary{
+  background:var(--brand,#3b82f6);
+  color:#fff;
+  border:1px solid var(--brand,#3b82f6);
+  padding:8px 12px;
+  border-radius:12px;
+  font-weight:800;
+}
+
+.btn.ghost{
+  background:transparent;
+  border:1px solid var(--border,#1e293b);
+  color:var(--text,#e5e7eb);
+  padding:8px 12px;
+  border-radius:12px;
+  font-weight:800;
+}
+
+.btn.ghost-sm{
+  background:transparent;
+  border:1px solid var(--border,#1e293b);
+  color:var(--text,#e5e7eb);
+  padding:6px 10px;
+  border-radius:12px;
+  font-size:12px;
+  font-weight:800;
+}
+
+/* Tabla */
+.table-wrap{
+  overflow:auto;
+  border:1px solid var(--border,#1e293b);
+  border-radius:12px;
+  margin-top:12px;
+  background: rgba(255,255,255,0.02);
+}
+
+.tbl{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  font-size:13px;
+  table-layout:auto;
+}
+
+.tbl thead th{
+  position:sticky;
+  top:0;
+  z-index:1;
+  background:var(--panel,#0f1b31);
+  text-align:left;
+  font-weight:800;
+  padding:10px 12px;
+  border-bottom:1px solid var(--border,#1e293b);
+  white-space:nowrap;
+}
+
+.tbl tbody td{
+  padding:10px 12px;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+  vertical-align:middle;
+}
+
+.tbl tbody tr:nth-child(odd){ background:rgba(255,255,255,0.02); }
+.tbl tbody tr:hover{ background:rgba(255,255,255,0.06); }
+
+.mono{ font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace; }
+.nowrap{ white-space:nowrap; }
+.center{ text-align:center; }
+.w-240{ max-width:240px; overflow:hidden; text-overflow:ellipsis; }
+.w-320{ max-width:320px; overflow:hidden; text-overflow:ellipsis; }
+
+/* Pills severidad */
+.pill{
+  display:inline-block;
+  padding:2px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+  line-height:1.6;
+  letter-spacing:.2px;
+  color:#fff;
+}
+
+.sev-critical{ background:#dc262633; border:1px solid #dc2626aa; color:#fff; }
+.sev-high{ background:#f9731633; border:1px solid #f97316aa; color:#fff; }
+.sev-medium{ background:#f59e0b33; border:1px solid #f59e0baa; color:#fff; }
+.sev-low{ background:#38bdf833; border:1px solid #38bdf8aa; color:#fff; }
+.sev-info{ background:#60a5fa33; border:1px solid #60a5faaa; color:#fff; }
+.sev-na{ background:#6b728033; border:1px solid #6b7280aa; color:#fff; }
+
+body.modal-open { overflow: hidden; }
+
+.modal { position: fixed; inset: 0; z-index: 1000; display: none; }
+.modal:not(.hidden) { display: block; }
+
+.modal-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); }
+
+.modal-card {
+  position: relative;
+  z-index: 1001;
+  background: var(--card, #0f1d35);
+  border: 1px solid var(--border, #1e293b);
+  border-radius: 12px;
+  max-width: min(1400px, calc(100% - 64px));
+  width: 100%;
+  margin: 5vh auto;
+  padding: 16px;
+  color: var(--text, #e5e7eb);
+  box-shadow: 0 10px 28px rgba(2,6,23,.35);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border, #1e293b);
+  margin-bottom: 12px;
+}
+
+.modal-close {
+  background: transparent;
+  border: 1px solid var(--border, #1e293b);
+  border-radius: 8px;
+  color: var(--text, #e5e7eb);
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.modal-close:hover { background: rgba(255, 255, 255, 0.08); }
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 65vh;
+  overflow-y: auto;
+}
+
+.block {
+  background:#0f1b31;
+  border:1px solid #1e293b;
+  border-radius:12px;
+  padding:12px 14px;
+}
+
+.block h4 {
+  margin:.1rem 0 .6rem;
+  font-size:14px;
+  letter-spacing:.3px;
+  text-transform:uppercase;
+  color:#cbd5e1;
+}
+
+.block p {
+  margin:.35rem 0;
+  line-height:1.5;
+  color:#cbd5e1;
+}
+
+.stacked { list-style:none; padding:0; margin:0; }
+.stacked li { padding:4px 0; border-bottom:1px dashed rgba(255,255,255,0.06); }
+.stacked li:last-child { border-bottom:0; }
+
+.muted { opacity:.92; }
+.dot { opacity:.7; }
+
+#tbl-anomaly-list tbody tr { cursor: pointer; }
+#tbl-anomaly-list tbody tr:hover { background: rgba(255,255,255,0.06); }
+
+#anom-list-title,
+#anom-detail-title{
+  font-size: 16px;
+  font-weight: 800;
+}
+
+/* ✅ Detalle SIEMPRE apilado (1 arriba de otra) */
+#anomalyDetailModal .modal-body{
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#anomalyDetailModal .modal-body b { color: #fff; }
+#anomalyDetailModal .modal-body .muted { color: #cbd5e1; }
+
+/* ===== Toolbar (igual a referencia + fuente/size consistente) ===== */
+.toolbar { padding: 8px 0 14px; }
+
+.toolbar,
+.toolbar *{
+  font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+.toolbar-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  border:1px solid var(--border, #1e293b);
+  border-radius:14px;
+  padding:10px 12px;
+  background:#0c1428;
+}
+
+.toolbar-row .group{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.toolbar-row .group:last-child{
+  margin-left:auto;
+  justify-content:flex-end;
+}
+
+#date-filter{
+  width: 100%;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+/* Chips */
+.toolbar .chip-btn{
+  cursor:pointer;
+  transition: background .15s ease, transform .08s ease, box-shadow .15s ease, border-color .15s ease, color .15s ease;
+  position:relative;
+}
+
+/* si tus chips son .btn.ghost */
+.toolbar .btn.ghost.chip-btn{
+  background: #0d1a36;
+  border: 1px solid var(--border,#1e293b);
+  color: #cbd5e1;
+  padding: .45rem .75rem;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 13px;     /* 🔥 */
+  line-height: 1.2;    /* 🔥 */
+}
+
+.toolbar .btn.ghost.chip-btn:hover{
+  background:#132449;
+  border-color:#2a3b57;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(17, 24, 39, .35);
+}
+
+.toolbar .btn.ghost.chip-btn:active{
+  background:#19305f;
+  transform: translateY(0);
+  box-shadow:none;
+}
+
+.toolbar .btn.ghost.chip-btn:focus-visible{
+  outline:none;
+  box-shadow: 0 0 0 4px rgba(59,130,246,.35);
+}
+
+.toolbar .btn.ghost.chip-btn.is-active{
+  background: linear-gradient(180deg, #16305e 0%, #0f2449 100%);
+  border-color:#3b82f6;
+  color:#e8eeff;
+}
+
+/* Rangos de fecha */
+.date-range{
+  display:flex;
+  gap:6px;
+  align-items:center;
+  background:#0d1a36;
+  border:1px solid var(--border, #1e293b);
+  padding:6px 8px;
+  border-radius:10px;
+  position:relative;
+}
+
+.date-range span{
+  color:#cbd5e1;
+  font-weight:800;
+  font-size:12px;
+  opacity:.95;
+}
+
+.date-range input{
+  background:transparent;
+  border:0;
+  color:#e5e7eb;
+  outline:none;
+  font-weight:700;
+  font-size: 13px;     /* 🔥 */
+  line-height: 1.2;    /* 🔥 */
+  font-family: inherit;/* 🔥 evita fuente distinta en inputs */
+}
+
+/* Icono calendario blanco */
+.date-range input[type="date"]{
+  color-scheme: dark;
+  padding-right: 30px;
+}
+.date-range input[type="date"]::-webkit-calendar-picker-indicator{
+  opacity:0;
+  width:0;height:0;padding:0;margin:0;
+  pointer-events:none;
+}
+.date-range::after{
+  content:"";
+  position:absolute;
+  right:10px;
+  top:50%;
+  width:18px;
+  height:18px;
+  transform:translateY(-50%);
+  background:no-repeat center / contain;
+  pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M7 2a1 1 0 0 0-1 1v1H5a3 3 0 0 0-3 3v11a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3h-1V3a1 1 0 1 0-2 0v1H8V3a1 1 0 0 0-1-1ZM5 7h14a1 1 0 0 1 1 1v2H4V8a1 1 0 0 1 1-1Zm-1 5h16v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-6Z'/%3E%3C/svg%3E");
+}
+
+/* Botones */
+.btn.primary{
+  background:var(--brand,#3b82f6);
+  color:#fff;
+  border:1px solid var(--brand,#3b82f6);
+  padding:8px 12px;
+  border-radius:12px;
+  font-weight:800;
+  font-size: 13px;
+}
+
+.btn.ghost{
+  background:transparent;
+  border:1px solid var(--border,#1e293b);
+  color:var(--text,#e5e7eb);
+  padding:8px 12px;
+  border-radius:12px;
+  font-weight:800;
+  font-size: 13px;
+}
+
+.btn.ghost-sm{
+  background:transparent;
+  border:1px solid var(--border,#1e293b);
+  color:var(--text,#e5e7eb);
+  padding:6px 10px;
+  border-radius:12px;
+  font-size:12px;
+  font-weight:800;
+}
+
+/* Pills severidad */
+.pill{
+  display:inline-block;
+  padding:2px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+  line-height:1.6;
+  letter-spacing:.2px;
+  color:#fff;
+}
+
+.sev-critical{ background:#dc262633; border:1px solid #dc2626aa; color:#fff; }
+.sev-high{ background:#f9731633; border:1px solid #f97316aa; color:#fff; }
+.sev-medium{ background:#f59e0b33; border:1px solid #f59e0baa; color:#fff; }
+.sev-low{ background:#38bdf833; border:1px solid #38bdf8aa; color:#fff; }
+.sev-info{ background:#60a5fa33; border:1px solid #60a5faaa; color:#fff; }
+.sev-na{ background:#6b728033; border:1px solid #6b7280aa; color:#fff; }

@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 
 from .models import IncidenteSOAR
 
-# 👇 NUEVO: credenciales de blacklist/portal + preferencias de países
+# 👇 credenciales de blacklist/portal + preferencias de países
 from home.models import TenantCredentials, WhitelistCountryPreference  # noqa
 from home.countries import ALL_COUNTRIES
 
@@ -139,10 +139,9 @@ def _make_incidents_csv_response(iterable, tenant, scope: str) -> HttpResponse:
     filename = f"soar_incidentes_{tenant_slug}_{scope}_{today_str}.csv"
 
     response = HttpResponse(content_type="text/csv; charset=utf-8")
-    response["Content-Disposition"] = f'attachment; filename=\"{filename}\"'
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
 
     writer = csv.writer(response)
-    # Cabecera: enfocada en resumen, fecha/hora, severidad e ID
     writer.writerow(
         [
             "Alarm ID",
@@ -162,7 +161,6 @@ def _make_incidents_csv_response(iterable, tenant, scope: str) -> HttpResponse:
         ]
     )
 
-    # Iteramos de forma eficiente (por si son muchos registros)
     for it in iterable:
         date_str = it.date.isoformat() if getattr(it, "date", None) else ""
         time_obj = getattr(it, "time", None)
@@ -199,7 +197,7 @@ def incidents_list(request):
     paginator = Paginator(qs, 25)
     page_obj = paginator.get_page(request.GET.get("page"))
 
-    # 👇 NUEVO: obtener credenciales activas del tenant (para el modal)
+    # credenciales activas del tenant (para el modal)
     cred = None
     try:
         if tenant:
@@ -207,23 +205,27 @@ def incidents_list(request):
     except Exception as e:
         logger.exception("[SOAR_INCIDENTS] Error obteniendo credenciales del tenant: %s", e)
 
-    # === Selector solo visible si el usuario pertenece a Inntesec ===
+    # Selector solo visible si el usuario pertenece a Inntesec
     tenants_list = []
     user_tenant = getattr(request.user, "tenant", None)
     if user_tenant and user_tenant.name.lower() == "inntesec":
         tenants_list = Tenant.objects.all().order_by("name")
 
     # ==============================
-    # Países para el modal de whitelist
+    # Países para el modal de whitelist (POR TENANT, NO POR USER)
     # ==============================
-    selected_paises = []
+    selected_paises: list[str] = []
     try:
-        pref = WhitelistCountryPreference.objects.get(user=request.user)
-        selected_paises = pref.paises or []
-    except WhitelistCountryPreference.DoesNotExist:
-        selected_paises = []
+        effective_tenant_for_pref = tenant or getattr(request.user, "tenant", None)
+        if effective_tenant_for_pref:
+            pref = WhitelistCountryPreference.objects.filter(
+                tenant=effective_tenant_for_pref
+            ).first()
+            selected_paises = (pref.paises or []) if pref else []
+        else:
+            selected_paises = []
     except Exception as e:
-        logger.exception("[SOAR_INCIDENTS] Error leyendo preferencias de países: %s", e)
+        logger.exception("[SOAR_INCIDENTS] Error leyendo preferencias de países (tenant): %s", e)
         selected_paises = []
 
     context = {
@@ -234,8 +236,7 @@ def incidents_list(request):
         "to_date_str": to_q.strftime("%Y-%m-%d"),
         "tenant": tenant,
         "all_tenants": tenants_list,
-        "cred": cred,  # 👈 para el partial de credenciales
-        # 👇 Para el modal de países (mismo contrato que en home/dashboard/realtime)
+        "cred": cred,
         "whitelist_countries": ALL_COUNTRIES,
         "selected_paises": selected_paises,
     }
@@ -255,7 +256,6 @@ def export_csv_current(request):
     paginator = Paginator(qs, 25)
     page_obj = paginator.get_page(request.GET.get("page"))
 
-    # page_obj.object_list es un queryset/iterable con los elementos de la página
     return _make_incidents_csv_response(page_obj.object_list, tenant, scope="page")
 
 
@@ -267,8 +267,6 @@ def export_csv_all(request):
     Exporta a CSV todos los incidentes del rango filtrado (todas las páginas).
     """
     qs, tenant, from_q, to_q, q = _build_incidents_queryset(request)
-
-    # Usamos iterator() por si son muchos registros
     return _make_incidents_csv_response(qs.iterator(), tenant, scope="all")
 
 
@@ -284,39 +282,32 @@ def switch_tenant(request, tenant_id):
 
     logger = logging.getLogger(__name__)
 
-    # --- Validar permisos ---
     user_tenant = getattr(request.user, "tenant", None)
     if not user_tenant or user_tenant.name.lower() != "inntesec":
         messages.error(request, "No tienes permiso para cambiar de empresa.")
         return redirect("dashboard:dashboard")
 
-    # --- Buscar tenant destino ---
     tenant = Tenant.objects.filter(id=tenant_id).first()
     if not tenant:
         messages.error(request, "El tenant seleccionado no existe.")
         return redirect("dashboard:dashboard")
 
-    # --- Actualizar tenant activo en sesión ---
     request.session["tenant_id"] = tenant.id
     request.session["tenant_name"] = tenant.name
     logger.info("[SwitchTenant] %s cambió a tenant %s", request.user.username, tenant.name)
 
-    # --- Limpiar caché ---
     cache.clear()
     logger.debug("[SwitchTenant] Caché limpiada tras cambio de tenant")
 
-    # --- Detectar URL de origen ---
     next_url = (request.POST.get("next") or request.META.get("HTTP_REFERER") or "").strip()
     parsed = urlparse(next_url or "")
     referer = (request.META.get("HTTP_REFERER") or "").lower()
     logger.debug("[SwitchTenant] next_url: %s | referer: %s", next_url, referer)
 
-    # --- Si la URL es interna válida, mantener la ruta actual ---
     if parsed.path and parsed.path.startswith("/"):
-        logger.debug(f"[SwitchTenant] Redirigiendo a ruta interna: {parsed.path}")
+        logger.debug("[SwitchTenant] Redirigiendo a ruta interna: %s", parsed.path)
         return HttpResponseRedirect(parsed.path)
 
-    # --- Redirecciones según el origen ---
     if "/soar/incidentes" in referer:
         logger.debug("[SwitchTenant] Manteniendo en lista de incidentes SOAR")
         return redirect("soar_incidents:list")
@@ -333,15 +324,14 @@ def switch_tenant(request, tenant_id):
         logger.debug("[SwitchTenant] Manteniendo en dashboard AlarmasOne")
         return redirect("dashboard:dashboard_alarmsone")
 
-    # --- Fallback final: dashboard principal ---
     try:
         current_path = request.META.get("PATH_INFO", "")
         origin = request.META.get("HTTP_ORIGIN") or request.build_absolute_uri("/")
         full_path = f"{origin}{current_path}" if current_path else request.build_absolute_uri("/")
-        logger.debug(f"[SwitchTenant] Fallback: redirigiendo a la misma ruta ({full_path})")
+        logger.debug("[SwitchTenant] Fallback: redirigiendo a la misma ruta (%s)", full_path)
         return HttpResponseRedirect(full_path)
     except Exception as e:
-        logger.warning(f"[SwitchTenant] Fallback al dashboard por error ({e})")
+        logger.warning("[SwitchTenant] Fallback al dashboard por error (%s)", e)
         return redirect("dashboard:dashboard")
 
 
@@ -389,5 +379,4 @@ def api_incidents_by_alarm_ids(request):
         return JsonResponse(data, safe=False)
     except Exception as e:
         logger.exception("[api_by_alarm_ids] Error: %s", e)
-        # 200 con [] evita alertas en el front; el modal abre vacío.
         return JsonResponse([], safe=False)

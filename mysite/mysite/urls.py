@@ -53,4 +53,5 @@ urlpatterns = [
     path("blacklist", home_views.blacklist_txt, name="blacklist_download_root_root"),
     path("siem/", include("siem.urls", namespace="siem")),
     path("", include("site24x7.urls")),
+    path("integrations/", include(("integrations.urls", "integrations"), namespace="integrations")),
 ]

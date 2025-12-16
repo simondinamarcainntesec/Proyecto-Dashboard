@@ -1,5 +1,6 @@
 # home/views.py
 from __future__ import annotations
+
 from datetime import datetime, timezone as dt_timezone
 import logging
 import os
@@ -32,7 +33,7 @@ from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.utils import timezone as dj_timezone
 from django.contrib import messages
 from django.urls import reverse
-from django.views.decorators.http import require_POST, require_http_methods
+from django.views.decorators.http import require_POST, require_GET, require_http_methods
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +71,6 @@ MEDIUM_TERMS = ["medium", "medio", "media"]
 LOW_TERMS = ["low", "bajo"]
 INFO_TERMS = ["info", "informational", "informacion", "información"]
 
-# términos que reconocemos como severidades "normales" en msg_severity
 KNOWN_SEVERITY_TERMS = (
     CRITICAL_TERMS
     + HIGH_TERMS
@@ -92,10 +92,6 @@ def _annotate_severity_fields(qs):
     return qs
 
 
-# Filtro reutilizable para "alarmas críticas":
-# - msg_severity es crítico, O
-# - msg_severity no es una severidad conocida (vacío, notice, alert, etc.)
-#   y severity indica crítico
 CRITICAL_FILTER = (
     Q(msg_sev_norm__in=CRITICAL_TERMS)
     | (
@@ -136,28 +132,25 @@ def _parse_country_codes(raw: str) -> list[str]:
     """
     if not raw:
         return []
-    return [
-        c.strip().upper()
-        for c in raw.split(",")
-        if c.strip()
-    ]
+    return [c.strip().upper() for c in raw.split(",") if c.strip()]
 
 
-def _save_country_pref(user, tenant, paises: list[str]) -> None:
+def _save_country_pref(tenant, paises: list[str]) -> None:
     """
-    Guarda en agent.whitelist_country_preference la lista de países (nombres)
-    seleccionados por usuario (UN REGISTRO POR USER).
+    Guarda en agent.whitelist_country_preference la lista de países (NOMBRES)
+    seleccionados POR TENANT (UN REGISTRO POR TENANT).
 
-    - Siempre hay un único registro por user.
-    - El campo tenant se actualiza con el tenant activo en el momento de guardar.
+    - Siempre hay un único registro por tenant.
     - Si paises es [], se deja la preferencia vacía (filtro limpio).
     """
     from django.utils import timezone as _tz
 
+    if not tenant:
+        raise ValueError("Tenant requerido para guardar preferencia de países.")
+
     WhitelistCountryPreference.objects.update_or_create(
-        user=user,
+        tenant=tenant,
         defaults={
-            "tenant": tenant,
             "paises": paises,
             "updated_at": _tz.now(),
         },
@@ -215,7 +208,6 @@ def _upsert_whitelist_from_download(
             getattr(user, "username", None),
         )
 
-        # 1) Intentar sacar el tenant desde las credenciales (FK Tenant en TenantCredentials)
         tenant_obj = None
         if creds is not None:
             tenant_obj = getattr(creds, "tenant", None)
@@ -224,7 +216,6 @@ def _upsert_whitelist_from_download(
                 getattr(tenant_obj, "name", None),
             )
 
-        # 2) Fallback a request.tenant o user.tenant
         if tenant_obj is None:
             tenant_from_request = getattr(request, "tenant", None)
             tenant_from_user = getattr(user, "tenant", None)
@@ -238,7 +229,6 @@ def _upsert_whitelist_from_download(
         tenant_name = (getattr(tenant_obj, "name", "") or "").strip() if tenant_obj else ""
         tenant_id = getattr(tenant_obj, "id", None) if tenant_obj else None
 
-        # 3) Fallback usando agent.tenant_credentials (tenant_id / tenant_name)
         cred_tenant_id = getattr(creds, "tenant_id", None) if creds else None
         cred_tenant_name = (getattr(creds, "tenant_name", "") or "").strip() if creds else ""
 
@@ -256,7 +246,6 @@ def _upsert_whitelist_from_download(
             cred_tenant_id,
         )
 
-        # Por requerimiento: cliente = nombre del tenant
         if not tenant_name:
             tenant_name = "Tenant desconocido"
 
@@ -269,7 +258,6 @@ def _upsert_whitelist_from_download(
             tenant_id,
         )
 
-        # get_or_create por IP (la IP debería ser única en la tabla)
         obj, created = IPWhitelist.objects.get_or_create(
             ip=ip,
             defaults={
@@ -289,7 +277,6 @@ def _upsert_whitelist_from_download(
         )
 
         if not created:
-            # Si ya existía la IP, actualizamos datos clave
             update_kwargs = {
                 "fecha_actualizacion": now,
                 "cliente": tenant_name,
@@ -320,9 +307,6 @@ def _build_severity_summary(qs):
     """
     Devuelve una lista de dicts con los niveles de severidad y sus conteos.
     Niveles: critical, high, medium, low, info, na (Sin información / N/A).
-
-    - Primero intenta clasificar usando msg_severity.
-    - Si msg_severity está vacío o cae en 'na/desconocido', usa severity.
     """
     if qs is None:
         return []
@@ -368,7 +352,6 @@ def _build_severity_summary(qs):
         n = row.get("total") or 0
 
         key = classify(msg_raw)
-        # si msg_severity está vacío o cae en 'na', usamos severity
         if (not msg_raw) or key == "na":
             key = classify(sev_raw)
 
@@ -398,6 +381,7 @@ def _build_severity_summary(qs):
         )
 
     return summary
+
 
 @login_required
 @tenant_required
@@ -575,15 +559,24 @@ def home_index(request):
     whitelist_not_found_terms: list[str] = []
     show_whitelist_modal = False
 
-    # 1) Leer países seleccionados desde las preferencias (NO usamos ?countries= aquí)
+    # 1) Leer países seleccionados desde las preferencias (POR TENANT) -> NOMBRES
+    effective_tenant_for_pref = tenant or getattr(user, "tenant", None)
     try:
-        pref = WhitelistCountryPreference.objects.get(user=user)
-        selected_paises = pref.paises or []
+        if effective_tenant_for_pref:
+            pref = WhitelistCountryPreference.objects.get(tenant=effective_tenant_for_pref)
+            selected_paises = pref.paises or []
+        else:
+            selected_paises = []
     except WhitelistCountryPreference.DoesNotExist:
         selected_paises = []
     except Exception as e:
         logger.exception("[HOME WHITELIST] Error leyendo preferencias de países: %s", e)
         selected_paises = []
+
+    # ✅ Convertir NOMBRES (BD) -> CÓDIGOS (UI)
+    CODE_BY_NAME = {v: k for k, v in COUNTRY_BY_CODE.items()}
+    selected_country_codes = [CODE_BY_NAME.get(n) for n in (selected_paises or [])]
+    selected_country_codes = [c for c in selected_country_codes if c]
 
     # 2) Base: whitelist del tenant (listado)  → sin filtro por país, solo tenant
     whitelist_table = IPWhitelist.objects.all()
@@ -713,7 +706,10 @@ def home_index(request):
         "whitelist_not_found_terms": whitelist_not_found_terms,
         "show_whitelist_modal": show_whitelist_modal,
         "whitelist_countries": ALL_COUNTRIES,
+        # ✅ desde BD
         "selected_paises": selected_paises,
+        # ✅ para marcar checkboxes (value=CL,AR,...)
+        "selected_country_codes": selected_country_codes,
         # Credenciales TXT
         "cred": cred,
         # Preferencias notificaciones
@@ -731,6 +727,7 @@ def home_index(request):
         "tg_critica": tg_critica,
     }
     return render(request, "home/index.html", ctx)
+
 
 @login_required
 @tenant_required
@@ -1146,12 +1143,6 @@ def _touch_tc_login(creds: TenantCredentials) -> None:
 
 @login_required
 def blacklist_download_root(request):
-    """
-    Endpoint /home_prueba_inntesec/blacklist/
-    - Muestra Basic Auth del navegador
-    - Valida contra TenantCredentials
-    - Si OK -> registra login + IP en whitelist y redirige a /blacklist/page/
-    """
     nonce = (request.GET.get("r") or "").strip()
     realm = f'Inntesec Blacklist {nonce}' if nonce else 'Inntesec Blacklist'
 
@@ -1212,11 +1203,6 @@ def blacklist_download_root(request):
 
 @login_required
 def blacklist_download_page(request):
-    """
-    Endpoint final /home_prueba_inntesec/blacklist/page/
-    Se asume que ya pasó por el Basic Auth en blacklist_download_root.
-    Aquí simplemente devolvemos el TXT usando el helper existente.
-    """
     logger.info("[BLACKLIST PAGE] Descarga TXT para usuario=%s", getattr(request.user, "username", None))
     return _stream_blacklist_txt_response()
 
@@ -1253,19 +1239,12 @@ def blacklist_download_post(request):
 @login_required
 @require_http_methods(["POST"])
 def config_notificaciones(request):
-    """
-    Guarda las preferencias de notificación del usuario actual.
-    Soporta llamadas vía AJAX (fetch con X-Requested-With) y POST normal.
-    """
     user = request.user
     is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
 
     logger.info("[CONFIG NOTIF] POST recibido para user_id=%s", getattr(user, "id", None))
 
     try:
-        # -------------------------
-        # Toggles principales
-        # -------------------------
         alarma_telefono = bool(request.POST.get("Alarma_Telefono"))
         alarma_correo = bool(request.POST.get("Alarma_Correo"))
         alarma_telegram = bool(request.POST.get("Alarma_Telegram"))
@@ -1277,9 +1256,6 @@ def config_notificaciones(request):
             alarma_telegram,
         )
 
-        # -------------------------
-        # Severidades Teléfono
-        # -------------------------
         tel_conf = {
             "baja": bool(request.POST.get("sev_tel_baja")),
             "media": bool(request.POST.get("sev_tel_media")),
@@ -1287,12 +1263,8 @@ def config_notificaciones(request):
             "critica": bool(request.POST.get("sev_tel_critica")),
         }
         if not alarma_telefono:
-            # Si el canal está apagado, forzamos severidades en False
             tel_conf = {k: False for k in tel_conf}
 
-        # -------------------------
-        # Severidades Correo
-        # -------------------------
         mail_conf = {
             "baja": bool(request.POST.get("sev_mail_baja")),
             "media": bool(request.POST.get("sev_mail_media")),
@@ -1302,9 +1274,6 @@ def config_notificaciones(request):
         if not alarma_correo:
             mail_conf = {k: False for k in mail_conf}
 
-        # -------------------------
-        # Severidades Telegram
-        # -------------------------
         tg_conf = {
             "baja": bool(request.POST.get("sev_tg_baja")),
             "media": bool(request.POST.get("sev_tg_media")),
@@ -1314,28 +1283,18 @@ def config_notificaciones(request):
         if not alarma_telegram:
             tg_conf = {k: False for k in tg_conf}
 
-        logger.info(
-            "[CONFIG NOTIF] Tel=%s Mail=%s Tg=%s",
-            tel_conf,
-            mail_conf,
-            tg_conf,
-        )
+        logger.info("[CONFIG NOTIF] Tel=%s Mail=%s Tg=%s", tel_conf, mail_conf, tg_conf)
 
-        # -------------------------
-        # Franja horaria (solo Teléfono)
-        # -------------------------
         raw_hora_inicio = (request.POST.get("hora_inicio") or "").strip()
         raw_hora_fin = (request.POST.get("hora_fin") or "").strip()
 
         if alarma_telefono:
-            # Solo actualizamos la franja cuando el canal Teléfono está activo
             hora_inicio = raw_hora_inicio or user.hora_inicio
             hora_fin = raw_hora_fin or user.hora_fin
         else:
-            # Si el canal Teléfono está apagado, NO tocamos las horas
-            # para evitar guardar '' en un TimeField / campo incompatible.
             hora_inicio = None
             hora_fin = None
+
         logger.info(
             "[CONFIG NOTIF] Franja -> inicio='%s' fin='%s' (alarma_telefono=%s)",
             hora_inicio,
@@ -1344,7 +1303,6 @@ def config_notificaciones(request):
         )
 
         with transaction.atomic():
-            # Actualizar flags en el usuario
             user.Alarma_Telefono = alarma_telefono
             user.Alarma_Correo = alarma_correo
             user.Alarma_Telegram = alarma_telegram
@@ -1361,10 +1319,7 @@ def config_notificaciones(request):
             )
             logger.info("[CONFIG NOTIF] Usuario actualizado OK (user_id=%s)", user.id)
 
-            # Preferencias de severidad en tenants.NotificationChannelPreference
-            pref, created = NotificationChannelPreference.objects.get_or_create(
-                user=user
-            )
+            pref, created = NotificationChannelPreference.objects.get_or_create(user=user)
             pref.telefono = tel_conf
             pref.correo = mail_conf
             pref.telegram = tg_conf
@@ -1389,52 +1344,72 @@ def config_notificaciones(request):
                 status=500,
             )
         return HttpResponseRedirect(reverse("home:index"))
-    except Exception:
-        logger.exception("[CONFIG NOTIF] Error guardando preferencias (500)")
-        if is_ajax:
-            return JsonResponse(
-                {"ok": False, "message": "Error interno al guardar preferencias."},
-                status=500,
-            )
-        return HttpResponseRedirect(reverse("home:index"))
+
+
+# ✅ NUEVO: endpoint GET para cargar selección por tenant (devuelve nombres + códigos)
+@login_required
+@tenant_required
+@require_GET
+def whitelist_get_countries(request):
+    tenant = getattr(request, "tenant", None) or getattr(request.user, "tenant", None)
+    if not tenant:
+        return JsonResponse({"ok": False, "message": "Tenant no resuelto."}, status=400)
+
+    try:
+        obj = WhitelistCountryPreference.objects.filter(tenant=tenant).first()
+        selected_paises = (obj.paises or []) if obj else []
+
+        CODE_BY_NAME = {v: k for k, v in COUNTRY_BY_CODE.items()}
+        selected_codes = [CODE_BY_NAME.get(n) for n in selected_paises]
+        selected_codes = [c for c in selected_codes if c]
+
+        return JsonResponse(
+            {"ok": True, "selected_paises": selected_paises, "selected_codes": selected_codes},
+            status=200,
+        )
+    except Exception as e:
+        logger.exception("[HOME WHITELIST AJAX] Error leyendo preferencias de países: %s", e)
+        return JsonResponse(
+            {"ok": False, "message": "Error interno al leer preferencias de países."},
+            status=500,
+        )
+
 
 @login_required
 @tenant_required
 @require_http_methods(["POST"])
 def whitelist_save_countries(request):
     """
-    Guarda las preferencias de países de whitelist vía AJAX.
+    Guarda las preferencias de países de whitelist vía AJAX (POR TENANT).
     Espera en POST:
       - countries: string tipo "CL,AR,US"
     """
-    user = request.user
-    tenant = getattr(request, "tenant", None)
+    tenant = getattr(request, "tenant", None) or getattr(request.user, "tenant", None)
+    if not tenant:
+        return JsonResponse({"ok": False, "message": "Tenant no resuelto."}, status=400)
 
     raw_country_codes = (request.POST.get("countries") or "").strip()
     codes_from_query = _parse_country_codes(raw_country_codes)
 
-    selected_paises = [
-        COUNTRY_BY_CODE[code]
-        for code in codes_from_query
-        if code in COUNTRY_BY_CODE
-    ]
+    # ✅ solo códigos válidos
+    selected_codes = [c for c in codes_from_query if c in COUNTRY_BY_CODE]
+
+    # ✅ se guardan NOMBRES en BD
+    selected_paises = [COUNTRY_BY_CODE[c] for c in selected_codes]
 
     try:
-        _save_country_pref(user, tenant, selected_paises)
+        _save_country_pref(tenant, selected_paises)
         logger.info(
-            "[HOME WHITELIST AJAX] Preferencias países guardadas para user_id=%s: %s",
-            getattr(user, "id", None),
+            "[HOME WHITELIST AJAX] Preferencias países guardadas para tenant_id=%s: %s",
+            getattr(tenant, "id", None),
             selected_paises,
         )
         return JsonResponse(
-            {"ok": True, "selected_paises": selected_paises},
+            {"ok": True, "selected_paises": selected_paises, "selected_codes": selected_codes},
             status=200,
         )
     except Exception as e:
-        logger.exception(
-            "[HOME WHITELIST AJAX] Error guardando preferencias de países: %s",
-            e,
-        )
+        logger.exception("[HOME WHITELIST AJAX] Error guardando preferencias de países: %s", e)
         return JsonResponse(
             {"ok": False, "message": "Error interno al guardar preferencias de países."},
             status=500,

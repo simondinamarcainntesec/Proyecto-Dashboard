@@ -1,11 +1,10 @@
-# site24x7/views.py
 import json
 import os
 import ssl
 import urllib.request
 from pathlib import Path
 from typing import Any, List, Dict
-from datetime import datetime
+from datetime import datetime, time
 
 import requests
 from django.contrib.auth.decorators import login_required
@@ -15,13 +14,15 @@ from django.utils import timezone
 from tenants.decorators import tenant_required
 from tenants.models import Tenant, TenantUser, TenantDashboardEmbed
 from .services import fetch_anomaly_summary, fetch_anomaly_by_monitor
+
+# ✅ Preferencias de países (POR TENANT)
+from home.models import WhitelistCountryPreference
+from home.countries import ALL_COUNTRIES
+
 import logging
 
 logger = logging.getLogger(__name__)
 
-# =========================
-# Config webhook Site24x7 (variables de entorno)
-# =========================
 SITE24X7_WEBHOOK_URL = os.environ.get("SITE24X7_WEBHOOK_URL")
 SITE24X7_WEBHOOK_SECRET = os.environ.get("SITE24X7_WEBHOOK_SECRET")
 SITE24X7_WEBHOOK_HEADER_NAME = os.environ.get("SITE24X7_WEBHOOK_HEADER_NAME", "passkey")
@@ -31,7 +32,6 @@ SITE24X7_VERIFY_SSL = _raw_verify in ("1", "true", "yes", "y", "on")
 
 TOKEN_FILE = Path(__file__).resolve().parent / "token.txt"
 
-# Conjunto de claves candidato (alineado con tu script debug)
 CANDIDATE_KEYS = {
     "acces_token",
     "access_token",
@@ -41,38 +41,65 @@ CANDIDATE_KEYS = {
     "access_token".upper(),
     "access_token".title(),
     "access_token".capitalize(),
-    "access_token".replace("_", ""),   # accesstoken -> para AccessToken
-    "access_token".replace("_", "-"),  # access-token
+    "access_token".replace("_", ""),
+    "access_token".replace("_", "-"),
 }
 CANDIDATE_KEYS.update(
     {
         "access_token",
         "access-token",
         "access token",
-        "access_token".upper(),
-        "access_token".title(),
-        "acces_token",
         "Access_Token",
         "ACCESS_TOKEN",
     }
 )
 
-# =========================
-# Config Site24x7 API (variables de entorno)
-# =========================
 SITE24X7_API_BASE_URL = os.environ.get("SITE24X7_API_BASE_URL", "https://www.site24x7.com/api")
 CURRENT_STATUS_PATH = "/msp/customers/monitors/status"
 
-# Preferencias de países para whitelist
-from home.models import WhitelistCountryPreference  # noqa
-from home.countries import ALL_COUNTRIES  # noqa
+
+# =========================
+# Helpers tenant / prefs
+# =========================
+def _resolve_tenant(request):
+    tenant = getattr(request, "tenant", None)
+    if tenant is not None:
+        return tenant
+
+    tu = (
+        TenantUser.objects
+        .filter(user=request.user)
+        .select_related("tenant")
+        .first()
+    )
+    return tu.tenant if tu else None
 
 
-# -----------------------------------
-# Utilidades para extraer tokens
-# -----------------------------------
+def _tenants_list_for_user(user):
+    user_tenant = getattr(user, "tenant", None)
+    if user_tenant and getattr(user_tenant, "name", "").lower() == "inntesec":
+        return Tenant.objects.all().order_by("name")
+    return []
+
+
+def _selected_paises_for_tenant(tenant):
+    """
+    ✅ Lee la preferencia desde WhitelistCountryPreference.tenant (NO existe field user).
+    """
+    try:
+        if not tenant:
+            return []
+        pref = WhitelistCountryPreference.objects.filter(tenant=tenant).first()
+        return (pref.paises or []) if pref else []
+    except Exception as e:
+        logger.exception("[SITE24X7] Error leyendo preferencias de países (tenant): %s", e)
+        return []
+
+
+# =========================
+# Token helpers
+# =========================
 def collect_tokens(obj: Any) -> List[str]:
-    """Recorre recursivamente el JSON y acumula todos los posibles tokens en orden."""
     found: List[str] = []
     if isinstance(obj, dict):
         lowered = {k.lower() for k in CANDIDATE_KEYS}
@@ -89,10 +116,6 @@ def collect_tokens(obj: Any) -> List[str]:
 
 
 def get_site24x7_token() -> str:
-    """
-    Llama al webhook (n8n) y devuelve el token de Site24x7.
-    Toma siempre el 3er token si hay 3 o más; si no, el último.
-    """
     if not SITE24X7_WEBHOOK_URL:
         raise RuntimeError("SITE24X7_WEBHOOK_URL no está configurada.")
     if not SITE24X7_WEBHOOK_SECRET:
@@ -114,15 +137,11 @@ def get_site24x7_token() -> str:
     if status // 100 != 2:
         raise RuntimeError(f"Webhook respondió HTTP {status}")
 
-    # Igual que el script: intentar JSON y extraer tokens por claves
     try:
         data = json.loads(text)
         tokens = collect_tokens(data)
-
         if not tokens:
             raise RuntimeError("No se encontraron tokens en el JSON del webhook.")
-
-        # 3er token = Site24x7, si existe; si no, el último
         chosen = tokens[2] if len(tokens) >= 3 else tokens[-1]
 
         try:
@@ -133,7 +152,6 @@ def get_site24x7_token() -> str:
         return chosen
 
     except json.JSONDecodeError:
-        # No es JSON, usar cuerpo directo como token
         if not text:
             raise RuntimeError("Respuesta vacía del webhook de token (no es JSON).")
         try:
@@ -143,11 +161,10 @@ def get_site24x7_token() -> str:
         return text
 
 
-# -----------------------------------
-# Helpers para tiempo “Hace X minutos”
-# -----------------------------------
+# =========================
+# Monitor status helpers
+# =========================
 def _parse_site24x7_timestamp(value: Any):
-    """Convierte last_polled_time (epoch ms o ISO) a datetime en UTC."""
     if not value:
         return None
 
@@ -181,7 +198,6 @@ def _parse_site24x7_timestamp(value: Any):
 
 
 def _humanize_delta(delta):
-    """Devuelve un texto tipo 'Hace X minutos' a partir de un timedelta."""
     seconds = int(delta.total_seconds())
     if seconds < 60:
         return "Hace menos de 1 minuto"
@@ -199,7 +215,6 @@ def _humanize_delta(delta):
 
 
 def format_last_polled(raw_value: Any) -> str:
-    """Formatea last_polled_time en texto relativo para la tabla."""
     dt = _parse_site24x7_timestamp(raw_value)
     if not dt:
         return "—"
@@ -212,14 +227,7 @@ def format_last_polled(raw_value: Any) -> str:
     return _humanize_delta(delta)
 
 
-# -----------------------------------
-# Llamado a Site24x7 – Customer Wise Monitor Status
-# -----------------------------------
 def fetch_customer_status(access_token: str, zaaid: str) -> Dict[str, Any]:
-    """
-    Llama a /msp/customers/monitors/status y devuelve el bloque
-    de datos del cliente que corresponde al zaaid.
-    """
     headers = {
         "Accept": "application/json; version=2.0",
         "Authorization": f"Zoho-oauthtoken {access_token}",
@@ -239,16 +247,12 @@ def fetch_customer_status(access_token: str, zaaid: str) -> Dict[str, Any]:
 
 
 def build_counters(monitors: List[Dict[str, Any]]) -> Dict[str, int]:
-    """
-    Cuenta monitores por estado:
-    down, up, trouble, critical, suspended.
-    """
     counters = {
-        "down": 0,       # 0
-        "up": 0,         # 1
-        "trouble": 0,    # 2
-        "critical": 0,   # 3
-        "suspended": 0,  # 5
+        "down": 0,
+        "up": 0,
+        "trouble": 0,
+        "critical": 0,
+        "suspended": 0,
     }
 
     for m in monitors:
@@ -267,46 +271,103 @@ def build_counters(monitors: List[Dict[str, Any]]) -> Dict[str, int]:
     return counters
 
 
-# -----------------------------------
-# Vista principal
-# -----------------------------------
+# =========================
+# Date filter helpers
+# =========================
+def _parse_ymd(s: str):
+    s = (s or "").strip()
+    try:
+        return datetime.strptime(s, "%Y-%m-%d").date()
+    except Exception:
+        return None
+
+
+def _get_period_from_request(request, default=3) -> int:
+    from_s = (request.GET.get("from") or "").strip()
+    to_s = (request.GET.get("to") or "").strip()
+
+    d1 = _parse_ymd(from_s) if from_s else None
+    d2 = _parse_ymd(to_s) if to_s else None
+    if d1 and d2:
+        return 50
+
+    periods = [p.strip() for p in request.GET.getlist("period") if (p or "").strip()]
+
+    for p in periods:
+        try:
+            pi = int(p)
+        except Exception:
+            continue
+        if pi in (2, 3, 5, 50):
+            return pi
+
+    try:
+        default_i = int(default)
+    except Exception:
+        default_i = 3
+
+    return default_i if default_i in (2, 3, 5, 50) else 3
+
+
+def _get_custom_range_ms_from_request(request, period: int | None = None):
+    if period != 50:
+        return (None, None)
+
+    from_s = (request.GET.get("from") or "").strip()
+    to_s = (request.GET.get("to") or "").strip()
+
+    d1 = _parse_ymd(from_s)
+    d2 = _parse_ymd(to_s)
+    if not d1 or not d2:
+        return (None, None)
+
+    if d1 > d2:
+        d1, d2 = d2, d1
+
+    tz = timezone.get_current_timezone()
+    start_dt = timezone.make_aware(datetime.combine(d1, time.min), tz)
+    end_dt = timezone.make_aware(datetime.combine(d2, time.max), tz)
+
+    start_ms = int(start_dt.timestamp() * 1000)
+    end_ms = int(end_dt.timestamp() * 1000)
+    return (start_ms, end_ms)
+
+
+def _filter_table_by_range_ms(table, start_ms, end_ms):
+    if not start_ms or not end_ms:
+        return table
+
+    out = []
+    for item in (table or []):
+        ad = (item or {}).get("anomaly_data") or {}
+        t = ad.get("time")
+        try:
+            t_ms = int(str(t).strip())
+        except Exception:
+            continue
+
+        if start_ms <= t_ms <= end_ms:
+            out.append(item)
+
+    return out
+
+
+def _api_period_for_site24x7(period_ui: int) -> int:
+    return period_ui if period_ui in (2, 3, 5) else 3
+
+
+# =========================
+# Views
+# =========================
 @tenant_required
 @login_required
 def monitor_status(request):
-    """
-    Vista de estado de monitores Site24x7.
-    Usa tenant.site24x7_id como zaaid y token desde webhook.
-    """
-    tenant = getattr(request, "tenant", None)
+    tenant = _resolve_tenant(request)
+    tenants_list = _tenants_list_for_user(request.user)
+    selected_paises = _selected_paises_for_tenant(tenant)
 
     if tenant is None:
-        tu = (
-            TenantUser.objects
-            .filter(user=request.user)
-            .select_related("tenant")
-            .first()
-        )
-        tenant = tu.tenant if tu else None
-
-    # Dropdown de tenants solo para usuarios cuyo tenant base es Inntesec
-    tenants_list = []
-    user_tenant = getattr(request.user, "tenant", None)
-    if user_tenant and getattr(user_tenant, "name", "").lower() == "inntesec":
-        tenants_list = Tenant.objects.all().order_by("name")
-
-    # ===== Caso: no se pudo determinar tenant =====
-    if tenant is None:
-        selected_paises = []
-        try:
-            pref = WhitelistCountryPreference.objects.get(user=request.user)
-            selected_paises = pref.paises or []
-        except WhitelistCountryPreference.DoesNotExist:
-            selected_paises = []
-        except Exception as e:
-            logger.exception("[SITE24X7] Error leyendo preferencias de países: %s", e)
-            selected_paises = []
-
-        context = {
+        return render(request, "site24x7/monitor_status.html", {
             "tenant": None,
             "all_tenants": tenants_list,
             "error": False,
@@ -321,24 +382,11 @@ def monitor_status(request):
             "count_suspended": 0,
             "whitelist_countries": ALL_COUNTRIES,
             "selected_paises": selected_paises,
-        }
-        return render(request, "site24x7/monitor_status.html", context)
+        })
 
     zaaid = getattr(tenant, "site24x7_id", "")
-
-    # ===== Caso: tenant sin Site24x7 configurado =====
     if not zaaid:
-        selected_paises = []
-        try:
-            pref = WhitelistCountryPreference.objects.get(user=request.user)
-            selected_paises = pref.paises or []
-        except WhitelistCountryPreference.DoesNotExist:
-            selected_paises = []
-        except Exception as e:
-            logger.exception("[SITE24X7] Error leyendo preferencias de países: %s", e)
-            selected_paises = []
-
-        context = {
+        return render(request, "site24x7/monitor_status.html", {
             "tenant": tenant,
             "all_tenants": tenants_list,
             "error": False,
@@ -353,30 +401,17 @@ def monitor_status(request):
             "count_suspended": 0,
             "whitelist_countries": ALL_COUNTRIES,
             "selected_paises": selected_paises,
-        }
-        return render(request, "site24x7/monitor_status.html", context)
+        })
 
-    # ===== Caso: error en token / llamada API =====
     try:
         access_token = get_site24x7_token()
         customer = fetch_customer_status(access_token, zaaid)
     except Exception as e:
         logger.exception("[SITE24X7] Error al consultar Site24x7: %s", e)
-
-        selected_paises = []
-        try:
-            pref = WhitelistCountryPreference.objects.get(user=request.user)
-            selected_paises = pref.paises or []
-        except WhitelistCountryPreference.DoesNotExist:
-            selected_paises = []
-        except Exception as e2:
-            logger.exception("[SITE24X7] Error leyendo preferencias de países: %s", e2)
-            selected_paises = []
-
-        context = {
+        return render(request, "site24x7/monitor_status.html", {
             "tenant": tenant,
             "all_tenants": tenants_list,
-            "error": True,  # flag genérico para mostrar card de error
+            "error": True,
             "customer_name": "",
             "monitors": [],
             "zaaid": zaaid or "",
@@ -388,12 +423,9 @@ def monitor_status(request):
             "count_suspended": 0,
             "whitelist_countries": ALL_COUNTRIES,
             "selected_paises": selected_paises,
-        }
-        return render(request, "site24x7/monitor_status.html", context)
+        })
 
-    # ===== Datos OK =====
     raw_monitors = customer.get("monitors", []) or []
-
     monitors: List[Dict[str, Any]] = []
     for m in raw_monitors:
         m_copy = dict(m)
@@ -402,17 +434,7 @@ def monitor_status(request):
 
     counters = build_counters(monitors)
 
-    selected_paises = []
-    try:
-        pref = WhitelistCountryPreference.objects.get(user=request.user)
-        selected_paises = pref.paises or []
-    except WhitelistCountryPreference.DoesNotExist:
-        selected_paises = []
-    except Exception as e:
-        logger.exception("[SITE24X7] Error leyendo preferencias de países: %s", e)
-        selected_paises = []
-
-    context = {
+    return render(request, "site24x7/monitor_status.html", {
         "tenant": tenant,
         "all_tenants": tenants_list,
         "error": False,
@@ -427,17 +449,10 @@ def monitor_status(request):
         "count_suspended": counters["suspended"],
         "whitelist_countries": ALL_COUNTRIES,
         "selected_paises": selected_paises,
-    }
+    })
 
-    return render(request, "site24x7/monitor_status.html", context)
 
 def summarize_anomaly_info(anomaly_info: dict) -> dict:
-    """
-    Recibe el bloque anomaly_info de un monitor y devuelve:
-      - total_count: suma de todas las anomalías
-      - top_severity: severidad más alta (Confirmado > Probable > Información)
-      - breakdown: dict con conteo por severidad normalizada: info/likely/confirmed
-    """
     if not isinstance(anomaly_info, dict):
         return {
             "total_count": 0,
@@ -455,12 +470,10 @@ def summarize_anomaly_info(anomaly_info: dict) -> dict:
             return "confirmed"
         return "other"
 
-    # ranking para decidir "la más grave"
     sev_rank = {"info": 1, "likely": 2, "confirmed": 3}
 
     total = 0
     breakdown = {"info": 0, "likely": 0, "confirmed": 0}
-    top_norm = None
     top_label_original = "—"
     top_rank = 0
 
@@ -477,14 +490,12 @@ def summarize_anomaly_info(anomaly_info: dict) -> dict:
         norm = norm_sev(label)
 
         total += count
-
         if norm in breakdown:
             breakdown[norm] += count
 
         rank = sev_rank.get(norm, 0)
         if rank > top_rank and count > 0:
             top_rank = rank
-            top_norm = norm
             top_label_original = label or "—"
 
     if total == 0:
@@ -500,43 +511,38 @@ def summarize_anomaly_info(anomaly_info: dict) -> dict:
 @tenant_required
 @login_required
 def anomaly_status(request):
-    """
-    Vista de resumen de anomalías Site24x7.
-    Muestra nombre del monitor, cantidad de anomalías y severidad máxima.
-    """
-    tenant = getattr(request, "tenant", None)
+    tenant = _resolve_tenant(request)
+    tenants_list = _tenants_list_for_user(request.user)
+    selected_paises = _selected_paises_for_tenant(tenant)
 
-    # fallback igual que monitor_status
+    period_ui = _get_period_from_request(request, default=3)
+    start_ms, end_ms = _get_custom_range_ms_from_request(request, period=period_ui)
+
+    from_s = (request.GET.get("from") or "").strip() if period_ui == 50 else ""
+    to_s = (request.GET.get("to") or "").strip() if period_ui == 50 else ""
+
+    period_label_map = {
+        3: "Hoy",
+        2: "Últimos 7 días",
+        5: "Últimos 30 días",
+        50: "Personalizado",
+    }
+    period_label = period_label_map.get(period_ui, "—")
+
+    base_context = {
+        "all_tenants": tenants_list,
+        "whitelist_countries": ALL_COUNTRIES,
+        "selected_paises": selected_paises,
+        "period": period_ui,
+        "from_date": from_s,
+        "to_date": to_s,
+        "period_label": period_label,
+    }
+
     if tenant is None:
-        tu = (
-            TenantUser.objects
-            .filter(user=request.user)
-            .select_related("tenant")
-            .first()
-        )
-        tenant = tu.tenant if tu else None
-
-    # Dropdown de tenants solo para usuarios cuyo tenant base es Inntesec
-    tenants_list = []
-    user_tenant = getattr(request.user, "tenant", None)
-    if user_tenant and getattr(user_tenant, "name", "").lower() == "inntesec":
-        tenants_list = Tenant.objects.all().order_by("name")
-
-    # Pref países (igual que monitor_status)
-    try:
-        pref = WhitelistCountryPreference.objects.get(user=request.user)
-        selected_paises = pref.paises or []
-    except WhitelistCountryPreference.DoesNotExist:
-        selected_paises = []
-    except Exception as e:
-        logger.exception("[SITE24X7] Error leyendo preferencias de países: %s", e)
-        selected_paises = []
-
-    # ===== Caso: sin tenant =====
-    if tenant is None:
-        context = {
+        return render(request, "site24x7/anomaly_status.html", {
+            **base_context,
             "tenant": None,
-            "all_tenants": tenants_list,
             "error": False,
             "monitors": [],
             "total_monitors": 0,
@@ -544,17 +550,13 @@ def anomaly_status(request):
             "count_info": 0,
             "count_likely": 0,
             "count_confirmed": 0,
-            "whitelist_countries": ALL_COUNTRIES,
-            "selected_paises": selected_paises,
-        }
-        return render(request, "site24x7/anomaly_status.html", context)
+        })
 
-    # ===== Caso: tenant sin Site24x7 =====
     zaaid = getattr(tenant, "site24x7_id", "")
     if not zaaid:
-        context = {
+        return render(request, "site24x7/anomaly_status.html", {
+            **base_context,
             "tenant": tenant,
-            "all_tenants": tenants_list,
             "error": False,
             "monitors": [],
             "total_monitors": 0,
@@ -562,39 +564,34 @@ def anomaly_status(request):
             "count_info": 0,
             "count_likely": 0,
             "count_confirmed": 0,
-            "whitelist_countries": ALL_COUNTRIES,
-            "selected_paises": selected_paises,
-        }
-        return render(request, "site24x7/anomaly_status.html", context)
+        })
 
-    # ===== Llamada a API de anomalías =====
+    api_period = _api_period_for_site24x7(period_ui)
+
     try:
         access_token = get_site24x7_token()
-        # period=5 → últimos ~30 días (igual que tu script)
         summary = fetch_anomaly_summary(
             access_token,
             zaaid=zaaid,
-            period=5,
+            period=api_period,
             monitor_type=None,
+            start_ms=start_ms,
+            end_ms=end_ms,
         )
     except Exception as e:
         logger.exception("[SITE24X7] Error al consultar anomalías Site24x7: %s", e)
-        context = {
+        return render(request, "site24x7/anomaly_status.html", {
+            **base_context,
             "tenant": tenant,
-            "all_tenants": tenants_list,
-            "error": True,  # para mostrar empty-state de error
+            "error": True,
             "monitors": [],
             "total_monitors": 0,
             "total_anomalies": 0,
             "count_info": 0,
             "count_likely": 0,
             "count_confirmed": 0,
-            "whitelist_countries": ALL_COUNTRIES,
-            "selected_paises": selected_paises,
-        }
-        return render(request, "site24x7/anomaly_status.html", context)
+        })
 
-    # ===== Parseo del summary =====
     raw_monitors = (summary or {}).get("monitors", []) or []
 
     monitors = []
@@ -605,8 +602,6 @@ def anomaly_status(request):
 
     for m in raw_monitors:
         info = m.get("anomaly_info") or {}
-
-        # Resumimos anomaly_info (que viene con claves "1","2","3")
         summary_info = summarize_anomaly_info(info)
 
         monitor_total = summary_info["total_count"]
@@ -621,12 +616,12 @@ def anomaly_status(request):
             "monitor_id": m.get("monitor_id"),
             "display_name": m.get("display_name"),
             "anomaly_count": monitor_total,
-            "severity": summary_info["top_severity"],  # p.ej. "Confirmado"
+            "severity": summary_info["top_severity"],
         })
 
-    context = {
+    return render(request, "site24x7/anomaly_status.html", {
+        **base_context,
         "tenant": tenant,
-        "all_tenants": tenants_list,
         "error": False,
         "monitors": monitors,
         "total_monitors": len(monitors),
@@ -634,59 +629,220 @@ def anomaly_status(request):
         "count_info": count_info,
         "count_likely": count_likely,
         "count_confirmed": count_confirmed,
-        "whitelist_countries": ALL_COUNTRIES,
-        "selected_paises": selected_paises,
-    }
-    return render(request, "site24x7/anomaly_status.html", context)
+    })
+
+
+def _format_epoch_ms_to_local(value):
+    if not value:
+        return "—"
+    try:
+        ms = int(str(value).strip())
+        dt = datetime.fromtimestamp(ms / 1000.0, tz=timezone.get_current_timezone())
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return str(value)
+
 
 @tenant_required
 @login_required
-def anomaly_detail(request):
-    """
-    Detalle de anomalías para un monitor específico (via ?monitor_id=).
-    """
+def anomaly_list(request):
+    tenant = _resolve_tenant(request)
+
     monitor_id = request.GET.get("monitor_id")
-    if not monitor_id:
-        # podrías devolver un 400 o un empty-state simple
-        return render(request, "site24x7/anomaly_detail.html", {
+    monitor_name = request.GET.get("monitor_name", "")
+
+    zaaid = str(getattr(tenant, "site24x7_id", "") or "")
+    if not monitor_id or not tenant or not zaaid:
+        return render(request, "site24x7/anomaly_list.html", {
             "error": True,
-            "monitor_id": None,
-            "rows": [],
+            "monitor_name": monitor_name,
+            "anomalies": [],
         })
+
+    period_ui = _get_period_from_request(request, default=3)
+    start_ms, end_ms = _get_custom_range_ms_from_request(request, period=period_ui)
+    api_period = _api_period_for_site24x7(period_ui)
 
     try:
         access_token = get_site24x7_token()
         data = fetch_anomaly_by_monitor(
-            access_token,
+            access_token=access_token,
+            zaaid=zaaid,
             monitor_id=monitor_id,
-            period=3,
+            period=api_period,
             severity="CONFIRMED,LIKELY,INFO",
+            start_ms=start_ms,
+            end_ms=end_ms,
+        )
+    except Exception as e:
+        logger.exception("[SITE24X7] Error al consultar listado de anomalías: %s", e)
+        return render(request, "site24x7/anomaly_list.html", {
+            "error": True,
+            "monitor_name": monitor_name,
+            "anomalies": [],
+        })
+
+    table = data.get("anomaly_table_data", []) or []
+    if period_ui == 50 and start_ms and end_ms:
+        table = _filter_table_by_range_ms(table, start_ms, end_ms)
+
+    anomalies = []
+    for idx, item in enumerate(table):
+        ad = item.get("anomaly_data") or {}
+
+        raw_comments = ad.get("comment") or []
+        flat_comments = []
+
+        for entry in raw_comments:
+            if isinstance(entry, dict) and "location_comments" in entry:
+                loc_name = entry.get("location_name")
+                for lc in entry.get("location_comments") or []:
+                    if not isinstance(lc, dict):
+                        continue
+                    c = dict(lc)
+                    c["location_name"] = loc_name
+                    c["display_attr"] = (
+                        c.get("formatted_attribute")
+                        or c.get("attribute_name")
+                        or "Atributo"
+                    )
+                    flat_comments.append(c)
+
+            elif isinstance(entry, list):
+                for lc in entry:
+                    if not isinstance(lc, dict):
+                        continue
+                    c = dict(lc)
+                    c["display_attr"] = (
+                        c.get("formatted_attribute")
+                        or c.get("attribute_name")
+                        or "Atributo"
+                    )
+                    flat_comments.append(c)
+
+            elif isinstance(entry, dict):
+                c = dict(entry)
+                c["display_attr"] = (
+                    c.get("formatted_attribute")
+                    or c.get("attribute_name")
+                    or "Atributo"
+                )
+                flat_comments.append(c)
+
+        anomalies.append({
+            "idx": idx,
+            "display_name": item.get("display_name") or monitor_name or "—",
+            "monitor_type": ad.get("monitor_type") or "—",
+            "severity": ad.get("severity") or "—",
+            "time_raw": ad.get("time"),
+            "time_human": _format_epoch_ms_to_local(ad.get("time")),
+            "comments": flat_comments,
+        })
+
+    return render(request, "site24x7/anomaly_list.html", {
+        "error": False,
+        "monitor_name": monitor_name,
+        "anomalies": anomalies,
+    })
+
+
+@tenant_required
+@login_required
+def anomaly_detail(request):
+    tenant = _resolve_tenant(request)
+
+    monitor_id = request.GET.get("monitor_id")
+    monitor_name = request.GET.get("monitor_name", "")
+
+    zaaid = str(getattr(tenant, "site24x7_id", "") or "")
+    if not monitor_id or not tenant or not zaaid:
+        return render(request, "site24x7/anomaly_detail.html", {
+            "error": True,
+            "monitor_name": monitor_name,
+            "rows": [],
+        })
+
+    period_ui = _get_period_from_request(request, default=3)
+    start_ms, end_ms = _get_custom_range_ms_from_request(request, period=period_ui)
+    api_period = _api_period_for_site24x7(period_ui)
+
+    try:
+        access_token = get_site24x7_token()
+        data = fetch_anomaly_by_monitor(
+            access_token=access_token,
+            zaaid=zaaid,
+            monitor_id=monitor_id,
+            period=api_period,
+            severity="CONFIRMED,LIKELY,INFO",
+            start_ms=start_ms,
+            end_ms=end_ms,
         )
     except Exception as e:
         logger.exception("[SITE24X7] Error al consultar detalle de anomalías: %s", e)
         return render(request, "site24x7/anomaly_detail.html", {
             "error": True,
-            "monitor_id": monitor_id,
+            "monitor_name": monitor_name,
             "rows": [],
         })
 
     table = data.get("anomaly_table_data", []) or []
+    if period_ui == 50 and start_ms and end_ms:
+        table = _filter_table_by_range_ms(table, start_ms, end_ms)
 
-    # Normalizamos un poco para la tabla
     rows = []
     for item in table:
         ad = item.get("anomaly_data") or {}
+
+        raw_comments = ad.get("comment") or []
+        flat_comments = []
+
+        for entry in raw_comments:
+            if isinstance(entry, dict) and "location_comments" in entry:
+                loc_name = entry.get("location_name")
+                for lc in entry.get("location_comments") or []:
+                    if not isinstance(lc, dict):
+                        continue
+                    c = dict(lc)
+                    c["location_name"] = loc_name
+                    c["display_attr"] = (
+                        c.get("formatted_attribute")
+                        or c.get("attribute_name")
+                        or "Atributo"
+                    )
+                    flat_comments.append(c)
+
+            elif isinstance(entry, list):
+                for lc in entry:
+                    if not isinstance(lc, dict):
+                        continue
+                    c = dict(lc)
+                    c["display_attr"] = (
+                        c.get("formatted_attribute")
+                        or c.get("attribute_name")
+                        or "Atributo"
+                    )
+                    flat_comments.append(c)
+
+            elif isinstance(entry, dict):
+                c = dict(entry)
+                c["display_attr"] = (
+                    c.get("formatted_attribute")
+                    or c.get("attribute_name")
+                    or "Atributo"
+                )
+                flat_comments.append(c)
+
         rows.append({
-            "display_name": item.get("display_name", "—"),
-            "time": ad.get("time", "—"),
-            "severity": ad.get("severity", "—"),
-            "monitor_type": ad.get("monitor_type", "—"),
-            "comment_raw": ad.get("comment", []),  # si después quieres parsear location_comments
+            "display_name": item.get("display_name") or monitor_name or "—",
+            "time": ad.get("time"),
+            "severity": ad.get("severity"),
+            "monitor_type": ad.get("monitor_type"),
+            "comments": flat_comments,
         })
 
     return render(request, "site24x7/anomaly_detail.html", {
         "error": False,
-        "monitor_id": monitor_id,
+        "monitor_name": monitor_name,
         "rows": rows,
     })
 
@@ -694,10 +850,6 @@ def anomaly_detail(request):
 @tenant_required
 @login_required
 def dashboard(request):
-    """
-    Dashboard de Site24x7 embebido en un iframe.
-    Usa TenantDashboardEmbed por tenant y muestra selector si el usuario es Inntesec.
-    """
     tenant = getattr(request, "tenant", None)
 
     if tenant is None:
@@ -708,30 +860,17 @@ def dashboard(request):
     if tenant is None:
         tenant = getattr(request.user, "tenant", None)
 
-    tenants_list = []
-    user_tenant = getattr(request.user, "tenant", None)
-    if user_tenant and getattr(user_tenant, "name", "").lower() == "inntesec":
-        tenants_list = Tenant.objects.all().order_by("name")
-
-    selected_paises = []
-    try:
-        pref = WhitelistCountryPreference.objects.get(user=request.user)
-        selected_paises = pref.paises or []
-    except WhitelistCountryPreference.DoesNotExist:
-        selected_paises = []
-    except Exception as e:
-        logger.exception("[SITE24X7] Error leyendo preferencias de países: %s", e)
-        selected_paises = []
+    tenants_list = _tenants_list_for_user(request.user)
+    selected_paises = _selected_paises_for_tenant(tenant)
 
     if tenant is None:
-        context = {
+        return render(request, "site24x7/dashboard.html", {
             "tenant": None,
             "all_tenants": tenants_list,
             "iframe_url": None,
             "whitelist_countries": ALL_COUNTRIES,
             "selected_paises": selected_paises,
-        }
-        return render(request, "site24x7/dashboard.html", context)
+        })
 
     iframe_url = None
     try:
@@ -743,11 +882,10 @@ def dashboard(request):
         embed = TenantDashboardEmbed.objects.filter(tenant=tenant).first()
         iframe_url = embed.iframe_url if embed else None
 
-    context = {
+    return render(request, "site24x7/dashboard.html", {
         "tenant": tenant,
         "all_tenants": tenants_list,
         "iframe_url": iframe_url,
         "whitelist_countries": ALL_COUNTRIES,
         "selected_paises": selected_paises,
-    }
-    return render(request, "site24x7/dashboard.html", context)
+    })

@@ -1,0 +1,63 @@
+{% comment %}
+Fragment que se inyecta dentro del body del modal "Listado".
+
+Requisitos:
+- Tabla con id="tbl-anomaly-list"
+- Filas .anom-row con data-idx
+- json_script id="anomaly-json" con lista (ARRAY) de anomalías (cada item trae idx)
+{% endcomment %}
+
+<div class="block">
+  <h4>Listado</h4>
+
+  <div class="table-wrap">
+    <table class="tbl" id="tbl-anomaly-list">
+      <thead>
+        <tr>
+          <th class="nowrap">Máquina / Monitor</th>
+          <th class="nowrap">Hora</th>
+          <th class="nowrap">Severidad</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% if anomalies and anomalies|length > 0 %}
+          {% for a in anomalies %}
+            <tr class="anom-row" data-idx="{{ a.idx }}">
+              <td class="w-320">
+                <strong>{{ a.display_name|default:"—" }}</strong>
+              </td>
+
+              <td class="nowrap mono">
+                {{ a.time_human|default:"—" }}
+              </td>
+
+              <td class="nowrap">
+                {% with sev=a.severity|default:""|lower %}
+                  <span class="pill
+                    {% if 'confirm' in sev or 'confirmad' in sev %}sev-critical
+                    {% elif 'prob' in sev or 'likely' in sev %}sev-high
+                    {% elif 'info' in sev or 'inform' in sev %}sev-info
+                    {% else %}sev-na{% endif %}">
+                    {{ a.severity|default:"N/A" }}
+                  </span>
+                {% endwith %}
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="3" class="muted">Sin anomalías para este monitor.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="muted" style="padding-top:.45rem">
+    * Clic en una fila para ver el detalle completo.
+  </div>
+</div>
+
+{# IMPORTANTE: acá SIEMPRE va el ARRAY real #}
+{{ anomalies|json_script:"anomaly-json" }}

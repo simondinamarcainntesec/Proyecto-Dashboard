@@ -15,568 +15,618 @@
   <link rel="stylesheet" href="{% static 'css/cred_modal.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/country_filter_modal.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/config_notificaciones_modal.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/retell_mic.css' %}?v={% now 'U' %}">
+
 
   <link rel="icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
   <link rel="shortcut icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
+
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
   <script defer src="{% static 'js/home_alarms_chart.js' %}?v={% now 'U' %}"></script>
+
+  <!-- Mic indicator (solo aparece durante la llamada Retell) -->
+  <style>
+    .call-mic-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      margin-left: .5rem;
+    }
+
+    .call-mic-wrap.hidden {
+      display: none !important;
+    }
+
+    .call-mic {
+      position: relative;
+      width: 38px;
+      height: 38px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      background: rgba(255, 255, 255, .06);
+      color: #fff;
+      cursor: pointer;
+      display: inline-grid;
+      place-items: center;
+      user-select: none;
+      outline: none;
+      padding: 0;
+    }
+
+    .call-mic:focus-visible {
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, .35);
+    }
+
+    .call-mic__icon {
+      font-size: 18px;
+      transform: scale(var(--mic-scale, 1));
+      transition: transform 80ms linear;
+      line-height: 1;
+    }
+
+    .call-mic__halo {
+      position: absolute;
+      inset: -10px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(59, 130, 246, .35), transparent 60%);
+      opacity: var(--mic-glow, 0);
+      transform: scale(var(--mic-halo-scale, 1));
+      transition: opacity 80ms linear, transform 80ms linear;
+      pointer-events: none;
+    }
+
+    .call-mic.is-on {
+      border-color: rgba(59, 130, 246, .5);
+    }
+  </style>
 </head>
 
-<body class="layout home-page" data-username="{{ request.user.username|default:'anon' }}">
+<body class="home-page" data-username="{{ request.user.username|default:'anon' }}">
 
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="brand">
-      <img src="{% static 'img/inntesec CSS negro 1.avif' %}" alt="Logo Inntesec" />
-    </div>
+  <!-- ✅ Wrapper grid SOLO para sidebar + content -->
+  <div class="layout">
 
-    <nav class="nav">
-      {% if tenant and tenant.alarms_one_id %}
-
-      <a id="homeNav" class="nav-item {% if request.resolver_match.app_name == 'home' %}is-active{% endif %}"
-        href="{% url 'home:index' %}">
-        <span class="nav-ico">🏠</span>Home
-        <span id="coachDotHome" class="coachmark-dot hidden"></span>
-      </a>
-
-      {# ===== Alarmas ===== #}
-      {% with url_name=request.resolver_match.url_name %}
-      <details class="tenant-dropdown nav-dropdown" {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}open{% endif %}>
-        <summary id="alarmsSummary"
-          class="nav-item {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}is-active{% endif %}">
-          <span class="nav-ico">📊</span>Alarmas
-          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
-          </svg>
-          <span id="coachDotAlarms" class="coachmark-dot hidden"></span>
-        </summary>
-        <div class="tenant-list nav-submenu">
-          <a class="tenant-option nav-subitem {% if url_name == 'dashboard_alarmsone' %}is-active{% endif %}"
-            href="{% url 'dashboard:dashboard_alarmsone' %}">Dashboard</a>
-          <a class="tenant-option nav-subitem {% if url_name == 'dashboard_realtime' %}is-active{% endif %}"
-            href="{% url 'dashboard:dashboard_realtime' %}">Tiempo Real</a>
-        </div>
-      </details>
-      {% endwith %}
-
-      {# ===== SOAR ===== #}
-      {% with app_name=request.resolver_match.app_name %}
-      <details class="tenant-dropdown nav-dropdown" {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' %}open{% endif %}>
-        <summary id="soarSummary"
-          class="nav-item {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' %}is-active{% endif %}">
-          <span class="nav-ico">🚨</span>SOAR
-          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
-          </svg>
-          <span id="coachDotSoar" class="coachmark-dot hidden"></span>
-        </summary>
-        <div class="tenant-list nav-submenu">
-          <a class="tenant-option nav-subitem {% if app_name == 'soar_dashboard' %}is-active{% endif %}"
-            href="{% url 'soar_dashboard:dashboard' %}">Dashboard</a>
-          <a class="tenant-option nav-subitem {% if app_name == 'soar_incidents' %}is-active{% endif %}"
-            href="{% url 'soar_incidents:list' %}">Eventos</a>
-        </div>
-      </details>
-      {% endwith %}
-
-      {# ===== SIEM ===== #}
-      {% with raw_siem_id=tenant.logs360siem_id|default_if_none:"" %}
-      {% with siem_id=raw_siem_id|stringformat:"s" %}
-      {% if siem_id and siem_id != "0" and siem_id != "null" and siem_id != "NULL" and siem_id != "None" %}
-      <a class="nav-item {% if request.resolver_match.app_name == 'siem' %}is-active{% endif %}"
-        href="{% url 'siem:alerts_logs360' %}">
-        <span class="nav-ico">🧠</span>SIEM
-        <span id="coachDotSiem" class="coachmark-dot hidden"></span>
-      </a>
-      {% endif %}
-      {% endwith %}
-      {% endwith %}
-      {% endif %}
-
-      {# ===== Site24x7 ===== #}
-      {% if tenant %}
-      {% with raw_site_id=tenant.site24x7_id|default_if_none:"" %}
-      {% with site_id=raw_site_id|stringformat:"s" %}
-      {% if site_id and site_id != "0" and site_id != "null" and site_id != "NULL" and site_id != "None" %}
-      {% with url_name=request.resolver_match.url_name %}
-      <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.app_name == 'site24x7' %}open{% endif %}>
-        <summary class="nav-item {% if request.resolver_match.app_name == 'site24x7' %}is-active{% endif %}">
-          <span class="nav-ico">📡</span>Inn-Monitor
-          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
-          </svg>
-          <span id="coachDotInnMonitor" class="coachmark-dot hidden"></span>
-        </summary>
-        <div class="tenant-list nav-submenu">
-          <a class="tenant-option nav-subitem {% if url_name == 'monitor_status' %}is-active{% endif %}"
-            href="{% url 'site24x7:monitor_status' %}">
-            Monitores
-          </a>
-          <a class="tenant-option nav-subitem {% if url_name == 'dashboard' %}is-active{% endif %}"
-            href="{% url 'site24x7:dashboard' %}">
-            Dashboard
-          </a>
-        </div>
-      </details>
-      {% endwith %}
-      {% endif %}
-      {% endwith %}
-      {% endwith %}
-      {% endif %}
-
-      {# ===== Configuración ===== #}
-      <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.url_name == 'cambiar_contrasena' %}open{% endif %}>
-        <summary id="settingsSummary"
-          class="nav-item {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}">
-          <span class="nav-ico">⚙️</span>Configuración
-          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24">
-            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
-          </svg>
-          <span id="coachDotConfig" class="coachmark-dot hidden"></span>
-        </summary>
-        <div class="tenant-list nav-submenu">
-          <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}"
-            href="{% url 'cambiar_contrasena' %}">🔒 Cambiar contraseña</a>
-          <a class="tenant-option nav-subitem" href="#" onclick="toggleCredModal(true)">🔑 Credenciales</a>
-          <a class="tenant-option nav-subitem" href="#" onclick="toggleConfigModal(true)">🔔 Notificaciones</a>
-          <a class="tenant-option nav-subitem" href="#" onclick="toggleCountryModal(true)">
-          🌎 Filtro países whitelist
-          </a>
-        </div>
-      </details>
-    </nav>
-  </aside>
-
-  <!-- Main content -->
-  <div class="content {% if not can_view_monitoring %}content--empty{% endif %}">
-    <!-- Topbar -->
-    <header class="topbar">
-      <div class="top-left">
-        <h1 class="top-title">
-          Tenant:
-          {% if request.user.tenant.name|lower == "inntesec" %}
-          <details class="tenant-dropdown">
-            <summary class="tenant-summary">
-              {{ tenant.name }}
-              <span class="caret">▼</span>
-            </summary>
-            <div class="tenant-list">
-              {% for t in all_tenants %}
-              <form method="post" action="{% url 'dashboard:switch_tenant' t.id %}">
-                {% csrf_token %}
-                <input type="hidden" name="next" value="{{ request.path }}">
-                <button type="submit" class="tenant-option {% if tenant.id == t.id %}is-active{% endif %}">
-                  {{ t.name }}
-                </button>
-              </form>
-              {% endfor %}
-            </div>
-          </details>
-          {% else %}
-          <span class="top-tenant">{{ tenant.name }}</span>
-          {% endif %}
-        </h1>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="{% static 'img/inntesec CSS negro 1.avif' %}" alt="Logo Inntesec" />
       </div>
 
-      <div class="top-right">
-        <!-- Botón refrescar -->
-        <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
+      <nav class="nav">
+        {% if tenant and tenant.alarms_one_id %}
 
-        <!-- Botón de flecha + menú desplegable -->
-        <div class="export-wrapper">
-          <button
-            type="button"
-            class="btn ghost small"
-            id="homeExportToggleBtn"
-            title="Exportar"
-            aria-haspopup="true"
-            aria-expanded="false"
-          >
-            ⬇
-          </button>
+        <a id="homeNav" class="nav-item {% if request.resolver_match.app_name == 'home' %}is-active{% endif %}"
+          href="{% url 'home:index' %}">
+          <span class="nav-ico">🏠</span>Home
+          <span id="coachDotHome" class="coachmark-dot hidden"></span>
+        </a>
 
-          <div class="export-menu" id="homeExportMenu" role="menu">
-            <button type="button" data-export-format="pdf">📄 Exportar PDF</button>
-            <button type="button" data-export-format="csv">📊 Exportar CSV</button>
+        {# ===== Alarmas ===== #}
+        {% with url_name=request.resolver_match.url_name %}
+        <details class="tenant-dropdown nav-dropdown"
+          {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}open{% endif %}>
+          <summary id="alarmsSummary"
+            class="nav-item {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}is-active{% endif %}">
+            <span class="nav-ico">📊</span>Alarmas
+            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
+            <span id="coachDotAlarms" class="coachmark-dot hidden"></span>
+          </summary>
+          <div class="tenant-list nav-submenu">
+            <a class="tenant-option nav-subitem {% if url_name == 'dashboard_alarmsone' %}is-active{% endif %}"
+              href="{% url 'dashboard:dashboard_alarmsone' %}">Dashboard</a>
+            <a class="tenant-option nav-subitem {% if url_name == 'dashboard_realtime' %}is-active{% endif %}"
+              href="{% url 'dashboard:dashboard_realtime' %}">Tiempo Real</a>
           </div>
-        </div>
+        </details>
+        {% endwith %}
 
-        <!-- Retell Call -->
-        <button id="retellStartBtn" class="btn ghost" title="Iniciar llamada (Retell)">📞 Llamar</button>
-        <button id="retellStopBtn" class="btn ghost small" title="Cortar llamada (Retell)">⛔</button>
-        <span id="retellStatus" class="muted" style="margin-left:.5rem; font-size:.9rem;"></span>
+        {# ===== SOAR ===== #}
+        {% with app_name=request.resolver_match.app_name %}
+        <details class="tenant-dropdown nav-dropdown"
+          {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' %}open{% endif %}>
+          <summary id="soarSummary"
+            class="nav-item {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' %}is-active{% endif %}">
+            <span class="nav-ico">🚨</span>SOAR
+            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
+            <span id="coachDotSoar" class="coachmark-dot hidden"></span>
+          </summary>
+          <div class="tenant-list nav-submenu">
+            <a class="tenant-option nav-subitem {% if app_name == 'soar_dashboard' %}is-active{% endif %}"
+              href="{% url 'soar_dashboard:dashboard' %}">Dashboard</a>
+            <a class="tenant-option nav-subitem {% if app_name == 'soar_incidents' %}is-active{% endif %}"
+              href="{% url 'soar_incidents:list' %}">Eventos</a>
+          </div>
+        </details>
+        {% endwith %}
 
-        <!-- Guía rápida -->
-        <button id="showCoachBtn" class="btn ghost" title="Mostrar guía rápida" onclick="window.startInntesecCoach()">
-          💡 Guía rápida
-        </button>
+        {# ===== SIEM ===== #}
+        {% with raw_siem_id=tenant.logs360siem_id|default_if_none:"" %}
+        {% with siem_id=raw_siem_id|stringformat:"s" %}
+        {% if siem_id and siem_id != "0" and siem_id != "null" and siem_id != "NULL" and siem_id != "None" %}
+        <a class="nav-item {% if request.resolver_match.app_name == 'siem' %}is-active{% endif %}"
+          href="{% url 'siem:alerts_logs360' %}">
+          <span class="nav-ico">🧠</span>SIEM
+          <span id="coachDotSiem" class="coachmark-dot hidden"></span>
+        </a>
+        {% endif %}
+        {% endwith %}
+        {% endwith %}
 
-        <!-- Menú de usuario -->
-        <div class="user-menu" id="userMenu">
-          <button type="button" id="userButton" class="user-button">
-            <div class="user-avatar">{{ request.user.username|default:"U"|slice:":1"|upper }}</div>
-            <div class="user-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+        {% endif %}
+
+        {# ===== Site24x7 ===== #}
+        {% if tenant %}
+        {% with raw_site_id=tenant.site24x7_id|default_if_none:"" %}
+        {% with site_id=raw_site_id|stringformat:"s" %}
+        {% if site_id and site_id != "0" and site_id != "null" and site_id != "NULL" and site_id != "None" %}
+        {% with url_name=request.resolver_match.url_name %}
+        <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.app_name == 'site24x7' %}open{% endif %}>
+          <summary class="nav-item {% if request.resolver_match.app_name == 'site24x7' %}is-active{% endif %}">
+            <span class="nav-ico">📡</span>Inn-Monitor
+            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
+            <span id="coachDotInnMonitor" class="coachmark-dot hidden"></span>
+          </summary>
+          <div class="tenant-list nav-submenu">
+            <a class="tenant-option nav-subitem {% if url_name == 'monitor_status' %}is-active{% endif %}"
+              href="{% url 'site24x7:monitor_status' %}">
+              Monitores
+            </a>
+            <a class="tenant-option nav-subitem {% if url_name == 'dashboard' %}is-active{% endif %}"
+              href="{% url 'site24x7:dashboard' %}">
+              Dashboard
+            </a>
+          </div>
+        </details>
+        {% endwith %}
+        {% endif %}
+        {% endwith %}
+        {% endwith %}
+        {% endif %}
+
+        {# ===== Configuración ===== #}
+        <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.url_name == 'cambiar_contrasena' %}open{% endif %}>
+          <summary id="settingsSummary"
+            class="nav-item {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}">
+            <span class="nav-ico">⚙️</span>Configuración
             <svg class="chevron" width="12" height="12" viewBox="0 0 24 24">
               <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
             </svg>
+            <span id="coachDotConfig" class="coachmark-dot hidden"></span>
+          </summary>
+          <div class="tenant-list nav-submenu">
+            <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}"
+              href="{% url 'cambiar_contrasena' %}">🔒 Cambiar contraseña</a>
+            <a class="tenant-option nav-subitem" href="#" onclick="toggleCredModal(true)">🔑 Credenciales</a>
+            <a class="tenant-option nav-subitem" href="#" onclick="toggleConfigModal(true)">🔔 Notificaciones</a>
+            <a class="tenant-option nav-subitem" href="#" onclick="toggleCountryModal(true)">
+              🌎 Filtro países whitelist
+            </a>
+          </div>
+        </details>
+      </nav>
+    </aside>
+
+    <!-- Main content -->
+    <div class="content {% if not can_view_monitoring %}content--empty{% endif %}">
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="top-left">
+          <h1 class="top-title">
+            Tenant:
+            {% if request.user.tenant.name|lower == "inntesec" %}
+            <details class="tenant-dropdown">
+              <summary class="tenant-summary">
+                {{ tenant.name }}
+                <span class="caret">▼</span>
+              </summary>
+              <div class="tenant-list">
+                {% for t in all_tenants %}
+                <form method="post" action="{% url 'dashboard:switch_tenant' t.id %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ request.path }}">
+                  <button type="submit" class="tenant-option {% if tenant.id == t.id %}is-active{% endif %}">
+                    {{ t.name }}
+                  </button>
+                </form>
+                {% endfor %}
+              </div>
+            </details>
+            {% else %}
+            <span class="top-tenant">{{ tenant.name }}</span>
+            {% endif %}
+          </h1>
+        </div>
+
+        <div class="top-right">
+          <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
+
+          <div class="export-wrapper">
+            <button type="button" class="btn ghost small" id="homeExportToggleBtn" title="Exportar" aria-haspopup="true"
+              aria-expanded="false">
+              ⬇
+            </button>
+            <div class="export-menu" id="homeExportMenu" role="menu">
+              <button type="button" data-export-format="pdf">📄 Exportar PDF</button>
+              <button type="button" data-export-format="csv">📊 Exportar CSV</button>
+            </div>
+          </div>
+
+          <button id="retellToggleBtn" class="btn ghost" title="Llamar / Colgar (Retell)">📞 Llamar</button>
+          <span id="retellStatus" class="muted" style="margin-left:.5rem; font-size:.9rem;"></span>
+
+          <!-- ✅ Mic animado: aparece SOLO cuando la llamada está activa -->
+          <div id="callMicWrap" class="call-mic-wrap hidden" aria-hidden="true">
+            <button id="callMicBtn" class="call-mic" type="button" aria-pressed="false" title="Micrófono (voz detectada)">
+              <span class="call-mic__halo" aria-hidden="true"></span>
+              <span class="call-mic__icon" aria-hidden="true">🎙️</span>
+            </button>
+          </div>
+
+          <button id="showCoachBtn" class="btn ghost" title="Mostrar guía rápida" onclick="window.startInntesecCoach()">
+            💡 Guía rápida
           </button>
-          <div class="dropdown-menu">
-            <form action="{% url 'logout' %}" method="post">{% csrf_token %}
-              <button type="submit">🚪 Cerrar sesión</button>
+
+          <div class="user-menu" id="userMenu">
+            <button type="button" id="userButton" class="user-button">
+              <div class="user-avatar">{{ request.user.username|default:"U"|slice:":1"|upper }}</div>
+              <div class="user-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+              <svg class="chevron" width="12" height="12" viewBox="0 0 24 24">
+                <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+              </svg>
+            </button>
+            <div class="dropdown-menu">
+              <form action="{% url 'logout' %}" method="post">{% csrf_token %}
+                <button type="submit">🚪 Cerrar sesión</button>
+              </form>
+            </div>
+          </div>
+
+        </div>
+      </header>
+
+      {% if can_view_monitoring %}
+
+      <div id="home-export-area">
+        <section class="grid grid-kpis" id="home-kpis" data-kpi-total="{{ alarms_total|default:'0' }}"
+          data-kpi-critical="{{ alarms_critical_total|default:'0' }}" data-kpi-soar="{{ soar_total|default:'0' }}"
+          data-kpi-telegram="{{ telegram_total|default:'0' }}">
+
+          <div class="card kpi">
+            <div class="kpi-header">
+              <div class="kpi-icon kpi-icon--alarms"><span>⚠️</span></div>
+              <div class="kpi-label">Alarmas</div>
+            </div>
+            <div class="kpi-value">{{ alarms_total|default:"0" }}</div>
+          </div>
+
+          <div class="card kpi">
+            <div class="kpi-header">
+              <div class="kpi-icon kpi-icon--critical"><span>⛔</span></div>
+              <div class="kpi-label">Alarmas críticas</div>
+            </div>
+            <div class="kpi-value">{{ alarms_critical_total|default:"0" }}</div>
+          </div>
+
+          <div class="card kpi">
+            <div class="kpi-header">
+              <div class="kpi-icon kpi-icon--soar"><span>🛡️</span></div>
+              <div class="kpi-label">SOAR – Incidentes</div>
+            </div>
+            <div class="kpi-value">{{ soar_total|default:"0" }}</div>
+          </div>
+
+          <div class="card kpi">
+            <div class="kpi-header">
+              <div class="kpi-icon kpi-icon--telegram"><span>💬</span></div>
+              <div class="kpi-label">Telegram – Solicitudes</div>
+            </div>
+            <div class="kpi-value">{{ telegram_total|default:"0" }}</div>
+          </div>
+        </section>
+
+        <section class="grid grid-main home-chart-section no-dashboard-gap">
+          <div class="card chart-card home-chart-card">
+            <div class="card-head">
+              <h2 class="card-title">Actividad de Alarmas</h2>
+              <p class="card-subtitle">Tendencia diaria de alarmas totales vs alarmas críticas.</p>
+            </div>
+            <div class="card-body">
+              <div class="chart-wrapper">
+                <canvas id="alarmsTrendChart" data-labels='{{ alarms_daily_labels_json|default:"[]" }}'
+                  data-total-series='{{ alarms_daily_total_json|default:"[]" }}'
+                  data-critical-series='{{ alarms_daily_critical_json|default:"[]" }}'>
+                </canvas>
+              </div>
+            </div>
+          </div>
+
+          {% if severity_summary %}
+          <aside class="card severity-card">
+            <div class="card-head">
+              <h2 class="card-title">Severidad de Alarmas</h2>
+              <p class="card-subtitle">Distribución por tipo para el tenant actual.</p>
+            </div>
+            <div class="card-body severity-body">
+              <ul class="severity-list">
+                {% for sev in severity_summary %}
+                <li class="severity-item" data-key="{{ sev.key }}" data-label="{{ sev.label }}" data-count="{{ sev.count }}"
+                  data-percent="{{ sev.percent }}">
+                  <div class="severity-main">
+                    <span class="severity-ico sev-ico-{{ sev.key }}">
+                      {% if sev.key == "critical" %}⛔{% elif sev.key == "high" %}⚠️{% elif sev.key == "medium" %}🔶{% else %}❔{% endif %}
+                    </span>
+                    <span class="pill {{ sev.css_class }}">{{ sev.label }}</span>
+                  </div>
+                  <span class="severity-count">{{ sev.count }}</span>
+                </li>
+                {% endfor %}
+              </ul>
+            </div>
+          </aside>
+          {% endif %}
+        </section>
+      </div>
+
+      <section class="home-ip-section">
+        <div class="home-ip-grid">
+          <div class="home-ip-card">
+            <div class="home-ip-header">
+              <div class="home-ip-icon home-ip-icon--blacklist">⛔</div>
+              <div class="home-ip-title">Buscar IP en Blacklist</div>
+            </div>
+
+            <form method="get" action="{% url 'home:index' %}" class="home-ip-form">
+              <div class="home-ip-input-row">
+                <input type="search" name="blacklist_q" placeholder="Ej: 80.64.18.80, 167.94.146.61"
+                  value="{{ blacklist_q|default:'' }}" class="home-ip-input" />
+                <button type="submit" class="home-ip-btn">
+                  <span class="home-ip-btn-icon">🔍</span><span>Buscar</span>
+                </button>
+              </div>
+
+              <div class="home-ip-examples">
+                <span class="home-ip-examples-label">IPs de ejemplo:</span>
+                <span class="home-ip-example-pill">60.64.18.80</span>
+                <span class="home-ip-example-pill">167.94.146.61</span>
+              </div>
+            </form>
+          </div>
+
+          <div class="home-ip-card">
+            <div class="home-ip-header">
+              <div class="home-ip-icon home-ip-icon--whitelist">🟢</div>
+              <div class="home-ip-title">Buscar IP en Whitelist</div>
+            </div>
+
+            <form method="get" action="{% url 'home:index' %}" class="home-ip-form">
+              <div class="home-ip-input-row">
+                <input type="search" name="whitelist_q" placeholder="Ej: 10.0.0.5, 10.0.0.6"
+                  value="{{ whitelist_q|default:'' }}" class="home-ip-input" />
+                <button type="submit" class="home-ip-btn">
+                  <span class="home-ip-btn-icon">🔍</span><span>Buscar</span>
+                </button>
+              </div>
+
+              <div class="home-ip-examples">
+                <span class="home-ip-examples-label">IPs de ejemplo:</span>
+                <span class="home-ip-example-pill">10.0.0.5</span>
+                <span class="home-ip-example-pill">10.0.0.6</span>
+              </div>
             </form>
           </div>
         </div>
-
-      </div>
-    </header>
-
-    {% if can_view_monitoring %}
-
-    <!-- ========== ÁREA EXPORTABLE (KPIs + gráficos) ========== -->
-    <div id="home-export-area">
-      <!-- KPIs -->
-      <section class="grid grid-kpis" id="home-kpis"
-        data-kpi-total="{{ alarms_total|default:'0' }}"
-        data-kpi-critical="{{ alarms_critical_total|default:'0' }}"
-        data-kpi-soar="{{ soar_total|default:'0' }}"
-        data-kpi-telegram="{{ telegram_total|default:'0' }}">
-        <div class="card kpi">
-          <div class="kpi-header">
-            <div class="kpi-icon kpi-icon--alarms"><span>⚠️</span></div>
-            <div class="kpi-label">Alarmas</div>
-          </div>
-          <div class="kpi-value">{{ alarms_total|default:"0" }}</div>
-        </div>
-
-        <div class="card kpi">
-          <div class="kpi-header">
-            <div class="kpi-icon kpi-icon--critical"><span>⛔</span></div>
-            <div class="kpi-label">Alarmas críticas</div>
-          </div>
-          <div class="kpi-value">{{ alarms_critical_total|default:"0" }}</div>
-        </div>
-
-        <div class="card kpi">
-          <div class="kpi-header">
-            <div class="kpi-icon kpi-icon--soar"><span>🛡️</span></div>
-            <div class="kpi-label">SOAR – Incidentes</div>
-          </div>
-          <div class="kpi-value">{{ soar_total|default:"0" }}</div>
-        </div>
-
-        <div class="card kpi">
-          <div class="kpi-header">
-            <div class="kpi-icon kpi-icon--telegram"><span>💬</span></div>
-            <div class="kpi-label">Telegram – Solicitudes</div>
-          </div>
-          <div class="kpi-value">{{ telegram_total|default:"0" }}</div>
-        </div>
       </section>
 
-      <!-- Charts & severity -->
-      <section class="grid grid-main home-chart-section no-dashboard-gap">
-        <div class="card chart-card home-chart-card">
-          <div class="card-head">
-            <h2 class="card-title">Actividad de Alarmas</h2>
-            <p class="card-subtitle">Tendencia diaria de alarmas totales vs alarmas críticas.</p>
-          </div>
-          <div class="card-body">
-            <div class="chart-wrapper">
-              <canvas id="alarmsTrendChart" data-labels='{{ alarms_daily_labels_json|default:"[]" }}'
-                data-total-series='{{ alarms_daily_total_json|default:"[]" }}'
-                data-critical-series='{{ alarms_daily_critical_json|default:"[]" }}'>
-              </canvas>
-            </div>
-          </div>
-        </div>
-
-        {% if severity_summary %}
-        <aside class="card severity-card">
-          <div class="card-head">
-            <h2 class="card-title">Severidad de Alarmas</h2>
-            <p class="card-subtitle">Distribución por tipo para el tenant actual.</p>
-          </div>
-          <div class="card-body severity-body">
-            <ul class="severity-list">
-              {% for sev in severity_summary %}
-              <li class="severity-item"
-                  data-key="{{ sev.key }}"
-                  data-label="{{ sev.label }}"
-                  data-count="{{ sev.count }}"
-                  data-percent="{{ sev.percent }}">
-                <div class="severity-main">
-                  <span class="severity-ico sev-ico-{{ sev.key }}">
-                    {% if sev.key == "critical" %}⛔{% elif sev.key == "high" %}⚠️{% elif sev.key == "medium" %}🔶{% else %}❔{% endif %}
-                  </span>
-                  <span class="pill {{ sev.css_class }}">{{ sev.label }}</span>
-                </div>
-                <span class="severity-count">{{ sev.count }}</span>
-              </li>
-              {% endfor %}
-            </ul>
-          </div>
-        </aside>
-        {% endif %}
-      </section>
-    </div>
-    <!-- ========== /ÁREA EXPORTABLE ========== -->
-
-    <!-- Buscadores IP (NO se exportan) -->
-    <section class="home-ip-section">
-      <div class="home-ip-grid">
-        <div class="home-ip-card">
-          <div class="home-ip-header">
-            <div class="home-ip-icon home-ip-icon--blacklist">⛔</div>
-            <div class="home-ip-title">Buscar IP en Blacklist</div>
+      <!-- IP Search Modal -->
+      <div id="ipSearchModal"
+        class="modal-overlay {% if blacklist_q or whitelist_q and show_whitelist_modal %}{% else %}hidden{% endif %}"
+        aria-hidden="{% if blacklist_q or whitelist_q and show_whitelist_modal %}false{% else %}true{% endif %}">
+        <div class="modal-card">
+          <div class="modal-head">
+            <h3>Resultados de búsqueda de IP</h3>
+            <button class="close-btn" type="button" aria-label="Cerrar" onclick="toggleIpModal(false)">×</button>
           </div>
 
-          <form method="get" action="{% url 'home:index' %}" class="home-ip-form">
-            <div class="home-ip-input-row">
-              <input type="search" name="blacklist_q" placeholder="Ej: 80.64.18.80, 167.94.146.61"
-                value="{{ blacklist_q|default:'' }}" class="home-ip-input" />
-              <button type="submit" class="home-ip-btn">
-                <span class="home-ip-btn-icon">🔍</span><span>Buscar</span>
-              </button>
-            </div>
+          <div class="modal-body ip-modal-body">
+            {% if blacklist_q %}
+            <section class="ip-modal-section">
+              <h4 class="ip-modal-title">Blacklist</h4>
+              <p class="ip-search-meta">Búsqueda: <strong>{{ blacklist_q }}</strong></p>
 
-            <div class="home-ip-examples">
-              <span class="home-ip-examples-label">IPs de ejemplo:</span>
-              <span class="home-ip-example-pill">60.64.18.80</span>
-              <span class="home-ip-example-pill">167.94.146.61</span>
-            </div>
-          </form>
-        </div>
-
-        <div class="home-ip-card">
-          <div class="home-ip-header">
-            <div class="home-ip-icon home-ip-icon--whitelist">🟢</div>
-            <div class="home-ip-title">Buscar IP en Whitelist</div>
-          </div>
-
-          <form method="get" action="{% url 'home:index' %}" class="home-ip-form">
-            <div class="home-ip-input-row">
-              <input type="search" name="whitelist_q" placeholder="Ej: 10.0.0.5, 10.0.0.6"
-                value="{{ whitelist_q|default:'' }}" class="home-ip-input" />
-              <button type="submit" class="home-ip-btn">
-                <span class="home-ip-btn-icon">🔍</span><span>Buscar</span>
-              </button>
-            </div>
-
-            <div class="home-ip-examples">
-              <span class="home-ip-examples-label">IPs de ejemplo:</span>
-              <span class="home-ip-example-pill">10.0.0.5</span>
-              <span class="home-ip-example-pill">10.0.0.6</span>
-            </div>
-          </form>
-        </div>
-      </div>
-    </section>
-
-    <!-- IP Search Modal -->
-    <div id="ipSearchModal"
-      class="modal-overlay {% if blacklist_q or whitelist_q and show_whitelist_modal %}{% else %}hidden{% endif %}"
-      aria-hidden="{% if blacklist_q or whitelist_q and show_whitelist_modal %}false{% else %}true{% endif %}">
-      <div class="modal-card">
-        <div class="modal-head">
-          <h3>Resultados de búsqueda de IP</h3>
-          <button class="close-btn" type="button" aria-label="Cerrar" onclick="toggleIpModal(false)">×</button>
-        </div>
-
-        <div class="modal-body ip-modal-body">
-          {% if blacklist_q %}
-          <section class="ip-modal-section">
-            <h4 class="ip-modal-title">Blacklist</h4>
-            <p class="ip-search-meta">Búsqueda: <strong>{{ blacklist_q }}</strong></p>
-
-            {% if blacklist_results %}
-            <ul class="ip-results-list">
-              {% for ip in blacklist_results %}
-              <li class="ip-result-item">
-                <div class="ip-detail-card">
-                  <div class="block ip-section-block">
-                    <h4>ENCABEZADO</h4>
-                    <ul class="stacked">
-                      <li><strong>IP:</strong> <span class="mono">{{ ip.ip }}</span></li>
-                      <li><strong>País:</strong> {{ ip.pais|default:"No disponible" }}</li>
-                      <li><strong>Usuario:</strong> {{ ip.usuario|default:"No registrado" }}</li>
-                    </ul>
+              {% if blacklist_results %}
+              <ul class="ip-results-list">
+                {% for ip in blacklist_results %}
+                <li class="ip-result-item">
+                  <div class="ip-detail-card">
+                    <div class="block ip-section-block">
+                      <h4>ENCABEZADO</h4>
+                      <ul class="stacked">
+                        <li><strong>IP:</strong> <span class="mono">{{ ip.ip }}</span></li>
+                        <li><strong>País:</strong> {{ ip.pais|default:"No disponible" }}</li>
+                        <li><strong>Usuario:</strong> {{ ip.usuario|default:"No registrado" }}</li>
+                      </ul>
+                    </div>
+                    <div class="block ip-section-block">
+                      <h4>DETALLE DEL LOG</h4>
+                      <ul class="stacked">
+                        <li><strong>Log ID:</strong> {{ ip.logid|default:"-" }}</li>
+                      </ul>
+                      <p class="muted" style="margin-top:.4rem;">
+                        <strong>Descripción del log:</strong><br>
+                        {{ ip.log_description|default:"Sin descripción disponible desde el log." }}
+                      </p>
+                    </div>
+                    <div class="block ip-section-block">
+                      <h4>CLASIFICACIÓN</h4>
+                      <p class="muted">{{ ip.mensaje|default:"Sin mensaje de clasificación disponible." }}</p>
+                    </div>
+                    <div class="block ip-section-block">
+                      <h4>FECHAS</h4>
+                      <ul class="stacked">
+                        <li><strong>Fecha creación:</strong> {{ ip.fecha_creacion|date:"Y-m-d H:i:s"|default:"-" }}</li>
+                        <li><strong>Fecha actualización:</strong> {{ ip.fecha_actualizacion|date:"Y-m-d H:i:s"|default:"-" }}</li>
+                      </ul>
+                    </div>
                   </div>
-                  <div class="block ip-section-block">
-                    <h4>DETALLE DEL LOG</h4>
-                    <ul class="stacked">
-                      <li><strong>Log ID:</strong> {{ ip.logid|default:"-" }}</li>
-                    </ul>
-                    <p class="muted" style="margin-top:.4rem;">
-                      <strong>Descripción del log:</strong><br>
-                      {{ ip.log_description|default:"Sin descripción disponible desde el log." }}
-                    </p>
-                  </div>
-                  <div class="block ip-section-block">
-                    <h4>CLASIFICACIÓN</h4>
-                    <p class="muted">{{ ip.mensaje|default:"Sin mensaje de clasificación disponible." }}</p>
-                  </div>
-                  <div class="block ip-section-block">
-                    <h4>FECHAS</h4>
-                    <ul class="stacked">
-                      <li><strong>Fecha creación:</strong> {{ ip.fecha_creacion|date:"Y-m-d H:i:s"|default:"-" }}</li>
-                      <li><strong>Fecha actualización:</strong> {{ ip.fecha_actualizacion|date:"Y-m-d H:i:s"|default:"-" }}</li>
-                    </ul>
-                  </div>
-                </div>
-              </li>
-              {% endfor %}
-            </ul>
-            {% else %}
-            <p class="ip-empty-text">No se encontraron coincidencias en la blacklist.</p>
+                </li>
+                {% endfor %}
+              </ul>
+              {% else %}
+              <p class="ip-empty-text">No se encontraron coincidencias en la blacklist.</p>
+              {% endif %}
+            </section>
             {% endif %}
-          </section>
-          {% endif %}
 
-          {% if whitelist_q and show_whitelist_modal %}
-          <section class="ip-modal-section">
-            <h4 class="ip-modal-title">Whitelist</h4>
-            <p class="ip-search-meta">Búsqueda: <strong>{{ whitelist_q }}</strong></p>
-            {% if whitelist_not_found_terms %}
-            <p class="ip-subtitle" style="margin-top:0.75rem;">
-              IPs no encontradas en la whitelist (usa el botón de abajo para solicitar añadirlas).
-            </p>
-            <ul class="ip-results-list">
-              {% for ip in whitelist_not_found_terms %}
-              <li class="ip-result-item"><span class="ip-pill">{{ ip }}</span></li>
-              {% endfor %}
-            </ul>
-            {% else %}
-            <p class="ip-empty-text">Todas las IPs buscadas ya están en la whitelist del tenant.</p>
-            {% endif %}
-          </section>
-          {% endif %}
-
-          {% if not blacklist_q and not whitelist_q and not show_whitelist_modal %}
-          <p class="ip-empty-text">No has realizado ninguna búsqueda todavía.</p>
-          {% endif %}
-        </div>
-
-        <div class="modal-foot">
-          {% if blacklist_results %}
-          <form method="post" action="{% url 'home:blacklist_create_ticket' %}" class="ip-footer-form">
-            {% csrf_token %}
-            <input type="hidden" name="ip" value="{{ blacklist_results.0.ip }}">
-            {% if blacklist_q %}<input type="hidden" name="blacklist_q_original" value="{{ blacklist_q }}">{% endif %}
-            {% if blacklist_removed %}<input type="hidden" name="blacklist_removed_original" value="{{ blacklist_removed }}">{% endif %}
-            <button type="submit" class="btn btn-danger">🗑 Solicitar eliminación de blacklist</button>
-          </form>
-          {% endif %}
-
-          {% if whitelist_q and show_whitelist_modal and whitelist_not_found_terms %}
-          <form method="post" action="{% url 'home:whitelist_create_ticket' %}" class="ip-footer-form">
-            {% csrf_token %}
-            <input type="hidden" name="ip" value="{{ whitelist_not_found_terms.0 }}">
-            <input type="hidden" name="whitelist_q_original" value="{{ whitelist_q }}">
-            {% if whitelist_removed %}<input type="hidden" name="whitelist_removed_original" value="{{ whitelist_removed }}">{% endif %}
-            <button type="submit" class="btn btn-primary">➕ Añadir a whitelist</button>
-          </form>
-          {% endif %}
-
-          <button type="button" class="btn ghost" onclick="toggleIpModal(false)">Cerrar</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Whitelist table (NO se exporta) -->
-    <section class="home-whitelist-section">
-      <div class="home-whitelist-card">
-        <div class="home-whitelist-head">
-          <div class="home-whitelist-title">
-            <div class="home-whitelist-title-icon">🛡️</div>
-            <div class="home-whitelist-title-text">
-              <h2>Whitelist</h2>
-              <p class="home-whitelist-subtitle">
-                Tenant: <strong>{{ tenant.name }}</strong>
-                {% if whitelist_q %} · filtro: <code>{{ whitelist_q }}</code>{% endif %}
+            {% if whitelist_q and show_whitelist_modal %}
+            <section class="ip-modal-section">
+              <h4 class="ip-modal-title">Whitelist</h4>
+              <p class="ip-search-meta">Búsqueda: <strong>{{ whitelist_q }}</strong></p>
+              {% if whitelist_not_found_terms %}
+              <p class="ip-subtitle" style="margin-top:0.75rem;">
+                IPs no encontradas en la whitelist (usa el botón de abajo para solicitar añadirlas).
               </p>
-            </div>
+              <ul class="ip-results-list">
+                {% for ip in whitelist_not_found_terms %}
+                <li class="ip-result-item"><span class="ip-pill">{{ ip }}</span></li>
+                {% endfor %}
+              </ul>
+              {% else %}
+              <p class="ip-empty-text">Todas las IPs buscadas ya están en la whitelist del tenant.</p>
+              {% endif %}
+            </section>
+            {% endif %}
+
+            {% if not blacklist_q and not whitelist_q and not show_whitelist_modal %}
+            <p class="ip-empty-text">No has realizado ninguna búsqueda todavía.</p>
+            {% endif %}
+          </div>
+
+          <div class="modal-foot">
+            {% if blacklist_results %}
+            <form method="post" action="{% url 'home:blacklist_create_ticket' %}" class="ip-footer-form">
+              {% csrf_token %}
+              <input type="hidden" name="ip" value="{{ blacklist_results.0.ip }}">
+              {% if blacklist_q %}<input type="hidden" name="blacklist_q_original" value="{{ blacklist_q }}">{% endif %}
+              {% if blacklist_removed %}<input type="hidden" name="blacklist_removed_original" value="{{ blacklist_removed }}">{% endif %}
+              <button type="submit" class="btn btn-danger">🗑 Solicitar eliminación de blacklist</button>
+            </form>
+            {% endif %}
+
+            {% if whitelist_q and show_whitelist_modal and whitelist_not_found_terms %}
+            <form method="post" action="{% url 'home:whitelist_create_ticket' %}" class="ip-footer-form">
+              {% csrf_token %}
+              <input type="hidden" name="ip" value="{{ whitelist_not_found_terms.0 }}">
+              <input type="hidden" name="whitelist_q_original" value="{{ whitelist_q }}">
+              {% if whitelist_removed %}<input type="hidden" name="whitelist_removed_original" value="{{ whitelist_removed }}">{% endif %}
+              <button type="submit" class="btn btn-primary">➕ Añadir a whitelist</button>
+            </form>
+            {% endif %}
+
+            <button type="button" class="btn ghost" onclick="toggleIpModal(false)">Cerrar</button>
           </div>
         </div>
+      </div>
 
-        {% if whitelist_results %}
-        <div class="home-whitelist-table-wrapper">
-          <table class="home-whitelist-table">
-            <thead>
-              <tr>
-                <th>IP</th>
-                <th>Cliente</th>
-                <th>ISP</th>
-                <th>Motivo</th>
-                <th>Fecha creación</th>
-                <th>Última actualización</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for ip in whitelist_results %}
-              <tr>
-                <td><span class="home-whitelist-ip">{{ ip.ip }}</span></td>
-                <td>{{ ip.cliente|default:"-" }}</td>
-                <td>{{ ip.isp|default:"-" }}</td>
-                <td>{{ ip.motivo|default:"-" }}</td>
-                <td>{{ ip.fecha_creacion|date:"Y-m-d H:i:s"|default:"-" }}</td>
-                <td>{{ ip.fecha_actualizacion|date:"Y-m-d H:i:s"|default:"-" }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        {% else %}
-        <p class="home-whitelist-empty">
-          <span class="home-whitelist-empty-icon">🛡️</span>
-          <span>
-            {% if whitelist_q %}
+      <section class="home-whitelist-section">
+        <div class="home-whitelist-card">
+          <div class="home-whitelist-head">
+            <div class="home-whitelist-title">
+              <div class="home-whitelist-title-icon">🛡️</div>
+              <div class="home-whitelist-title-text">
+                <h2>Whitelist</h2>
+                <p class="home-whitelist-subtitle">
+                  Tenant: <strong>{{ tenant.name }}</strong>
+                  {% if whitelist_q %} · filtro: <code>{{ whitelist_q }}</code>{% endif %}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {% if whitelist_results %}
+          <div class="home-whitelist-table-wrapper">
+            <table class="home-whitelist-table">
+              <thead>
+                <tr>
+                  <th>IP</th>
+                  <th>Cliente</th>
+                  <th>ISP</th>
+                  <th>Motivo</th>
+                  <th>Fecha creación</th>
+                  <th>Última actualización</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for ip in whitelist_results %}
+                <tr>
+                  <td><span class="home-whitelist-ip">{{ ip.ip }}</span></td>
+                  <td>{{ ip.cliente|default:"-" }}</td>
+                  <td>{{ ip.isp|default:"-" }}</td>
+                  <td>{{ ip.motivo|default:"-" }}</td>
+                  <td>{{ ip.fecha_creacion|date:"Y-m-d H:i:s"|default:"-" }}</td>
+                  <td>{{ ip.fecha_actualizacion|date:"Y-m-d H:i:s"|default:"-" }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <p class="home-whitelist-empty">
+            <span class="home-whitelist-empty-icon">🛡️</span>
+            <span>
+              {% if whitelist_q %}
               No se encontraron IPs en la whitelist para ese criterio en este tenant.
-            {% else %}
+              {% else %}
               No hay IPs en la whitelist para este tenant.
-            {% endif %}
-          </span>
-        </p>
-        {% endif %}
-      </div>
-    </section>
-
-    {% else %}
-    <section class="empty-state">
-      <div class="empty-card">
-        <h2>Servicio no disponible</h2>
-        <p>La empresa <strong>{{ tenant.name|default:"—" }}</strong> no tiene el servicio de alarmas contratado.</p>
-        <p>Por favor, contacte con un administrador.</p>
-      </div>
-    </section>
-    {% endif %}
-
-    {# 🔑 Credenciales modal como partial reutilizable #}
-    {% include 'partials/cred_modal.html' %}
-
-    <!-- Ticket loader/dialog -->
-    <div id="ticketLoadingOverlay" class="ticket-loading-overlay hidden" aria-hidden="true">
-      <div class="ticket-loading-card">
-        <div class="spinner" aria-hidden="true"></div>
-        <div class="ticket-loading-text">Creando ticket…</div>
-      </div>
-    </div>
-    <div id="ticketDialog" class="ticket-dialog-overlay hidden" aria-hidden="true">
-      <div class="ticket-dialog-card">
-        <div id="ticketDialogIcon" class="ticket-dialog-icon is-success">
-          <span id="ticketDialogIconChar">✔</span>
+              {% endif %}
+            </span>
+          </p>
+          {% endif %}
         </div>
-        <h2 class="ticket-dialog-title" id="ticketDialogTitle">Solicitud enviada</h2>
-        <p class="ticket-dialog-text" id="ticketDialogText">Se procesó la solicitud.</p>
-        <div class="ticket-dialog-actions">
-          <button type="button" id="ticketDialogOkBtn" class="ticket-dialog-btn">OK</button>
+      </section>
+
+      {% else %}
+      <section class="empty-state">
+        <div class="empty-card">
+          <h2>Servicio no disponible</h2>
+          <p>La empresa <strong>{{ tenant.name|default:"—" }}</strong> no tiene el servicio de alarmas contratado.</p>
+          <p>Por favor, contacte con un administrador.</p>
+        </div>
+      </section>
+      {% endif %}
+
+      {% include 'partials/cred_modal.html' %}
+
+      <div id="ticketLoadingOverlay" class="ticket-loading-overlay hidden" aria-hidden="true">
+        <div class="ticket-loading-card">
+          <div class="spinner" aria-hidden="true"></div>
+          <div class="ticket-loading-text">Creando ticket…</div>
         </div>
       </div>
-    </div>
 
-  </div> <!-- /content -->
+      <div id="ticketDialog" class="ticket-dialog-overlay hidden" aria-hidden="true">
+        <div class="ticket-dialog-card">
+          <div id="ticketDialogIcon" class="ticket-dialog-icon is-success">
+            <span id="ticketDialogIconChar">✔</span>
+          </div>
+          <h2 class="ticket-dialog-title" id="ticketDialogTitle">Solicitud enviada</h2>
+          <p class="ticket-dialog-text" id="ticketDialogText">Se procesó la solicitud.</p>
+          <div class="ticket-dialog-actions">
+            <button type="button" id="ticketDialogOkBtn" class="ticket-dialog-btn">OK</button>
+          </div>
+        </div>
+      </div>
 
-  <!-- Coachmark elements (legacy, por si los usas en otras vistas) -->
+    </div> <!-- /content -->
+  </div> <!-- /layout wrapper -->
+
+  <!-- Coachmark elements -->
   <div id="coachmarkBackdrop" class="coachmark-backdrop hidden"></div>
   <div id="coachmarkGeneric" class="coachmark hidden" role="dialog" aria-modal="true">
     <h3 class="coachmark-title">Guía rápida</h3>
@@ -600,24 +650,36 @@
   <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script defer src="{% static 'js/home_export.js' %}?v={% now 'U' %}"></script>
   <script src="{% static 'js/country_filter_modal.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/retell_mic_vad.js' %}?v={% now 'U' %}"></script>
 
   {% include 'partials/config_notificaciones_modal.html' %}
   {% include "partials/_country_filter_modal.html" %}
 
-  <!-- Retell wiring -->
+  <!-- Retell wiring (1 botón + panel) -->
   <script type="module">
     (async () => {
       const statusEl = document.getElementById("retellStatus");
-      const setStatus = (t) => { if (statusEl) statusEl.textContent = t; };
+      const setStatus = (t) => { if (statusEl) statusEl.textContent = t || ""; };
 
       try {
-        const mod = await import("{% static 'js/retell_call.bundle.js' %}");
+        const mod = await import("{% static 'js/retell_call.bundle.js' %}?v={% now 'U' %}");
+
+        const getCallTemplate =
+          "{% url 'integrations:retell_get_call' 'CALLID' %}".replace("CALLID", "{call_id}");
+
         mod.wireRetellButtons({
           createUrl: "{% url 'integrations:retell_create_web_call' %}",
-          startBtnId: "retellStartBtn",
-          stopBtnId: "retellStopBtn",
+          getCallUrlTemplate: getCallTemplate,
+
+          toggleBtnId: "retellToggleBtn",
           statusId: "retellStatus",
+
+          panelId: "retellTranscriptPanel",
+          panelBodyId: "retellTranscriptBody",
+          panelCloseBtnId: "retellTranscriptCloseBtn",
+          panelClearBtnId: "retellTranscriptClearBtn",
         });
+
         setStatus("");
       } catch (e) {
         console.error("Retell bundle no cargó:", e);
@@ -626,4 +688,5 @@
     })();
   </script>
 </body>
+
 </html>

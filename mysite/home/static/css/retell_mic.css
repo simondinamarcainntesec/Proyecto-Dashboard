@@ -1,0 +1,54 @@
+/* ===== Mic animado (solo durante llamada Retell) ===== */
+
+.call-mic-wrap{
+  display:inline-flex;
+  align-items:center;
+  gap:.5rem;
+  margin-left:.5rem;
+}
+
+.call-mic-wrap.hidden{
+  display:none !important;
+}
+
+.call-mic{
+  position:relative;
+  width:38px;
+  height:38px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.06);
+  color:#fff;
+  cursor:pointer;
+  display:inline-grid;
+  place-items:center;
+  user-select:none;
+  outline:none;
+  padding:0;
+}
+
+.call-mic:focus-visible{
+  box-shadow:0 0 0 3px rgba(59,130,246,.35);
+}
+
+.call-mic__icon{
+  font-size:18px;
+  line-height:1;
+  transform:scale(var(--mic-scale, 1));
+  transition:transform 80ms linear;
+}
+
+.call-mic__halo{
+  position:absolute;
+  inset:-10px;
+  border-radius:999px;
+  background:radial-gradient(circle, rgba(59,130,246,.35), transparent 60%);
+  opacity:var(--mic-glow, 0);
+  transform:scale(var(--mic-halo-scale, 1));
+  transition:opacity 80ms linear, transform 80ms linear;
+  pointer-events:none;
+}
+
+.call-mic.is-on{
+  border-color:rgba(59,130,246,.5);
+}

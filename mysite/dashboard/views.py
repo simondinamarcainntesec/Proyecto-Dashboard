@@ -15,7 +15,7 @@ from django.http import HttpResponseRedirect
 from tenants.decorators import tenant_required
 from tenants.models import Tenant
 from home.models import TenantCredentials, WhitelistCountryPreference  # ← incluye pref de países
-from home.countries import ALL_COUNTRIES  # ← lista de países para el modal
+from home.countries import ALL_COUNTRIES, COUNTRY_BY_CODE  # ← lista de países para el modal
 
 from .charts import (
     build_trend_data,
@@ -263,9 +263,7 @@ def dashboard_view(request):
             "hour_data": hour_payload["hour_data"],
             "severity_counts_by_hour": hour_payload["severity_counts_by_hour"],
             "device_counts_by_hour": hour_payload["device_counts_by_hour"],
-            "device_counts_by_hour_full": hour_payload[
-                "device_counts_by_hour_full"
-            ],
+            "device_counts_by_hour_full": hour_payload["device_counts_by_hour_full"],
             "action_counts_by_hour": hour_payload["action_counts_by_hour"],
             "trend_labels_hour": hour_payload["trend_labels_hour"],
             "trend_by_hour": hour_payload["trend_by_hour"],
@@ -280,9 +278,7 @@ def dashboard_view(request):
             "device_counts_by_level": device_counts_by_level,
             "action_counts_by_level": action_counts_by_level,
             "severity_counts_by_level": severity_counts_by_level,
-            "subtype_counts_by_level": subtype_by_level[
-                "subtype_counts_by_level"
-            ],
+            "subtype_counts_by_level": subtype_by_level["subtype_counts_by_level"],
             "subtype_counts": subtype_counts,
             "device_counts_by_subtype": device_counts_by_subtype,
             "action_counts_by_subtype": action_counts_by_subtype,
@@ -295,16 +291,10 @@ def dashboard_view(request):
             "severity_counts_by_logdesc": severity_counts_by_logdesc,
             "level_counts_by_subtype": level_counts_by_subtype,
             "msg_severity_by_level": msgsev_by_level["msg_severity_by_level"],
-            "msg_severity_by_subtype": msgsev_by_subtype[
-                "msg_severity_by_subtype"
-            ],
+            "msg_severity_by_subtype": msgsev_by_subtype["msg_severity_by_subtype"],
             "level_by_msg_severity": level_by_msgsev["level_by_msg_severity"],
-            "subtype_by_msg_severity": subtype_by_msgsev[
-                "subtype_by_msg_severity"
-            ],
-            "hour_series_by_subtype": hour_series_by_subtype[
-                "hour_series_by_subtype"
-            ],
+            "subtype_by_msg_severity": subtype_by_msgsev["subtype_by_msg_severity"],
+            "hour_series_by_subtype": hour_series_by_subtype["hour_series_by_subtype"],
         }
 
         cache.set(_key("ctx"), context, timeout=ttl)
@@ -313,36 +303,33 @@ def dashboard_view(request):
     cred = None
     try:
         if tenant:
-            cred = TenantCredentials.get_active_for_tenant(
-                int(getattr(tenant, "id", 0))
-            )
+            cred = TenantCredentials.get_active_for_tenant(int(getattr(tenant, "id", 0)))
     except Exception as e:
-        logger.exception(
-            "[DASHBOARD] Error obteniendo credenciales del tenant: %s", e
-        )
+        logger.exception("[DASHBOARD] Error obteniendo credenciales del tenant: %s", e)
 
     context["cred"] = cred
 
     # Selector de tenants solo para usuarios del tenant Inntesec
-    user_tenant_name = getattr(
-        getattr(request.user, "tenant", None), "name", ""
-    ).lower()
+    user_tenant_name = getattr(getattr(request.user, "tenant", None), "name", "").lower()
     if user_tenant_name == "inntesec":
         context["all_tenants"] = Tenant.objects.all().order_by("name")
 
     # ==============================
-    # Países para el modal de whitelist
+    # Países para el modal de whitelist (POR TENANT, NO POR USER)
     # ==============================
+    effective_tenant_for_pref = tenant or getattr(request.user, "tenant", None)
+
     selected_paises = []
     try:
-        pref = WhitelistCountryPreference.objects.get(user=request.user)
-        selected_paises = pref.paises or []
-    except WhitelistCountryPreference.DoesNotExist:
-        selected_paises = []
+        if effective_tenant_for_pref:
+            pref = WhitelistCountryPreference.objects.filter(
+                tenant=effective_tenant_for_pref
+            ).first()
+            selected_paises = (pref.paises or []) if pref else []
+        else:
+            selected_paises = []
     except Exception as e:
-        logger.exception(
-            "[DASHBOARD] Error leyendo preferencias de países: %s", e
-        )
+        logger.exception("[DASHBOARD] Error leyendo preferencias de países (tenant): %s", e)
         selected_paises = []
 
     context["whitelist_countries"] = ALL_COUNTRIES
@@ -396,14 +383,10 @@ def switch_tenant(request, tenant_id):
     logger.debug("[SwitchTenant] Caché limpiada tras cambio de tenant")
 
     # Detectar URL de origen
-    next_url = (
-        request.POST.get("next") or request.META.get("HTTP_REFERER") or ""
-    ).strip()
+    next_url = (request.POST.get("next") or request.META.get("HTTP_REFERER") or "").strip()
     parsed = urlparse(next_url or "")
     referer = (request.META.get("HTTP_REFERER") or "").lower()
-    logger.debug(
-        "[SwitchTenant] next_url: %s | referer: %s", next_url, referer
-    )
+    logger.debug("[SwitchTenant] next_url: %s | referer: %s", next_url, referer)
 
     # Si la URL es interna válida, mantener la ruta actual
     if parsed.path and parsed.path.startswith("/"):
@@ -430,17 +413,9 @@ def switch_tenant(request, tenant_id):
     # Fallback final: misma ruta o dashboard principal
     try:
         current_path = request.META.get("PATH_INFO", "")
-        origin = request.META.get("HTTP_ORIGIN") or request.build_absolute_uri(
-            "/"
-        )
-        full_path = (
-            f"{origin}{current_path}"
-            if current_path
-            else request.build_absolute_uri("/")
-        )
-        logger.debug(
-            "[SwitchTenant] Fallback: redirigiendo a la misma ruta (%s)", full_path
-        )
+        origin = request.META.get("HTTP_ORIGIN") or request.build_absolute_uri("/")
+        full_path = f"{origin}{current_path}" if current_path else request.build_absolute_uri("/")
+        logger.debug("[SwitchTenant] Fallback: redirigiendo a la misma ruta (%s)", full_path)
         return HttpResponseRedirect(full_path)
     except Exception as e:
         logger.warning("[SwitchTenant] Fallback al dashboard por error (%s)", e)

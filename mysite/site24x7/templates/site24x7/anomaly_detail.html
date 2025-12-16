@@ -1,0 +1,82 @@
+{# site24x7/anomaly_detail.html
+   Fragmento HTML que se inyecta dentro del cuerpo del modal en anomaly_status.html.
+#}
+
+{% if error %}
+  <div class="block">
+    <h4>Error al cargar detalle</h4>
+    <p>No se pudo cargar el detalle de anomalías para este monitor.</p>
+  </div>
+
+{% elif rows %}
+  <div class="anom-detail-wrap">
+    {% for row in rows %}
+      <div class="anom-item block">
+        <div class="anom-item-header">
+          <div class="anom-item-main">
+            <div class="anom-item-title">
+              {{ row.display_name|default:monitor_name|default:"—" }}
+            </div>
+            <div class="anom-item-meta">
+              <span class="mono">{{ row.time|default:"—" }}</span>
+              <span class="dot">•</span>
+              <span>{{ row.monitor_type|default:"—" }}</span>
+            </div>
+          </div>
+
+          {% with sev=row.severity|default:"N/A"|lower %}
+          <span class="pill
+            {% if 'confirm' in sev or 'confirmad' in sev %}sev-critical
+            {% elif 'probabl' in sev or 'likely' in sev %}sev-high
+            {% elif 'inform' in sev or sev == 'info' %}sev-info
+            {% else %}sev-na{% endif %}">
+            {{ row.severity|default:"N/A" }}
+          </span>
+          {% endwith %}
+        </div>
+
+        {% if row.comments %}
+          <div class="anom-comments-list">
+            {% for c in row.comments %}
+              <div class="anom-comment">
+                <div class="anom-comment-header">
+                  <div class="anom-attr-name">
+                    {{ c.display_attr }}
+                  </div>
+                  <div class="anom-comment-meta mono">
+                    {% if c.location_name %}
+                      <span class="badge-location">{{ c.location_name }}</span>
+                      <span class="dot">•</span>
+                    {% endif %}
+                    <span>
+                      Valor actual:
+                      <strong>{{ c.present_value|default:"—" }}</strong>
+                      {% if c.attribute_unit %} {{ c.attribute_unit }}{% endif %}
+                    </span>
+                    <span class="dot">•</span>
+                    <span>
+                      Baseline:
+                      <strong>{{ c.base_value|default:"—" }}</strong>
+                    </span>
+                  </div>
+                </div>
+
+                <div class="anom-comment-body">
+                  {{ c.anomaly_comment|safe }}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="muted">No hay comentarios detallados para esta anomalía.</p>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+
+{% else %}
+  <div class="block">
+    <h4>Sin anomalías recientes</h4>
+    <p>No se encontraron anomalías para este monitor en el período consultado.</p>
+  </div>
+{% endif %}

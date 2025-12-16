@@ -24527,12 +24527,16 @@ function extractTranscriptText(update) {
     const parts = t.map((x) => {
       if (!x) return "";
       if (typeof x === "string") return x;
-      return x.text || x.content || x.transcript || x.message || x.utterance || "";
+      return x.text || x.content || x.transcript || x.message || x.utterance || x.delta || x.partial || "";
     }).filter(Boolean);
     return parts.join(" ").trim();
   }
   if (t && typeof t === "object") {
-    return (t.text || t.content || t.transcript || t.message || t.utterance || "").toString().trim();
+    return (t.text || t.content || t.transcript || t.message || t.utterance || t.delta || t.partial || "").toString().trim();
+  }
+  if (update && typeof update === "object") {
+    const alt = update.text || update.content || update.message || update.utterance || update.delta || update.partial || update?.data?.text || update?.data?.message || update?.payload?.text || update?.payload?.message || "";
+    if (alt) return alt.toString().trim();
   }
   try {
     return JSON.stringify(update).slice(0, 500);
@@ -24540,47 +24544,22 @@ function extractTranscriptText(update) {
     return "";
   }
 }
-function positionPanelNearAnchor(panel, anchorEl, prefer = "bottom") {
-  if (!panel || !anchorEl) return;
-  const wasHidden = panel.classList.contains("hidden");
-  if (wasHidden) {
-    panel.classList.remove("hidden");
-    panel.style.visibility = "hidden";
-  }
-  const anchorRect = anchorEl.getBoundingClientRect();
-  const panelRect = panel.getBoundingClientRect();
-  const margin = 10;
-  const pad = 8;
-  let right = window.innerWidth - anchorRect.right;
-  right = Math.max(pad, Math.min(right, window.innerWidth - panelRect.width - pad));
-  const belowTop = anchorRect.bottom + margin;
-  const aboveTop = anchorRect.top - panelRect.height - margin;
-  let top;
-  if (prefer === "top") {
-    top = aboveTop >= pad ? aboveTop : belowTop;
-  } else {
-    top = belowTop + panelRect.height <= window.innerHeight - pad ? belowTop : aboveTop;
-  }
-  top = Math.max(pad, Math.min(top, window.innerHeight - panelRect.height - pad));
-  panel.style.position = "fixed";
-  panel.style.left = "auto";
-  panel.style.bottom = "auto";
-  panel.style.right = `${right}px`;
-  panel.style.top = `${top}px`;
-  if (wasHidden) {
-    panel.classList.add("hidden");
-    panel.style.visibility = "";
-  }
-}
 function wireRetellButtons({
   createUrl,
   getCallUrlTemplate,
+  // "/integrations/retell/get-call/{call_id}/"
   toggleBtnId,
+  // "retellToggleBtn"
   statusId,
+  // "retellStatus"
   panelId,
+  // "retellTranscriptPanel"
   panelBodyId,
+  // "retellTranscriptBody"
   panelCloseBtnId,
+  // "retellTranscriptCloseBtn"
   panelClearBtnId
+  // "retellTranscriptClearBtn"
 }) {
   const toggleBtn = document.getElementById(toggleBtnId);
   const statusEl = document.getElementById(statusId);
@@ -24595,16 +24574,10 @@ function wireRetellButtons({
       statusEl.title = txt;
     }
   };
-  const reposition = () => {
-    if (!panel || panel.classList.contains("hidden")) return;
-    if (!toggleBtn) return;
-    positionPanelNearAnchor(panel, toggleBtn, "bottom");
-  };
   const openPanel = () => {
     if (!panel) return;
     panel.classList.remove("hidden");
     panel.setAttribute("aria-hidden", "false");
-    requestAnimationFrame(reposition);
   };
   const closePanel = () => {
     if (!panel) return;
@@ -24616,50 +24589,31 @@ function wireRetellButtons({
   };
   if (panelCloseBtn) panelCloseBtn.addEventListener("click", closePanel);
   if (panelClearBtn) panelClearBtn.addEventListener("click", clearPanel);
-  window.addEventListener("resize", () => requestAnimationFrame(reposition));
-  window.addEventListener("scroll", () => requestAnimationFrame(reposition), true);
-  let liveEl = null;
-  let lastLiveText = "";
-  function ensureLiveEl() {
-    if (!panelBody) return null;
-    if (liveEl && panelBody.contains(liveEl)) return liveEl;
-    panelBody.innerHTML = "";
-    liveEl = document.createElement("div");
-    liveEl.className = "retell-live";
-    liveEl.innerHTML = `<span class="who">IA</span><div class="txt"></div>`;
-    panelBody.appendChild(liveEl);
-    return liveEl;
-  }
-  function setLiveText(text) {
+  function pushLine(text, who = "agent") {
     if (!panelBody) return;
-    const t = (text || "").trim();
+    const t = (text || "").toString().trim();
     if (!t) return;
-    if (t === lastLiveText) return;
-    const box = ensureLiveEl();
-    if (!box) return;
-    const txtEl = box.querySelector(".txt");
-    if (txtEl) txtEl.textContent = t;
-    lastLiveText = t;
+    const line = document.createElement("div");
+    line.className = `retell-line ${who === "user" ? "is-user" : "is-agent"}`;
+    const whoEl = document.createElement("div");
+    whoEl.className = "who";
+    whoEl.textContent = who === "user" ? "T\xFA" : "IA";
+    const txtEl = document.createElement("div");
+    txtEl.className = "txt";
+    txtEl.textContent = t;
+    line.appendChild(whoEl);
+    line.appendChild(txtEl);
+    panelBody.appendChild(line);
+    while (panelBody.children.length > 120) {
+      panelBody.removeChild(panelBody.firstChild);
+    }
     panelBody.scrollTop = panelBody.scrollHeight;
-    reposition();
-  }
-  function showFinalTranscript(finalText) {
-    if (!panelBody) return;
-    const t = (finalText || "").trim();
-    panelBody.innerHTML = "";
-    liveEl = document.createElement("div");
-    liveEl.className = "retell-live";
-    liveEl.innerHTML = `<span class="who">IA (final)</span><div class="txt"></div>`;
-    panelBody.appendChild(liveEl);
-    const txtEl = liveEl.querySelector(".txt");
-    if (txtEl) txtEl.textContent = t || "Sin transcripci\xF3n final disponible.";
-    lastLiveText = t || "";
-    panelBody.scrollTop = 0;
-    reposition();
   }
   const retellWebClient = new s();
   let isActive = false;
   let lastCallId = null;
+  let lastAgentText = "";
+  let lastAgentAt = 0;
   const paintToggle = () => {
     if (!toggleBtn) return;
     if (isActive) {
@@ -24683,14 +24637,21 @@ function wireRetellButtons({
     });
     const data = await resp.json().catch(() => ({}));
     if (!resp.ok || !data?.ok) {
-      if (data?.error === "NO_PHONE") throw new Error("NO_PHONE");
-      throw new Error(data?.detail || data?.error || `Error creando llamada (${resp.status})`);
+      if (data?.error === "NO_PHONE") {
+        throw new Error("NO_PHONE");
+      }
+      throw new Error(
+        data?.detail || data?.error || `Error creando llamada (${resp.status})`
+      );
     }
     return data;
   }
   async function fetchCallSummary() {
     if (!getCallUrlTemplate || !lastCallId) return null;
-    const url = getCallUrlTemplate.replace("{call_id}", encodeURIComponent(lastCallId));
+    const url = getCallUrlTemplate.replace(
+      "{call_id}",
+      encodeURIComponent(lastCallId)
+    );
     const resp = await fetch(url, { credentials: "same-origin" });
     const data = await resp.json().catch(() => ({}));
     if (!data?.ok) return null;
@@ -24701,8 +24662,6 @@ function wireRetellButtons({
     setStatus("Retell: creando llamada\u2026");
     const { access_token, call_id } = await createWebCallOnServer();
     lastCallId = call_id || null;
-    lastLiveText = "";
-    clearPanel();
     setStatus("Retell: conectando\u2026");
     await retellWebClient.startCall({ accessToken: access_token });
   }
@@ -24711,6 +24670,28 @@ function wireRetellButtons({
       retellWebClient.stopCall();
     } catch (_2) {
     }
+  }
+  function shouldFlushAgentLine(nextText) {
+    const now = Date.now();
+    const t = (nextText || "").trim();
+    if (!t) return false;
+    if (t === lastAgentText) return false;
+    const isPrefix = t.startsWith(lastAgentText) && lastAgentText.length >= 2;
+    if (isPrefix && now - lastAgentAt < 450) {
+      lastAgentText = t;
+      lastAgentAt = now;
+      return false;
+    }
+    const okByTime = now - lastAgentAt > 450;
+    const okByChange = !isPrefix;
+    if (okByTime || okByChange) {
+      lastAgentText = t;
+      lastAgentAt = now;
+      return true;
+    }
+    lastAgentText = t;
+    lastAgentAt = now;
+    return false;
   }
   retellWebClient.on("call_started", () => {
     isActive = true;
@@ -24723,13 +24704,19 @@ function wireRetellButtons({
   });
   retellWebClient.on("agent_stop_talking", () => {
     setStatus("Retell: escuchando\u2026");
+    const pending = (lastAgentText || "").trim();
+    if (pending) {
+      pushLine(pending, "agent");
+      openPanel();
+      lastAgentAt = Date.now();
+    }
   });
   retellWebClient.on("update", (update) => {
     const text = extractTranscriptText(update);
-    if (text) {
-      openPanel();
-      setLiveText(text);
-    }
+    if (!text) return;
+    if (!shouldFlushAgentLine(text)) return;
+    pushLine(text, "agent");
+    openPanel();
   });
   retellWebClient.on("call_ended", async () => {
     isActive = false;
@@ -24737,20 +24724,23 @@ function wireRetellButtons({
     setStatus("Retell: llamada finalizada");
     try {
       const call = await fetchCallSummary();
-      const transcript = (call?.transcript || "").trim();
-      openPanel();
-      showFinalTranscript(transcript);
+      if (call) {
+        const reason = call.disconnection_reason || "desconocida";
+        const status = call.call_status || "unknown";
+        const transcript = (call.transcript || "").trim();
+        pushLine(`Estado final: ${status} (${reason})`, "agent");
+        if (transcript && transcript !== lastAgentText) {
+          pushLine(transcript, "agent");
+        }
+      }
     } catch (_2) {
-      openPanel();
-      showFinalTranscript(lastLiveText);
     }
   });
   retellWebClient.on("error", (error) => {
     isActive = false;
     paintToggle();
     setStatus("Retell: error en la llamada");
-    openPanel();
-    showFinalTranscript(`Error: ${error?.message || "revisa consola"}`);
+    pushLine(`Error: ${error?.message || "revisa consola"}`, "agent");
     try {
       retellWebClient.stopCall();
     } catch (_2) {
@@ -24767,15 +24757,17 @@ function wireRetellButtons({
       try {
         await startCall();
       } catch (err) {
-        openPanel();
         if (String(err?.message || err) === "NO_PHONE") {
           setStatus("Retell: no tienes n\xFAmero registrado");
-          showFinalTranscript(
-            "No tienes un n\xFAmero de tel\xE9fono registrado. Actual\xEDzalo en tu perfil o solicita al administrador que lo ingrese."
+          pushLine(
+            "No tienes un n\xFAmero de tel\xE9fono registrado. Actual\xEDzalo en tu perfil o solicita al administrador que lo ingrese.",
+            "agent"
           );
+          openPanel();
         } else {
           setStatus("Retell: no se pudo iniciar");
-          showFinalTranscript(`No se pudo iniciar la llamada. ${err?.message || err}`);
+          pushLine(`No se pudo iniciar la llamada. ${err?.message || err}`, "agent");
+          openPanel();
         }
         isActive = false;
         paintToggle();
