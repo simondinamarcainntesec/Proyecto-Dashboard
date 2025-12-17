@@ -1,0 +1,336 @@
+:root{
+  --bg:#0b1220;
+  --border:#1e293b;
+  --text:#e5e7eb;
+  --muted:#94a3b8;
+  --brand:#3b82f6;
+  --shadow:0 10px 28px rgba(2,6,23,.25);
+  --radius:16px;
+
+  --user:#22c55e;
+  --ai:#60a5fa;
+
+  --panel: rgba(2,6,23,0.55);
+  --panel2: rgba(2,6,23,0.35);
+  --glass: rgba(15,23,42,0.45);
+}
+
+*{ box-sizing:border-box }
+html,body{ height:100% }
+
+body.retell-win{
+  margin:0;
+  font-family:'Inter',system-ui,Segoe UI,Roboto,Arial,sans-serif;
+  background:linear-gradient(180deg,#0e1930 0%,#0b1220 100%);
+  color:var(--text);
+}
+
+/* ========= Shell / Layout ========= */
+.retell-shell{
+  min-height: 100%;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  padding:14px;
+}
+
+/* Card principal */
+.retell-shell{
+  background: var(--panel);
+  border:1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow:hidden;
+  backdrop-filter: blur(10px);
+}
+
+/* ========= Header ========= */
+.retell-head{
+  padding:12px 12px 10px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  border-bottom:1px solid rgba(148,163,184,0.12);
+}
+
+.retell-title{
+  font-weight:800;
+  font-size:1rem;
+  margin:0;
+}
+
+.retell-subtitle{
+  margin-top:4px;
+  font-weight:700;
+  color:var(--muted);
+  font-size:.85rem;
+}
+
+.retell-status{
+  color:var(--muted);
+  font-size:.9rem;
+  font-weight:700;
+  white-space:nowrap;
+}
+
+/* ========= Controls ========= */
+.retell-controls{
+  padding:12px;
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+  border-bottom:1px solid rgba(148,163,184,0.10);
+  background: linear-gradient(180deg, rgba(15,23,42,0.35), rgba(2,6,23,0.0));
+}
+
+/* Buttons (rbtn) */
+.rbtn{
+  border:1px solid var(--border);
+  background:#0b1428;
+  color:#dbeafe;
+  border-radius:12px;
+  padding:.55rem .85rem;
+  cursor:pointer;
+  font-size:.95rem;
+  font-weight:800;
+  transition:transform .12s, box-shadow .12s, background .12s, border-color .12s, opacity .12s;
+  line-height:1;
+}
+.rbtn:hover{
+  transform:translateY(-1px);
+  box-shadow:0 6px 18px rgba(2,6,23,.35);
+  background:#0e1a33;
+}
+.rbtn:active{ transform:translateY(0); box-shadow:none; }
+.rbtn:disabled{ opacity:.55; cursor:not-allowed; transform:none; box-shadow:none; }
+
+.rbtn-primary{
+  border-color:var(--brand);
+  background:var(--brand);
+  color:#e5e7eb;
+}
+.rbtn-primary:hover{
+  background:#2563eb;
+  border-color:#2563eb;
+  box-shadow:0 8px 24px rgba(15,23,42,.7);
+}
+
+.rbtn-ghost{
+  background: rgba(2,6,23,0.20);
+}
+
+/* ========= Body / Blocks ========= */
+.retell-body{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+
+  /* Tamaño definido del popup */
+  height: min(72vh, 640px);
+  min-height: 420px;
+}
+
+.retell-block{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+
+  padding:12px;
+  margin: 0;
+  background: var(--panel2);
+  border-top: 0;
+}
+
+.retell-block-title{
+  font-weight:900;
+  font-size:.92rem;
+  color: #dbeafe;
+  letter-spacing: .2px;
+}
+
+.retell-hint{
+  color:var(--muted);
+  font-size:.86rem;
+}
+
+/* ========= Feed (chat) ========= */
+.retell-feed{
+  /* Área definida para que “se vea bien” siempre */
+  flex: 1 1 auto;
+  min-height: 0;
+
+  height: 100%;
+  max-height: 380px;
+
+  overflow:auto;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(148,163,184,0.14);
+  background: rgba(2,6,23,0.28);
+}
+
+/* Mensajes (el JS debe insertar .msg.msg--user / .msg.msg--ai) */
+.msg{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-bottom:10px;
+  max-width: 92%;
+}
+
+.msg--user{ margin-left:auto; align-items:flex-end; }
+.msg--ai{ margin-right:auto; align-items:flex-start; }
+
+.msg-meta{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  font-size:.78rem;
+  color:var(--muted);
+  width:100%;
+}
+
+.msg-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:2px 8px;
+  border-radius:999px;
+  border:1px solid rgba(148,163,184,.18);
+  background:rgba(2,6,23,.18);
+  font-weight:900;
+}
+
+.msg--user .msg-badge{ border-color: rgba(34,197,94,.35); color: var(--user); }
+.msg--ai .msg-badge{ border-color: rgba(96,165,250,.35); color: var(--ai); }
+
+.msg-bubble{
+  padding:10px 12px;
+  border-radius: 14px;
+  border:1px solid rgba(148,163,184,0.10);
+  background: rgba(2,6,23,0.35);
+  color: var(--text);
+
+  /* Texto adaptable */
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+  font-size: .92rem;
+}
+
+.msg--user .msg-bubble{
+  background: rgba(34,197,94,0.12);
+  border-color: rgba(34,197,94,0.20);
+}
+
+.msg--ai .msg-bubble{
+  background: rgba(96,165,250,0.12);
+  border-color: rgba(96,165,250,0.20);
+}
+
+/* Scroll */
+.retell-feed::-webkit-scrollbar{ width:8px; height:8px; }
+.retell-feed::-webkit-scrollbar-thumb{
+  background:rgba(148,163,184,0.55);
+  border-radius:999px;
+}
+
+/* ========= Mic (tipo home) ========= */
+.retell-mic-wrap{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:6px 10px;
+  border-radius: 14px;
+  border:1px solid rgba(148,163,184,0.14);
+  background: rgba(2,6,23,0.22);
+}
+
+.mic-btn{
+  width:auto;
+  height:44px;
+  border-radius:999px;
+  border:1px solid rgba(148,163,184,.22);
+  background:rgba(2,6,23,.35);
+  color:var(--text);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  cursor:pointer;
+  position:relative;
+  box-shadow:0 10px 24px rgba(2,6,23,.25);
+  transition: transform .12s, border-color .12s, background .12s, opacity .12s;
+  padding: 0 12px;
+}
+.mic-btn:hover{ transform: translateY(-1px); border-color: rgba(59,130,246,.35); }
+.mic-btn:active{ transform:none; }
+.mic-btn[aria-disabled="true"]{ opacity:.55; cursor:not-allowed; }
+
+.mic-ico{ font-size: 1rem; }
+.mic-label{ font-weight:900; font-size:.85rem; color:#dbeafe; }
+
+.mic-pulse{
+  position:absolute;
+  inset:-6px;
+  border-radius:999px;
+  border:2px solid rgba(59,130,246,.25);
+  opacity:0;
+  pointer-events:none;
+}
+
+/* Si tu JS activa clase .is-active en el botón */
+.mic-btn.is-active .mic-pulse{
+  opacity:1;
+  animation: micPulse 1.2s ease-in-out infinite;
+}
+@keyframes micPulse{
+  0%{ transform:scale(.92); opacity:.45; }
+  50%{ transform:scale(1.10); opacity:.15; }
+  100%{ transform:scale(.92); opacity:.45; }
+}
+
+.mic-meter{
+  width:110px;
+  height:10px;
+  border-radius:999px;
+  border:1px solid rgba(148,163,184,.18);
+  background:rgba(2,6,23,.35);
+  overflow:hidden;
+}
+.mic-meter-fill{
+  height:100%;
+  width:0%;
+  background:rgba(34,197,94,.65);
+  transition:width .08s linear;
+}
+
+/* ========= Final transcript ========= */
+.retell-final.hidden{ display:none !important; }
+
+.retell-final-text{
+  margin:0;
+  padding:10px;
+  border-radius:14px;
+  border:1px solid rgba(148,163,184,.18);
+  background:rgba(2,6,23,.35);
+  color:var(--text);
+
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size:.86rem;
+  line-height:1.35;
+
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+
+  max-height: 220px;
+  overflow:auto;
+}
+
+/* ========= Utilities ========= */
+.hidden{ display:none !important; }

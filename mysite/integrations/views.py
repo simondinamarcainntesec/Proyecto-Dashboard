@@ -8,6 +8,8 @@ from inyeccion_api.models import Alarm
 from inyeccion_api.utils import _map_api_alarm_to_model
 import pathlib
 from integrations.alarmsone import list_alarms_all
+from django.contrib.auth.decorators import login_required
+from tenants.decorators import tenant_required
 
 BASE_DIR = pathlib.Path(__file__).resolve().parent.parent.parent 
 TOKEN_FILE = BASE_DIR / "token.txt"
@@ -56,3 +58,12 @@ def obtener_alarmas_desde_api(request):
     except Exception as e:
         logging.exception(f"Error durante la ingesta manual: {e}")
         return JsonResponse({"error": str(e)}, status=500)
+
+@login_required
+@tenant_required
+def retell_call_window(request):
+    # Si necesitas el tenant en contexto:
+    tenant = getattr(request, "tenant", None)
+    return render(request, "integrations/retell_call_window.html", {
+        "tenant": tenant,
+    })

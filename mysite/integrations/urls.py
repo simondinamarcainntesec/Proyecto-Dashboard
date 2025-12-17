@@ -11,4 +11,5 @@ urlpatterns = [
     # Retell
     path("retell/create-web-call/", views_retell.retell_create_web_call, name="retell_create_web_call"),
     path("retell/get-call/<str:call_id>/", views_retell.retell_get_call, name="retell_get_call"),
+    path("retell/call/", views.retell_call_window, name="retell_call_window"),
 ]

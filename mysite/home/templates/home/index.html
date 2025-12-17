@@ -258,16 +258,9 @@
             </div>
           </div>
 
-          <button id="retellToggleBtn" class="btn ghost" title="Llamar / Colgar (Retell)">📞 Llamar</button>
-          <span id="retellStatus" class="muted" style="margin-left:.5rem; font-size:.9rem;"></span>
-
-          <!-- ✅ Mic animado: aparece SOLO cuando la llamada está activa -->
-          <div id="callMicWrap" class="call-mic-wrap hidden" aria-hidden="true">
-            <button id="callMicBtn" class="call-mic" type="button" aria-pressed="false" title="Micrófono (voz detectada)">
-              <span class="call-mic__halo" aria-hidden="true"></span>
-              <span class="call-mic__icon" aria-hidden="true">🎙️</span>
-            </button>
-          </div>
+          <button class="btn ghost" type="button" onclick="window.openRetellCallWindow()">
+            📞 Llamar
+          </button>
 
           <button id="showCoachBtn" class="btn ghost" title="Mostrar guía rápida" onclick="window.startInntesecCoach()">
             💡 Guía rápida
@@ -650,43 +643,15 @@
   <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script defer src="{% static 'js/home_export.js' %}?v={% now 'U' %}"></script>
   <script src="{% static 'js/country_filter_modal.js' %}?v={% now 'U' %}"></script>
-  <script defer src="{% static 'js/retell_mic_vad.js' %}?v={% now 'U' %}"></script>
 
   {% include 'partials/config_notificaciones_modal.html' %}
   {% include "partials/_country_filter_modal.html" %}
 
-  <!-- Retell wiring (1 botón + panel) -->
-  <script type="module">
-    (async () => {
-      const statusEl = document.getElementById("retellStatus");
-      const setStatus = (t) => { if (statusEl) statusEl.textContent = t || ""; };
-
-      try {
-        const mod = await import("{% static 'js/retell_call.bundle.js' %}?v={% now 'U' %}");
-
-        const getCallTemplate =
-          "{% url 'integrations:retell_get_call' 'CALLID' %}".replace("CALLID", "{call_id}");
-
-        mod.wireRetellButtons({
-          createUrl: "{% url 'integrations:retell_create_web_call' %}",
-          getCallUrlTemplate: getCallTemplate,
-
-          toggleBtnId: "retellToggleBtn",
-          statusId: "retellStatus",
-
-          panelId: "retellTranscriptPanel",
-          panelBodyId: "retellTranscriptBody",
-          panelCloseBtnId: "retellTranscriptCloseBtn",
-          panelClearBtnId: "retellTranscriptClearBtn",
-        });
-
-        setStatus("");
-      } catch (e) {
-        console.error("Retell bundle no cargó:", e);
-        setStatus("Retell: bundle no disponible");
-      }
-    })();
+  <script>
+  window.__RETELL_POPUP_URL = "{% url 'integrations:retell_call_window' %}";
   </script>
+
+  <script defer src="{% static 'js/retell_open_popup.js' %}?v={% now 'U' %}"></script>
 </body>
 
 </html>

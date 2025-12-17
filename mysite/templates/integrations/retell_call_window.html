@@ -1,0 +1,66 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Retell – Llamada</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/retell_call_window.css' %}?v={% now 'U' %}">
+</head>
+
+<body class="retell-win">
+  <div class="retell-shell">
+    <header class="retell-head">
+      <div class="retell-head-left">
+        <div class="retell-title">Asistente IA</div>
+        <div class="retell-subtitle">
+          Tenant: <strong>{{ tenant.name|default:"—" }}</strong>
+        </div>
+      </div>
+
+      <div class="retell-head-right">
+        <span id="retellStatus" class="retell-status"></span>
+      </div>
+    </header>
+
+    <section class="retell-controls">
+      <button id="retellToggleBtn" class="rbtn rbtn-primary" type="button">📞 Llamar</button>
+
+      <button id="retellMicBtn" class="rbtn rbtn-ghost mic-btn" type="button" title="Micrófono">
+        <span class="mic-ico">🎙️</span>
+        <span class="mic-pulse" aria-hidden="true"></span>
+      </button>
+
+      <button id="retellClearBtn" class="rbtn rbtn-ghost" type="button" title="Limpiar">🧹</button>
+      <button id="retellCopyFinalBtn" class="rbtn rbtn-ghost" type="button" title="Copiar final">📋</button>
+      <button id="retellCloseBtn" class="rbtn rbtn-ghost" type="button" title="Cerrar">✕</button>
+    </section>
+
+    <main class="retell-body">
+      <div class="retell-block">
+        <div class="retell-block-title">Transcripción en vivo</div>
+        <div id="retellLive" class="retell-live" aria-live="polite"></div>
+      </div>
+
+      <div id="retellFinalWrap" class="retell-block retell-final hidden">
+        <div class="retell-block-title">Transcripción final</div>
+        <pre id="retellFinalText" class="retell-final-text"></pre>
+      </div>
+    </main>
+  </div>
+
+  <!-- URLs backend (sin async) -->
+  <script>
+  window.__RETELL_CREATE_URL = "{% url 'integrations:retell_create_web_call' %}";
+  window.__RETELL_GETCALL_TEMPLATE =
+    "{% url 'integrations:retell_get_call' 'CALLID' %}".replace("CALLID", "{call_id}");
+  window.__RETELL_BUNDLE_URL = "{% static 'js/retell_call.bundle.js' %}?v={% now 'U' %}";
+  </script>
+
+    <script type="module" src="{% static 'js/retell_call_window.js' %}?v={% now 'U' %}"></script>
+
+
+</body>
+</html>

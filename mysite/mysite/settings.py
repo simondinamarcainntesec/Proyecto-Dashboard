@@ -38,8 +38,6 @@ PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
     'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
 ]
-TIME_ZONE = "America/Santiago"
-USE_TZ = True
 
 ALLOWED_HOSTS = ['ia.inntesec.com', 'www.ia.inntesec.com', '127.0.0.1:8001','127.0.0.1:8000', '127.0.0.1']
 CSRF_TRUSTED_ORIGINS = ['https://ia.inntesec.com', 'https://www.ia.inntesec.com', 'http://127.0.0.1:8001','http://127.0.0.1:8000']
@@ -181,14 +179,14 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-
 LANGUAGE_CODE = 'es-ES'
 
-TIME_ZONE = 'UTC'
+# ✅ Chile (maneja DST). NO usar 'UTC' aquí si quieres ver hora local en Django.
+TIME_ZONE = "America/Santiago"
 
 USE_I18N = True
-
 USE_TZ = True
+
 
 
 # Static files (CSS, JavaScript, Images)
