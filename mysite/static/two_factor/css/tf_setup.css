@@ -1,0 +1,49 @@
+/* static/two_factor/css/tf_setup.css */
+
+/* extra seguridad: QR sin filtros */
+img.tf-qr{
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+/* Modal OK */
+.tf-ok-backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  display: none;
+  z-index: 9999;
+
+  align-items: flex-start;
+  justify-content: center;
+
+  /* Ajuste fino: cerca del centro del QR */
+  padding-top: 360px;
+}
+.tf-ok-backdrop.is-open{ display:flex; }
+
+.tf-ok-modal{
+  width: min(520px, calc(100vw - 32px));
+  background: var(--body-bg, #111);
+  color: var(--body-fg, #fff);
+  border: 1px solid var(--hairline-color, rgba(255,255,255,.10));
+  border-radius: 6px;
+  box-shadow: 0 10px 35px rgba(0,0,0,.55);
+  padding: 18px 18px 16px;
+}
+.tf-ok-modal h2{
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 700;
+}
+.tf-ok-modal p{
+  margin: 0 0 14px;
+  color: var(--body-quiet-color, #9ca3af);
+  line-height: 1.35;
+}
+.tf-ok-actions{
+  display:flex;
+  gap: 10px;
+  justify-content: flex-end;
+  align-items:center;
+}

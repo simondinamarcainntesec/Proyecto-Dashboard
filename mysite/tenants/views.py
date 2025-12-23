@@ -1,7 +1,7 @@
 # tenants/views.py
 import logging
 import re
-import json  # ⭐ para armar input_data
+import json  # para armar input_data
 
 import requests
 from django.conf import settings
@@ -15,7 +15,7 @@ from django.views.decorators.cache import never_cache
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
 from django.http import HttpResponseRedirect, JsonResponse
-from tenants.models import Tenant, Client, NotificationChannelPreference  # ⭐ añadimos Client
+from tenants.models import Tenant, Client, NotificationChannelPreference  # añadimos Client
 from tenants.context import current_tenant, current_tenant_source
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.messages import get_messages
@@ -48,7 +48,7 @@ def fetch_soporte_users(start_index: int = 1, row_count: int = 100) -> dict:
         "authtoken": authtoken,
     }
 
-    # ⭐ La API espera input_data como JSON en querystring
+    # La API espera input_data como JSON en querystring
     payload = {
         "list_info": {
             "sort_field": "name",
@@ -282,7 +282,7 @@ def tenant_login_view(request):
     Opcional: POST['tenant'] para scope explícito.
     """
 
-    # ✅ Limpia mensajes antiguos (de sesiones previas)
+    # Limpia mensajes antiguos (de sesiones previas)
     storage = get_messages(request)
     for _ in storage:
         pass
@@ -373,7 +373,7 @@ def tenant_login_view(request):
                 )
                 messages.warning(request, "Inicio de sesión sin tenant asociado.")
 
-            # ✅ Redirigir inmediatamente para evitar reenvíos o tokens antiguos
+            # Redirigir inmediatamente para evitar reenvíos o tokens antiguos
             return redirect("/home/")
 
         # --- Credenciales inválidas ---
@@ -467,14 +467,14 @@ def cambiar_contraseña(request):
                 "La nueva contraseña debe incluir al menos un carácter especial (como @, #, $, %, etc.)."
             )
         else:
-            # ✅ Cambia la contraseña y mantiene la sesión activa
+            # Cambia la contraseña y mantiene la sesión activa
             request.user.set_password(nueva)
             request.user.save()
             update_session_auth_hash(request, request.user)
 
             success_msg = "✅ Contraseña cambiada correctamente."
 
-            # 📨 Envío del correo de confirmación (diseño corporativo Inntesec)
+            # Envío del correo de confirmación (diseño corporativo Inntesec)
             try:
                 enviar_correo_cambio_contrasena(
                     email_destino=request.user.email,
@@ -491,7 +491,7 @@ def cambiar_contraseña(request):
             messages.success(request, success_msg)
             return redirect("cambiar_contrasena")
 
-    # ✅ Limpieza de mensajes antiguos (por accesibilidad)
+    # Limpieza de mensajes antiguos (por accesibilidad)
     storage = get_messages(request)
     for _ in storage:
         pass

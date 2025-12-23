@@ -1,0 +1,142 @@
+/* static/two_factor/css/tf_base.css */
+
+/* Ajustes globales */
+:root{
+  --tf-field-width: 360px; /* ⬅️ tamaño inputs */
+  --tf-box-width: 480px;   /* ⬅️ tamaño del cuadro */
+}
+
+/* que la caja crezca según contenido */
+body.login #container,
+body.login #content,
+body.login #content-main{
+  height: auto !important;
+  min-height: 0 !important;
+}
+body.login #content{ padding-bottom: 0 !important; }
+
+/* caja más cómoda */
+body.login #content-main{
+  float: none;
+  width: var(--tf-box-width);
+  max-width: calc(100vw - 40px);
+  margin: 0 auto;
+}
+
+/* tipografía consistente */
+body.login #content-main,
+body.login #content-main p,
+body.login #content-main label,
+body.login #content-main input,
+body.login #content-main button,
+body.login #content-main a{
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+/* filas centradas y anchas */
+body.login #content-main .form-row{
+  float: none;
+  display: block;
+  width: var(--tf-field-width);
+  max-width: 100%;
+  margin: 0 auto 12px;
+  box-sizing: border-box;
+}
+
+/* label alineado al inicio del input */
+body.login #content-main .form-row label{
+  float: none;
+  display: block;
+  margin: 0 0 6px;
+  text-align: left;
+  width: 100%;
+}
+
+/* input ocupa el ancho */
+body.login #content-main .form-row input,
+body.login #content-main .form-row select{
+  float: none;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+}
+
+/* help */
+.otp-help,
+.tf-help,
+.tf-subtle{
+  width: var(--tf-field-width);
+  max-width: 100%;
+  margin: 0 auto 12px;
+  color: var(--body-quiet-color, #9ca3af);
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: left;
+}
+
+/* submit row centrado */
+body.login .submit-row{
+  width: var(--tf-field-width);
+  max-width: 100%;
+  margin: 16px auto 0;
+  box-sizing: border-box;
+}
+
+/* acciones en setup */
+.tf-actions{
+  width: var(--tf-field-width);
+  max-width: 100%;
+  margin: 16px auto 0;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.tf-actions .cancel-link{ margin-left: auto; }
+
+/* QR bien visible */
+.tf-qr{
+  display: block;
+  margin: 14px auto 10px;
+  padding: 10px;
+  background: #fff;
+  border-radius: 6px;
+  width: 240px;
+  height: 240px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.25);
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+/* secreto TOTP en una línea */
+.tf-secret{
+  width: var(--tf-field-width);
+  max-width: 100%;
+  margin: 8px auto 0;
+  color: var(--body-fg, #fff);
+  text-align: left;
+}
+.tf-code{
+  display:block;
+  width:100%;
+  padding:6px 8px;
+  border-radius:6px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+  white-space: nowrap;
+  overflow-x: auto;
+  box-sizing: border-box;
+}
+
+/* quitar spinners si llega number */
+#content-main input[type="number"]{
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+#content-main input[type="number"]::-webkit-outer-spin-button,
+#content-main input[type="number"]::-webkit-inner-spin-button{
+  -webkit-appearance:none;
+  margin:0;
+}

@@ -10,6 +10,68 @@ function getCookie(name) {
   return null;
 }
 
+function getModalEl() {
+  return document.getElementById("countryModal");
+}
+
+function getTenantIdFromModal() {
+  var modal = getModalEl();
+  if (!modal) return "";
+  return (modal.getAttribute("data-tenant-id") || "").trim();
+}
+
+function getLoadUrlFromModal() {
+  var modal = getModalEl();
+  if (!modal) return "";
+  return (
+    modal.getAttribute("data-load-url") ||
+    window.WHITELIST_GET_COUNTRIES_URL ||
+    "/home/whitelist/get-countries/"
+  );
+}
+
+function getSaveUrlFromModal() {
+  var modal = getModalEl();
+  if (!modal) return "";
+  return (
+    modal.getAttribute("data-save-url") ||
+    window.WHITELIST_SAVE_COUNTRIES_URL ||
+    "/home/whitelist/save-countries/"
+  );
+}
+
+// ===============================
+// Fetch helper: maneja 500/HTML y muestra detalle real
+// ===============================
+function fetchJsonOrThrow(url, options) {
+  return fetch(url, options).then(function (resp) {
+    // Intentar leer el body siempre
+    return resp.text().then(function (text) {
+      var data = null;
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch (e) {
+        data = null; // puede venir HTML (debug) o texto plano
+      }
+
+      if (!resp.ok) {
+        var err = new Error("HTTP " + resp.status + " " + resp.statusText);
+        err.status = resp.status;
+        err.bodyText = text;
+        err.bodyJson = data;
+        throw err;
+      }
+
+      // 200 OK, pero si no era JSON válido, igual devolvemos algo útil
+      return data !== null ? data : { ok: false, message: "Respuesta no-JSON", raw: text };
+    });
+  });
+}
+
+// ===============================
+// UI helpers
+// ===============================
+
 // Devuelve array de códigos ISO seleccionados (['CL', 'AR', ...])
 function getSelectedCountryCodes() {
   var checkboxes = document.querySelectorAll("#countryModal .country-checkbox:checked");
@@ -24,12 +86,13 @@ function getSelectedCountryCodes() {
 function applySelectedCountries(codes) {
   var set = {};
   (codes || []).forEach(function (c) {
-    if (c) set[String(c).trim()] = true;
+    if (!c) return;
+    set[String(c).trim().toUpperCase()] = true;
   });
 
   var all = document.querySelectorAll("#countryModal .country-checkbox");
   all.forEach(function (cb) {
-    var code = (cb.value || "").trim();
+    var code = (cb.value || "").trim().toUpperCase();
     var checked = !!set[code];
     cb.checked = checked;
 
@@ -38,33 +101,55 @@ function applySelectedCountries(codes) {
   });
 }
 
+// Lee lo que ya venía renderizado en el template (fallback si falla AJAX)
+function getSelectedCodesFromRenderedHTML() {
+  var codes = [];
+  var checked = document.querySelectorAll("#countryModal .country-checkbox:checked");
+  checked.forEach(function (cb) {
+    if (cb.value) codes.push(String(cb.value).trim().toUpperCase());
+  });
+  return codes;
+}
+
 // ===============================
 // Cargar selección desde backend (por tenant actual)
 // ===============================
 function loadCountriesAjax() {
-  var modal = document.getElementById("countryModal");
+  var modal = getModalEl();
   if (!modal) return Promise.resolve([]);
 
-  var loadUrl =
-    modal.getAttribute("data-load-url") ||
-    window.WHITELIST_GET_COUNTRIES_URL ||
-    "/home/whitelist/get-countries/";
+  var baseUrl = getLoadUrlFromModal();
+  var tenantId = getTenantIdFromModal();
 
-  return fetch(loadUrl, {
+  // anexar tenant_id como querystring (aunque el backend lo ignore si no coincide)
+  var url = baseUrl;
+  try {
+    var u = new URL(baseUrl, window.location.origin);
+    if (tenantId) u.searchParams.set("tenant_id", tenantId);
+    url = u.toString();
+  } catch (e) {
+    // si baseUrl ya es relativo raro, fallback simple
+    if (tenantId) {
+      url = baseUrl + (baseUrl.indexOf("?") >= 0 ? "&" : "?") + "tenant_id=" + encodeURIComponent(tenantId);
+    }
+  }
+
+  return fetchJsonOrThrow(url, {
     method: "GET",
     headers: { "X-Requested-With": "XMLHttpRequest" }
   })
-    .then(function (resp) { return resp.json(); })
     .then(function (data) {
       if (!data || !data.ok) {
-        console.error("Error cargando países:", data);
+        console.error("[COUNTRY MODAL] Backend respondió ok=false en GET:", data);
         return [];
       }
-      // ✅ usamos códigos
-      return data.selected_codes || [];
+      return (data.selected_codes || []).map(function (c) { return String(c).trim().toUpperCase(); });
     })
     .catch(function (err) {
-      console.error("Error AJAX cargando países:", err);
+      // Aquí verás el error real (incluye bodyText cuando es 500)
+      console.error("[COUNTRY MODAL] GET falló:", err);
+      if (err.bodyJson) console.error("[COUNTRY MODAL] GET bodyJson:", err.bodyJson);
+      if (err.bodyText) console.error("[COUNTRY MODAL] GET bodyText (primeros 1200):", String(err.bodyText).slice(0, 1200));
       return [];
     });
 }
@@ -73,23 +158,21 @@ function loadCountriesAjax() {
 // Guardado vía AJAX (sin recargar)
 // ===============================
 function saveCountriesAjax(codes) {
-  var modal = document.getElementById("countryModal");
+  var modal = getModalEl();
   if (!modal) {
-    console.error("No se encontró #countryModal");
+    console.error("[COUNTRY MODAL] No se encontró #countryModal");
     return Promise.resolve(false);
   }
 
-  var saveUrl =
-    modal.getAttribute("data-save-url") ||
-    window.WHITELIST_SAVE_COUNTRIES_URL ||
-    "/home/whitelist/save-countries/";
-
+  var saveUrl = getSaveUrlFromModal();
+  var tenantId = getTenantIdFromModal();
   var csrfToken = getCookie("csrftoken") || "";
 
   var params = new URLSearchParams();
   params.append("countries", (codes || []).join(","));
+  if (tenantId) params.append("tenant_id", tenantId);
 
-  return fetch(saveUrl, {
+  return fetchJsonOrThrow(saveUrl, {
     method: "POST",
     headers: {
       "X-Requested-With": "XMLHttpRequest",
@@ -98,15 +181,13 @@ function saveCountriesAjax(codes) {
     },
     body: params.toString()
   })
-    .then(function (resp) { return resp.json(); })
     .then(function (data) {
       if (!data || !data.ok) {
-        console.error("Error guardando países:", data);
+        console.error("[COUNTRY MODAL] Backend respondió ok=false en POST:", data);
         return false;
       }
 
-      // ✅ aplicar lo guardado (códigos)
-      applySelectedCountries(data.selected_codes || []);
+      applySelectedCountries((data.selected_codes || []).map(function (c) { return String(c).trim().toUpperCase(); }));
 
       var toast = document.getElementById("countrySaveToast");
       if (toast) {
@@ -123,7 +204,9 @@ function saveCountriesAjax(codes) {
       return true;
     })
     .catch(function (err) {
-      console.error("Error AJAX guardando países:", err);
+      console.error("[COUNTRY MODAL] POST falló:", err);
+      if (err.bodyJson) console.error("[COUNTRY MODAL] POST bodyJson:", err.bodyJson);
+      if (err.bodyText) console.error("[COUNTRY MODAL] POST bodyText (primeros 1200):", String(err.bodyText).slice(0, 1200));
       return false;
     });
 }
@@ -132,15 +215,20 @@ function saveCountriesAjax(codes) {
 // Mostrar / ocultar modal
 // ===============================
 function toggleCountryModal(show) {
-  var modal = document.getElementById("countryModal");
+  var modal = getModalEl();
   if (!modal) return;
 
   if (show) {
     modal.classList.remove("hidden");
 
-    // ✅ cargar desde BD y marcar
+    // 1) Fallback inmediato: deja lo que venía renderizado
+    applySelectedCountries(getSelectedCodesFromRenderedHTML());
+
+    // 2) Luego intenta cargar desde BD
     loadCountriesAjax().then(function (selectedCodes) {
-      applySelectedCountries(selectedCodes);
+      if (selectedCodes && selectedCodes.length) {
+        applySelectedCountries(selectedCodes);
+      }
 
       var searchInput = document.getElementById("countrySearch");
       var term = "";

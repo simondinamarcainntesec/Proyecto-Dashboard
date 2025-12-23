@@ -18,11 +18,11 @@
         <div class="password-container">
             <h1>🔒 Cambiar Contraseña</h1>
 
-            <!-- 🔹 Formulario con acción al endpoint Django -->
+            <!-- Formulario con acción al endpoint Django -->
             <form method="POST" action="{% url 'cambiar_contrasena' %}">
                 {% csrf_token %}
 
-                <!-- 🔸 Mensajes del sistema -->
+                <!-- Mensajes del sistema -->
                 {% if messages %}
                 {% for message in messages %}
                 {% if message.tags == 'success' %}
@@ -59,7 +59,7 @@
         <button id="theme-switcher" aria-label="Cambiar tema">🌓</button>
     </div>
 
-    <!-- ✅ Archivos JavaScript externos -->
+    <!-- Archivos JavaScript externos -->
     <script src="{% static 'js/theme-switcher.js' %}?v={% now 'U' %}"></script>
     <script src="{% static 'js/password-validation.js' %}?v={% now 'U' %}"></script>
 </body>

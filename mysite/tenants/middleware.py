@@ -4,6 +4,8 @@ from django.utils.deprecation import MiddlewareMixin
 from django.contrib.auth import get_user_model
 from tenants.models import Tenant
 from tenants.context import current_tenant, current_tenant_source
+from django.shortcuts import redirect
+from django.urls import reverse
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -64,9 +66,24 @@ class TenantMiddleware:
         if tenant_id:
             try:
                 tenant = Client.objects.get(id=tenant_id)
-                connection.set_tenant(tenant)  # ⬅️ esto cambia el schema activo
+                connection.set_tenant(tenant)  # esto cambia el schema activo
                 request.tenant = tenant
             except Client.DoesNotExist:
                 pass
         response = self.get_response(request)
         return response
+
+    class AdminForce2FAMiddleware(MiddlewareMixin):
+        """
+        Obliga 2FA (OTP verificado) para cualquier usuario staff/superuser que entre a /admin.
+        """
+        def process_request(self, request):
+            path = request.path or ""
+
+            if path.startswith("/admin/"):
+                user = getattr(request, "user", None)
+                if user and user.is_authenticated and (user.is_staff or user.is_superuser):
+                    is_verified = getattr(user, "is_verified", None)
+                    if callable(is_verified) and not user.is_verified():
+                        return redirect(reverse("two_factor:setup"))
+            return None

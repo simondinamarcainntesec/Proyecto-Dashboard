@@ -8,7 +8,7 @@ import pytz
 
 logger = logging.getLogger(__name__)
 # ==============================================
-# 🔑 Obtener token OAuth2 (client_credentials)
+# Obtener token OAuth2 (client_credentials)
 # ==============================================
 def obtener_token_ms():
     """
@@ -35,7 +35,7 @@ def obtener_token_ms():
 
 
 # ==============================================
-# 📧 Envío genérico de correos por Microsoft Graph
+# Envío genérico de correos por Microsoft Graph
 # ==============================================
 def enviar_correo_ms(destinatario, asunto, cuerpo_html):
     """
@@ -66,7 +66,7 @@ def enviar_correo_ms(destinatario, asunto, cuerpo_html):
 
     logger.info(f"📬 Correo enviado correctamente a {destinatario}")
 # ==============================================
-# 🔒 Correo específico: cambio de contraseña
+# Correo específico: cambio de contraseña
 # ==============================================
 def enviar_correo_cambio_contrasena(email_destino, nombre_usuario):
     """Envía un correo de confirmación de cambio de contraseña con el mismo diseño corporativo."""
@@ -149,7 +149,7 @@ def enviar_correo_recuperar_contrasena(email_destino, nombre_usuario, reset_link
     </html>
     """
 
-    # ✅ Envía el correo usando tu método Graph API
+    # Envía el correo usando tu método Graph API
     from utils.ms_email import enviar_correo_ms
     enviar_correo_ms(email_destino, asunto, cuerpo_html)
 

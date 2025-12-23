@@ -30,7 +30,7 @@ function buildConf(rawLabels, data, title, activeKey, onCanvasClick) {
       }]
     },
     options: {
-      indexAxis: "y",                       // 👈 barras horizontales
+      indexAxis: "y",                       // barras horizontales
       responsive: true,
       maintainAspectRatio: false,
       animation: { duration: 600, easing: "easeOutQuart" },

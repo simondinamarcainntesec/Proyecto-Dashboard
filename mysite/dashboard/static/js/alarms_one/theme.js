@@ -42,7 +42,7 @@ export function setupChartJSDefaults(Chart) {
   Chart.defaults.plugins.legend.labels.pointStyle = "circle";
   Chart.defaults.plugins.legend.labels.font = { size: 15, weight: "700" };
 
-  // ⚡ Fuerza color BLANCO para la leyenda
+  // Fuerza color BLANCO para la leyenda
   Chart.defaults.plugins.legend.labels.color = "#FFFFFF";
 
   // === Tooltip ===

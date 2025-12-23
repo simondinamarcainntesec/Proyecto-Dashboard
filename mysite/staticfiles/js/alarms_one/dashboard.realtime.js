@@ -12,7 +12,7 @@ import {
   subtypeDataForCurrentFilter,
   logDescriptionDataForCurrentFilter,
   getPeakHour,
-  calcKpis, // ✅ Usamos el mismo calcKpis que en el histórico
+  calcKpis, // Usamos el mismo calcKpis que en el histórico
 } from "./selectors.js";
 
 import { renderDonut } from "./charts/donut.js";
@@ -46,7 +46,7 @@ function formatHourRange(h) {
 function renderKPIs() {
   const state = getState() || {};
 
-  // ✅ MISMA LÓGICA QUE EL HISTÓRICO
+  // MISMA LÓGICA QUE EL HISTÓRICO
   // calcKpis ya implementa la prioridad:
   // - usa msg_severity cuando corresponde
   // - cae a severity cuando msg_severity está vacío

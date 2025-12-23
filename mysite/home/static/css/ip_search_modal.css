@@ -134,15 +134,15 @@ body.modal-open { overflow: hidden; }
 
 .modal-card {
   position: relative; z-index: 1001;
-  background: var(--card, #0f1d35);           /* 💙 mismo fondo que la original */
-  border: 1px solid var(--border, #1e293b);  /* 💙 mismo borde */
+  background: var(--card, #0f1d35);           /* mismo fondo que la original */
+  border: 1px solid var(--border, #1e293b);  /* mismo borde */
   border-radius: 12px;
   max-width: 1000px;
   width: calc(100% - 48px);
   margin: 5vh auto;
   padding: 16px;
   color: var(--text, #e5e7eb);
-  box-shadow: 0 10px 28px rgba(2,6,23,.35);  /* 💙 misma sombra */
+  box-shadow: 0 10px 28px rgba(2,6,23,.35);  /* misma sombra */
 }
 
 .modal-header {
@@ -171,8 +171,8 @@ body.modal-open { overflow: hidden; }
 
 /* Bloques internos de la modal (ENCABEZADO, RIESGO, etc.) */
 .block {
-  background:#0f1b31;                  /* 💙 igual al original */
-  border:1px solid #1e293b;            /* 💙 igual al original */
+  background:#0f1b31;                  /* igual al original */
+  border:1px solid #1e293b;            /* igual al original */
   border-radius:12px;
   padding:12px 14px;
 }

@@ -1,10 +1,15 @@
 /* ===== Toolbar (igual a referencia) ===== */
 .toolbar { padding: 8px 0 14px; }
 
+.toolbar,
+.toolbar *{
+  font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+}
+
 .toolbar-row{
   display:flex;
   align-items:center;
-  justify-content:space-between;
+  justify-content:flex-start;
   gap:12px;
   border:1px solid var(--border, #1e293b);
   border-radius:14px;
@@ -17,21 +22,33 @@
   gap:8px;
   flex-wrap:wrap;
   align-items:center;
+  justify-content:flex-start; 
 }
 
-.toolbar-row .group:last-child{
+/* Si algún día vuelves a tener un grupo a la derecha, úsalo así:
+   <div class="group align-right">...</div>
+*/
+.toolbar-row .group.align-right{
   margin-left:auto;
   justify-content:flex-end;
 }
 
-/* Chips (misma vibra referencia, aunque uses btn ghost) */
+/* Form layout */
+#date-filter{
+  width: 100%;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:12px;
+}
+
+/* Chips */
 .toolbar .chip-btn{
   cursor:pointer;
   transition: background .15s ease, transform .08s ease, box-shadow .15s ease, border-color .15s ease, color .15s ease;
   position:relative;
 }
 
-/* si tus chips son .btn.ghost */
 .toolbar .btn.ghost.chip-btn{
   background: #0d1a36;
   border: 1px solid var(--border,#1e293b);
@@ -39,6 +56,8 @@
   padding: .45rem .75rem;
   border-radius: 12px;
   font-weight: 800;
+  font-size: 13px;
+  line-height: 1.2;
 }
 
 .toolbar .btn.ghost.chip-btn:hover{
@@ -65,65 +84,6 @@
   color:#e8eeff;
 }
 
-/* Form layout */
-#date-filter{
-  width: 100%;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-}
-
-/* Rangos de fecha (igual referencia) */
-.date-range{
-  display:flex;
-  gap:6px;
-  align-items:center;
-  background:#0d1a36;
-  border:1px solid var(--border);
-  padding:6px 8px;
-  border-radius:10px;
-  position:relative;
-}
-
-.date-range span{
-  color:#cbd5e1;
-  font-weight:800;
-  font-size:12px;
-  opacity:.95;
-}
-
-.date-range input{
-  background:transparent;
-  border:0;
-  color:#e5e7eb;
-  outline:none;
-  font-weight:700;
-}
-
-/* Icono calendario blanco */
-.date-range input[type="date"]{
-  color-scheme: dark;
-  padding-right: 30px;
-}
-.date-range input[type="date"]::-webkit-calendar-picker-indicator{
-  opacity:0;
-  width:0;height:0;padding:0;margin:0;
-  pointer-events:none;
-}
-.date-range::after{
-  content:"";
-  position:absolute;
-  right:10px;
-  top:50%;
-  width:18px;
-  height:18px;
-  transform:translateY(-50%);
-  background:no-repeat center / contain;
-  pointer-events:none;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M7 2a1 1 0 0 0-1 1v1H5a3 3 0 0 0-3 3v11a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3h-1V3a1 1 0 1 0-2 0v1H8V3a1 1 0 0 0-1-1ZM5 7h14a1 1 0 0 1 1 1v2H4V8a1 1 0 0 1 1-1Zm-1 5h16v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-6Z'/%3E%3C/svg%3E");
-}
-
 /* Botones */
 .btn.primary{
   background:var(--brand,#3b82f6);
@@ -132,6 +92,7 @@
   padding:8px 12px;
   border-radius:12px;
   font-weight:800;
+  font-size: 13px;
 }
 
 .btn.ghost{
@@ -141,6 +102,7 @@
   padding:8px 12px;
   border-radius:12px;
   font-weight:800;
+  font-size: 13px;
 }
 
 .btn.ghost-sm{
@@ -216,6 +178,7 @@
 .sev-info{ background:#60a5fa33; border:1px solid #60a5faaa; color:#fff; }
 .sev-na{ background:#6b728033; border:1px solid #6b7280aa; color:#fff; }
 
+/* ===== Modales ===== */
 body.modal-open { overflow: hidden; }
 
 .modal { position: fixed; inset: 0; z-index: 1000; display: none; }
@@ -302,7 +265,7 @@ body.modal-open { overflow: hidden; }
   font-weight: 800;
 }
 
-/* ✅ Detalle SIEMPRE apilado (1 arriba de otra) */
+/* Detalle SIEMPRE apilado */
 #anomalyDetailModal .modal-body{
   display: flex;
   flex-direction: column;
@@ -312,187 +275,204 @@ body.modal-open { overflow: hidden; }
 #anomalyDetailModal .modal-body b { color: #fff; }
 #anomalyDetailModal .modal-body .muted { color: #cbd5e1; }
 
-/* ===== Toolbar (igual a referencia + fuente/size consistente) ===== */
-.toolbar { padding: 8px 0 14px; }
+/* =========================================================
+ * Overlay de carga (mismo feeling realtime)
+ * ========================================================= */
+#loading-overlay{
+  position: fixed; inset: 0;
+  display: grid; place-items: center;
+  background: rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(2px);
+  z-index: 9999;
 
-.toolbar,
-.toolbar *{
-  font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .15s ease-out, visibility .15s ease-out;
 }
 
-.toolbar-row{
+#loading-overlay.is-active{
+  opacity: 1;
+  visibility: visible;
+}
+
+#loading-overlay .loading-card{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: var(--surface, #0f172a);
+  box-shadow: var(--shadow, 0 10px 28px rgba(2, 6, 23, .25));
+  color: var(--text, #e5e7eb);
+  font-weight: 600;
+}
+
+#loading-overlay .spinner{
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid rgba(229, 231, 235, 0.25);
+  border-top-color: rgba(229, 231, 235, 0.95);
+  animation: spin .8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* === Loader dentro de la tabla del modal (tipo realtime) === */
+#anomalyListModal .loading-row td{
+  padding: 20px 12px;
+  text-align: center;
+  background: transparent;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+#anomalyListModal .ao-loading{
   display:flex;
   align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  border:1px solid var(--border, #1e293b);
-  border-radius:14px;
-  padding:10px 12px;
-  background:#0c1428;
+  justify-content:center;
+  gap:.6rem;
+  min-height: 120px; /* asegura altura visible */
 }
 
-.toolbar-row .group{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  align-items:center;
+#anomalyListModal .ao-spinner{
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, .25);
+  border-top-color: #fff;
+  animation: ao-spin .8s linear infinite;
 }
 
-.toolbar-row .group:last-child{
-  margin-left:auto;
-  justify-content:flex-end;
+@keyframes ao-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-color-scheme: light) {
+  #anomalyListModal .ao-spinner {
+    border: 3px solid rgba(30, 41, 59, .25);
+    border-top-color: #0f172a;
+  }
 }
 
-#date-filter{
-  width: 100%;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
+/* ===== Loader tipo Realtime dentro del modal de anomalías ===== */
+#anomalyListModal .loading-row td{
+  padding: 20px 12px;
+  text-align: center;
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-/* Chips */
-.toolbar .chip-btn{
-  cursor:pointer;
-  transition: background .15s ease, transform .08s ease, box-shadow .15s ease, border-color .15s ease, color .15s ease;
-  position:relative;
-}
-
-/* si tus chips son .btn.ghost */
-.toolbar .btn.ghost.chip-btn{
-  background: #0d1a36;
-  border: 1px solid var(--border,#1e293b);
+#anomalyListModal .ao-loading{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .6rem;
+  min-height: 120px;
   color: #cbd5e1;
-  padding: .45rem .75rem;
-  border-radius: 12px;
+  font-weight: 700;
+}
+
+#anomalyListModal .ao-spinner{
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, .25);
+  border-top-color: rgba(255, 255, 255, .95);
+  animation: ao-spin .8s linear infinite;
+}
+
+@keyframes ao-spin { to { transform: rotate(360deg); } }
+
+/* Fecha/Hora más legibles */
+#anomalyListModal .td-date,
+#anomalyListModal .td-time{
+  color: #eaf1ff;
   font-weight: 800;
-  font-size: 13px;     /* 🔥 */
-  line-height: 1.2;    /* 🔥 */
+  letter-spacing: .2px;
+}
+#anomalyListModal .td-date{ min-width: 120px; }
+#anomalyListModal .td-time{ min-width: 80px; }
+
+/* =========================================================
+ * Modal Export Info (estilo "empty card" del pantallazo)
+ * ========================================================= */
+#exportInfoModal.modal:not(.hidden){
+  display: flex;               /* en vez de block */
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
 }
 
-.toolbar .btn.ghost.chip-btn:hover{
-  background:#132449;
-  border-color:#2a3b57;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(17, 24, 39, .35);
+/* Mantén el backdrop igual */
+#exportInfoModal .modal-backdrop{
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
 }
 
-.toolbar .btn.ghost.chip-btn:active{
-  background:#19305f;
-  transform: translateY(0);
-  box-shadow:none;
+/* Card centrada y compacta */
+#exportInfoModal .modal-card{
+  max-width: 640px;
+  width: calc(100% - 32px);
+  margin: 0;                   /* clave para centrar con flex */
+  padding: 26px 24px;
+  border-radius: 18px;
+  background: #0c1428;          /* igual al feeling de tu toolbar-row */
+  border: 1px solid var(--border, #1e293b);
+  box-shadow: 0 18px 48px rgba(2,6,23,.55);
+  text-align: center;
 }
 
-.toolbar .btn.ghost.chip-btn:focus-visible{
-  outline:none;
-  box-shadow: 0 0 0 4px rgba(59,130,246,.35);
+/* Header como título grande centrado */
+#exportInfoModal .modal-header{
+  justify-content: center;
+  border-bottom: 0;
+  margin-bottom: 8px;
+  padding-bottom: 0;
 }
 
-.toolbar .btn.ghost.chip-btn.is-active{
-  background: linear-gradient(180deg, #16305e 0%, #0f2449 100%);
-  border-color:#3b82f6;
-  color:#e8eeff;
+/* Oculta la X para que sea como tu captura (solo OK) */
+#exportInfoModal .modal-close{
+  display: none;
 }
 
-/* Rangos de fecha */
-.date-range{
-  display:flex;
-  gap:6px;
-  align-items:center;
-  background:#0d1a36;
-  border:1px solid var(--border, #1e293b);
-  padding:6px 8px;
-  border-radius:10px;
-  position:relative;
+/* Título grande */
+#exportInfoTitle{
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  color: #eaf1ff;
 }
 
-.date-range span{
-  color:#cbd5e1;
-  font-weight:800;
-  font-size:12px;
-  opacity:.95;
+/* Body sin scroll, centrado */
+#exportInfoModal .modal-body{
+  max-height: none;
+  overflow: visible;
+  gap: 12px;
+  align-items: center;
 }
 
-.date-range input{
-  background:transparent;
-  border:0;
-  color:#e5e7eb;
-  outline:none;
-  font-weight:700;
-  font-size: 13px;     /* 🔥 */
-  line-height: 1.2;    /* 🔥 */
-  font-family: inherit;/* 🔥 evita fuente distinta en inputs */
+/* Texto */
+#exportInfoModal .export-info-text{
+  margin: 6px 0 14px;
+  color: #cbd5e1;
+  font-size: 15px;
+  line-height: 1.55;
+  max-width: 520px;
 }
 
-/* Icono calendario blanco */
-.date-range input[type="date"]{
-  color-scheme: dark;
-  padding-right: 30px;
-}
-.date-range input[type="date"]::-webkit-calendar-picker-indicator{
-  opacity:0;
-  width:0;height:0;padding:0;margin:0;
-  pointer-events:none;
-}
-.date-range::after{
-  content:"";
-  position:absolute;
-  right:10px;
-  top:50%;
-  width:18px;
-  height:18px;
-  transform:translateY(-50%);
-  background:no-repeat center / contain;
-  pointer-events:none;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M7 2a1 1 0 0 0-1 1v1H5a3 3 0 0 0-3 3v11a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3h-1V3a1 1 0 1 0-2 0v1H8V3a1 1 0 0 0-1-1ZM5 7h14a1 1 0 0 1 1 1v2H4V8a1 1 0 0 1 1-1Zm-1 5h16v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-6Z'/%3E%3C/svg%3E");
+/* Acciones centradas */
+#exportInfoModal .export-info-actions{
+  display: flex;
+  justify-content: center;
 }
 
-/* Botones */
-.btn.primary{
-  background:var(--brand,#3b82f6);
-  color:#fff;
-  border:1px solid var(--brand,#3b82f6);
-  padding:8px 12px;
-  border-radius:12px;
-  font-weight:800;
-  font-size: 13px;
+/* Botón OK similar al de la captura */
+#exportInfoModal .btn.primary{
+  padding: 10px 18px;
+  border-radius: 14px;
+  min-width: 78px;
 }
 
-.btn.ghost{
-  background:transparent;
-  border:1px solid var(--border,#1e293b);
-  color:var(--text,#e5e7eb);
-  padding:8px 12px;
-  border-radius:12px;
-  font-weight:800;
-  font-size: 13px;
+/* Evita que "Inn-Monitor" se parta en 2 líneas */
+#exportInfoModal .brand-nowrap{
+  white-space: nowrap;
+  display: inline-block;
 }
-
-.btn.ghost-sm{
-  background:transparent;
-  border:1px solid var(--border,#1e293b);
-  color:var(--text,#e5e7eb);
-  padding:6px 10px;
-  border-radius:12px;
-  font-size:12px;
-  font-weight:800;
-}
-
-/* Pills severidad */
-.pill{
-  display:inline-block;
-  padding:2px 10px;
-  border-radius:999px;
-  font-size:12px;
-  font-weight:800;
-  line-height:1.6;
-  letter-spacing:.2px;
-  color:#fff;
-}
-
-.sev-critical{ background:#dc262633; border:1px solid #dc2626aa; color:#fff; }
-.sev-high{ background:#f9731633; border:1px solid #f97316aa; color:#fff; }
-.sev-medium{ background:#f59e0b33; border:1px solid #f59e0baa; color:#fff; }
-.sev-low{ background:#38bdf833; border:1px solid #38bdf8aa; color:#fff; }
-.sev-info{ background:#60a5fa33; border:1px solid #60a5faaa; color:#fff; }
-.sev-na{ background:#6b728033; border:1px solid #6b7280aa; color:#fff; }

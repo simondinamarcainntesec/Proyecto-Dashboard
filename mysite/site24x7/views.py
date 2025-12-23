@@ -15,8 +15,8 @@ from tenants.decorators import tenant_required
 from tenants.models import Tenant, TenantUser, TenantDashboardEmbed
 from .services import fetch_anomaly_summary, fetch_anomaly_by_monitor
 
-# ✅ Preferencias de países (POR TENANT)
-from home.models import WhitelistCountryPreference
+# Preferencias de países (POR TENANT)
+from home.models import WhitelistCountryPreference, TenantCredentials  # añadido
 from home.countries import ALL_COUNTRIES
 
 import logging
@@ -84,7 +84,7 @@ def _tenants_list_for_user(user):
 
 def _selected_paises_for_tenant(tenant):
     """
-    ✅ Lee la preferencia desde WhitelistCountryPreference.tenant (NO existe field user).
+    Lee la preferencia desde WhitelistCountryPreference.tenant (NO existe field user).
     """
     try:
         if not tenant:
@@ -94,6 +94,20 @@ def _selected_paises_for_tenant(tenant):
     except Exception as e:
         logger.exception("[SITE24X7] Error leyendo preferencias de países (tenant): %s", e)
         return []
+
+
+def _active_cred_for_tenant(tenant):
+    """
+    Credenciales desde agent.tenant_credentials (TenantCredentials).
+    Retorna None si no hay credenciales activas.
+    """
+    try:
+        if not tenant:
+            return None
+        return TenantCredentials.get_active_for_tenant(int(tenant.id))
+    except Exception as e:
+        logger.exception("[SITE24X7] Error leyendo TenantCredentials tenant_id=%s: %s", getattr(tenant, "id", None), e)
+        return None
 
 
 # =========================
@@ -365,11 +379,13 @@ def monitor_status(request):
     tenant = _resolve_tenant(request)
     tenants_list = _tenants_list_for_user(request.user)
     selected_paises = _selected_paises_for_tenant(tenant)
+    cred = _active_cred_for_tenant(tenant)  # añadido
 
     if tenant is None:
         return render(request, "site24x7/monitor_status.html", {
             "tenant": None,
             "all_tenants": tenants_list,
+            "cred": cred,  # añadido
             "error": False,
             "customer_name": "",
             "monitors": [],
@@ -389,6 +405,7 @@ def monitor_status(request):
         return render(request, "site24x7/monitor_status.html", {
             "tenant": tenant,
             "all_tenants": tenants_list,
+            "cred": cred,  # añadido
             "error": False,
             "customer_name": "",
             "monitors": [],
@@ -411,6 +428,7 @@ def monitor_status(request):
         return render(request, "site24x7/monitor_status.html", {
             "tenant": tenant,
             "all_tenants": tenants_list,
+            "cred": cred,  # añadido
             "error": True,
             "customer_name": "",
             "monitors": [],
@@ -437,6 +455,7 @@ def monitor_status(request):
     return render(request, "site24x7/monitor_status.html", {
         "tenant": tenant,
         "all_tenants": tenants_list,
+        "cred": cred,  # añadido
         "error": False,
         "customer_name": customer.get("customer_name", ""),
         "zaaid": customer.get("zaaid", zaaid),
@@ -514,6 +533,7 @@ def anomaly_status(request):
     tenant = _resolve_tenant(request)
     tenants_list = _tenants_list_for_user(request.user)
     selected_paises = _selected_paises_for_tenant(tenant)
+    cred = _active_cred_for_tenant(tenant)  # añadido
 
     period_ui = _get_period_from_request(request, default=3)
     start_ms, end_ms = _get_custom_range_ms_from_request(request, period=period_ui)
@@ -537,6 +557,7 @@ def anomaly_status(request):
         "from_date": from_s,
         "to_date": to_s,
         "period_label": period_label,
+        "cred": cred,  # añadido
     }
 
     if tenant is None:
@@ -862,11 +883,13 @@ def dashboard(request):
 
     tenants_list = _tenants_list_for_user(request.user)
     selected_paises = _selected_paises_for_tenant(tenant)
+    cred = _active_cred_for_tenant(tenant)  # añadido
 
     if tenant is None:
         return render(request, "site24x7/dashboard.html", {
             "tenant": None,
             "all_tenants": tenants_list,
+            "cred": cred,  # añadido
             "iframe_url": None,
             "whitelist_countries": ALL_COUNTRIES,
             "selected_paises": selected_paises,
@@ -885,6 +908,7 @@ def dashboard(request):
     return render(request, "site24x7/dashboard.html", {
         "tenant": tenant,
         "all_tenants": tenants_list,
+        "cred": cred,  # añadido
         "iframe_url": iframe_url,
         "whitelist_countries": ALL_COUNTRIES,
         "selected_paises": selected_paises,

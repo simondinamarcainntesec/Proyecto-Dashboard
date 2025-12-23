@@ -8,290 +8,184 @@ function getCookie(name) {
   return "";
 }
 
-function safeJsonParse(text) {
-  try { return JSON.parse(text); } catch { return null; }
-}
-
-function extractUpdateText(update) {
+function extractTranscriptText(update) {
   if (!update) return "";
 
-  if (typeof update === "string") return update.trim();
-  if (typeof update.transcript === "string") return update.transcript.trim();
-  if (typeof update.text === "string") return update.text.trim();
-  if (typeof update.content === "string") return update.content.trim();
+  if (typeof update === "string") return update;
+  if (typeof update.transcript === "string") return update.transcript;
 
   const t = update.transcript;
+
   if (Array.isArray(t)) {
+    if (t.every((x) => typeof x === "string")) return t.join(" ");
+
     const parts = t
       .map((x) => {
         if (!x) return "";
         if (typeof x === "string") return x;
-        return (x.text || x.content || x.transcript || x.message || x.utterance || "").toString();
+        return (
+          x.text ||
+          x.content ||
+          x.transcript ||
+          x.message ||
+          x.utterance ||
+          ""
+        );
       })
       .filter(Boolean);
+
     return parts.join(" ").trim();
   }
 
   if (t && typeof t === "object") {
-    return (t.text || t.content || t.transcript || t.message || t.utterance || "").toString().trim();
+    return (
+      t.text ||
+      t.content ||
+      t.transcript ||
+      t.message ||
+      t.utterance ||
+      ""
+    )
+      .toString()
+      .trim();
   }
 
   return "";
 }
 
-function extractUpdateRole(update) {
-  // Intentamos detectar “user” vs “agent/assistant”
-  const raw =
-    update?.role ||
-    update?.speaker ||
-    update?.from ||
-    update?.participant ||
-    update?.type ||
-    "";
-
-  const s = String(raw).toLowerCase();
-  if (s.includes("user") || s.includes("customer") || s.includes("human") || s.includes("client")) return "USER";
+function normalizeRole(raw) {
+  const s = String(raw || "").toLowerCase();
+  if (!s) return "AI";
   if (s.includes("agent") || s.includes("assistant") || s.includes("ai") || s.includes("bot")) return "AI";
-
-  // fallback: la mayoría de updates que viste eran del agente
-  return "AI";
+  if (s.includes("user") || s.includes("customer") || s.includes("human") || s.includes("client")) return "USER";
+  return "MIX";
 }
 
-async function fetchCallSummary(getCallUrlTemplate, callId) {
-  if (!getCallUrlTemplate || !callId) return null;
-  const url = getCallUrlTemplate.replace("{call_id}", encodeURIComponent(callId));
-
-  const resp = await fetch(url, { credentials: "same-origin" });
-  const text = await resp.text();
-  const data = safeJsonParse(text);
-
-  if (!resp.ok || !data?.ok) return null;
-  return data.call || null;
+function extractRole(update) {
+  if (!update || typeof update !== "object") return "AI";
+  return normalizeRole(
+    update.role ||
+      update.speaker ||
+      update.from ||
+      update.participant ||
+      update.type ||
+      update.source
+  );
 }
 
-async function createWebCallOnServer(createUrl) {
-  const csrftoken = getCookie("csrftoken");
-
-  const resp = await fetch(createUrl, {
-    method: "POST",
-    credentials: "same-origin",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRFToken": csrftoken,
-    },
-    body: JSON.stringify({}),
-  });
-
-  const dataText = await resp.text();
-  const data = safeJsonParse(dataText) || {};
-
-  if (!resp.ok || !data?.ok) {
-    if (data?.error === "NO_PHONE") throw new Error("NO_PHONE");
-    throw new Error(data?.detail || data?.error || `Error creando llamada (${resp.status})`);
-  }
-
-  return data; // { ok, access_token, call_id }
-}
-
-/**
- * Popup: transcripción en vivo (SDK update) + final (GET call.transcript)
- * Requisitos HTML IDs:
- * - toggleBtnId, statusId, micBtnId (opcional), liveId, clearBtnId, closeBtnId
- * - finalWrapId, finalTextId, copyFinalBtnId (opcionales)
- */
-export function wireRetellPopup({
+export function wireRetellButtons({
   createUrl,
   getCallUrlTemplate,
 
   toggleBtnId,
   statusId,
 
-  micBtnId,
-  liveId,
+  panelId,
+  panelBodyId,
+  panelCloseBtnId,
+  panelClearBtnId,
 
-  clearBtnId,
-  closeBtnId,
+  // NUEVO: hooks (opcionales)
+  onUpdate,     // ({ role, text, raw }) => void   (SDK "update")
+  onPollData,   // (json) => void                  (backend get-call)
+  onEvent,      // ({type,...}) => void            (call_started/call_ended/error)
 
-  finalWrapId,
-  finalTextId,
-  copyFinalBtnId,
+  pollIntervalMs = 700,
 }) {
-  const toggleBtn = document.getElementById(toggleBtnId);
-  const statusEl = document.getElementById(statusId);
+  const toggleBtn = toggleBtnId ? document.getElementById(toggleBtnId) : null;
+  const statusEl = statusId ? document.getElementById(statusId) : null;
 
-  const micBtn = micBtnId ? document.getElementById(micBtnId) : null;
-  const liveEl = document.getElementById(liveId);
-
-  const clearBtn = clearBtnId ? document.getElementById(clearBtnId) : null;
-  const closeBtn = closeBtnId ? document.getElementById(closeBtnId) : null;
-
-  const finalWrap = finalWrapId ? document.getElementById(finalWrapId) : null;
-  const finalText = finalTextId ? document.getElementById(finalTextId) : null;
-  const copyFinalBtn = copyFinalBtnId ? document.getElementById(copyFinalBtnId) : null;
+  const panel = panelId ? document.getElementById(panelId) : null;
+  const panelBody = panelBodyId ? document.getElementById(panelBodyId) : null;
+  const panelCloseBtn = panelCloseBtnId ? document.getElementById(panelCloseBtnId) : null;
+  const panelClearBtn = panelClearBtnId ? document.getElementById(panelClearBtnId) : null;
 
   const setStatus = (t) => {
     const txt = (t || "").toString();
-    if (statusEl) statusEl.textContent = txt;
+    if (statusEl) {
+      statusEl.textContent = txt;
+      statusEl.title = txt;
+    }
   };
 
-  // ---------- UI live: 2 cajas (Usuario / IA) y SOLO se actualiza texto ----------
-  let liveUserBox = null;
-  let liveAiBox = null;
-  let lastLive = { USER: "", AI: "" };
+  const openPanel = () => {
+    if (!panel) return;
+    panel.classList.remove("hidden");
+    panel.setAttribute("aria-hidden", "false");
+  };
 
-  function ensureLiveBoxes() {
-    if (!liveEl) return;
+  const closePanel = () => {
+    if (!panel) return;
+    panel.classList.add("hidden");
+    panel.setAttribute("aria-hidden", "true");
+  };
 
-    if (!liveUserBox) {
-      liveUserBox = document.createElement("div");
-      liveUserBox.className = "feed-line";
-      liveUserBox.innerHTML = `
-        <div class="meta">
-          <span class="badge user">Usuario</span><span class="time"></span>
-        </div>
-        <div class="body"></div>
-      `;
-      liveEl.appendChild(liveUserBox);
-    }
+  const clearPanel = () => {
+    if (panelBody) panelBody.innerHTML = "";
+  };
 
-    if (!liveAiBox) {
-      liveAiBox = document.createElement("div");
-      liveAiBox.className = "feed-line";
-      liveAiBox.innerHTML = `
-        <div class="meta">
-          <span class="badge ai">IA</span><span class="time"></span>
-        </div>
-        <div class="body"></div>
-      `;
-      liveEl.appendChild(liveAiBox);
-    }
+  if (panelCloseBtn) panelCloseBtn.addEventListener("click", closePanel);
+  if (panelClearBtn) panelClearBtn.addEventListener("click", clearPanel);
+
+  // ---- UI live en panel (si existe) ----
+  let liveEl = null;
+  let lastLiveText = "";
+
+  function ensureLiveEl() {
+    if (!panelBody) return null;
+    if (liveEl && panelBody.contains(liveEl)) return liveEl;
+
+    panelBody.innerHTML = "";
+    liveEl = document.createElement("div");
+    liveEl.className = "retell-live";
+    liveEl.innerHTML = `<span class="who">IA</span><div class="txt"></div>`;
+    panelBody.appendChild(liveEl);
+    return liveEl;
   }
 
-  function nowTime() {
-    const d = new Date();
-    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  }
-
-  function setLive(which, text) {
-    if (!liveEl) return;
-    const t = String(text || "").trim();
+  function setLiveText(text) {
+    if (!panelBody) return;
+    const t = (text || "").trim();
     if (!t) return;
+    if (t === lastLiveText) return;
 
-    // anti-spam incremental: solo reemplaza si cambió
-    if (t === lastLive[which]) return;
-    lastLive[which] = t;
-
-    ensureLiveBoxes();
-    const box = which === "USER" ? liveUserBox : liveAiBox;
+    const box = ensureLiveEl();
     if (!box) return;
 
-    box.querySelector(".time").textContent = nowTime();
-    box.querySelector(".body").textContent = t;
+    const txtEl = box.querySelector(".txt");
+    if (txtEl) txtEl.textContent = t;
+
+    lastLiveText = t;
+    panelBody.scrollTop = panelBody.scrollHeight;
   }
 
-  function clearUI() {
-    lastLive.USER = "";
-    lastLive.AI = "";
-    if (liveEl) liveEl.innerHTML = "";
-    liveUserBox = null;
-    liveAiBox = null;
+  function showFinalTranscript(finalText) {
+    if (!panelBody) return;
+    const t = (finalText || "").trim();
 
-    if (finalWrap) finalWrap.classList.add("hidden");
-    if (finalText) finalText.textContent = "";
+    panelBody.innerHTML = "";
+    liveEl = document.createElement("div");
+    liveEl.className = "retell-live";
+    liveEl.innerHTML = `<span class="who">IA (final)</span><div class="txt"></div>`;
+    panelBody.appendChild(liveEl);
+
+    const txtEl = liveEl.querySelector(".txt");
+    if (txtEl) txtEl.textContent = t || "Sin transcripción final disponible.";
+
+    lastLiveText = t || "";
+    panelBody.scrollTop = 0;
   }
 
-  // ---------- Mic indicador (solo animación / nivel local) ----------
-  // Nota: esto NO mutea la llamada; solo muestra actividad del mic del navegador.
-  let micOn = false;
-  let micStream = null;
-  let micRAF = null;
-  let audioCtx = null;
-  let analyser = null;
-  let dataArr = null;
-
-  async function micStart() {
-    if (!micBtn || micOn) return;
-
-    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const src = audioCtx.createMediaStreamSource(micStream);
-    analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 512;
-    dataArr = new Uint8Array(analyser.frequencyBinCount);
-    src.connect(analyser);
-
-    micOn = true;
-    micBtn.classList.add("is-on");
-
-    const tick = () => {
-      if (!micOn || !analyser) return;
-
-      analyser.getByteFrequencyData(dataArr);
-      let sum = 0;
-      for (let i = 0; i < dataArr.length; i++) sum += dataArr[i];
-      const avg = sum / dataArr.length; // 0..255
-
-      // “halo” suave
-      const glow = Math.min(1, avg / 90);
-      const scale = 1 + Math.min(0.25, avg / 300);
-
-      micBtn.style.setProperty("--mic-glow", String(glow));
-      micBtn.style.setProperty("--mic-halo-scale", String(scale));
-      micBtn.style.setProperty("--mic-scale", String(1 + glow * 0.12));
-
-      // opcional: mandar al opener para icono del home
-      try {
-        if (window.opener && !window.opener.closed) {
-          window.opener.postMessage(
-            { source: "retell", type: "mic_level", level: glow },
-            window.location.origin
-          );
-        }
-      } catch (_) {}
-
-      micRAF = requestAnimationFrame(tick);
-    };
-
-    micRAF = requestAnimationFrame(tick);
-  }
-
-  function micStop() {
-    micOn = false;
-    if (micRAF) cancelAnimationFrame(micRAF);
-    micRAF = null;
-
-    try { analyser?.disconnect(); } catch (_) {}
-    analyser = null;
-    dataArr = null;
-
-    try { audioCtx?.close(); } catch (_) {}
-    audioCtx = null;
-
-    try { micStream?.getTracks()?.forEach((t) => t.stop()); } catch (_) {}
-    micStream = null;
-
-    if (micBtn) {
-      micBtn.classList.remove("is-on");
-      micBtn.style.removeProperty("--mic-glow");
-      micBtn.style.removeProperty("--mic-halo-scale");
-      micBtn.style.removeProperty("--mic-scale");
-    }
-  }
-
-  micBtn?.addEventListener("click", async () => {
-    try {
-      if (!micOn) await micStart();
-      else micStop();
-    } catch (e) {
-      setStatus("No se pudo activar mic (permiso)");
-      setTimeout(() => setStatus(""), 1800);
-    }
-  });
-
-  // ---------- Retell SDK ----------
   const retellWebClient = new RetellWebClient();
+
   let isActive = false;
   let lastCallId = null;
+
+  let pollTimer = null;
+
+  const emitEvent = (payload) => {
+    try { onEvent && onEvent(payload); } catch (_) {}
+  };
 
   const paintToggle = () => {
     if (!toggleBtn) return;
@@ -304,15 +198,80 @@ export function wireRetellPopup({
     }
   };
 
+  async function createWebCallOnServer() {
+    const csrftoken = getCookie("csrftoken");
+
+    const resp = await fetch(createUrl, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": csrftoken,
+      },
+      body: JSON.stringify({}),
+    });
+
+    const data = await resp.json().catch(() => ({}));
+
+    if (!resp.ok || !data?.ok) {
+      if (data?.error === "NO_PHONE") throw new Error("NO_PHONE");
+      throw new Error(
+        data?.detail || data?.error || `Error creando llamada (${resp.status})`
+      );
+    }
+
+    return data; // { ok, access_token, call_id }
+  }
+
+  async function fetchCallJson() {
+    if (!getCallUrlTemplate || !lastCallId) return null;
+    const url = getCallUrlTemplate.replace(
+      "{call_id}",
+      encodeURIComponent(lastCallId)
+    );
+    const resp = await fetch(url, { credentials: "same-origin" });
+    const data = await resp.json().catch(() => ({}));
+    return data || null;
+  }
+
+  function startPolling() {
+    stopPolling();
+    if (!getCallUrlTemplate) return;
+
+    pollTimer = window.setInterval(async () => {
+      if (!isActive || !lastCallId) return;
+      try {
+        const json = await fetchCallJson();
+        if (!json) return;
+        try { onPollData && onPollData(json); } catch (_) {}
+
+        const st = String(json?.call?.call_status || json?.call_status || "").toLowerCase();
+        if (st === "ended") {
+          stopPolling();
+        }
+      } catch (_) {
+        // silencioso
+      }
+    }, Math.max(250, Number(pollIntervalMs) || 700));
+  }
+
+  function stopPolling() {
+    if (pollTimer) {
+      window.clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  }
+
   async function startCall() {
     if (isActive) return;
-    if (!createUrl) throw new Error("createUrl faltante");
 
     setStatus("Retell: creando llamada…");
-    clearUI();
 
-    const { access_token, call_id } = await createWebCallOnServer(createUrl);
+    const { access_token, call_id } = await createWebCallOnServer();
     lastCallId = call_id || null;
+
+    lastLiveText = "";
+    clearPanel();
 
     setStatus("Retell: conectando…");
     await retellWebClient.startCall({ accessToken: access_token });
@@ -322,124 +281,107 @@ export function wireRetellPopup({
     try { retellWebClient.stopCall(); } catch (_) {}
   }
 
-  // SDK events
+  // ---- Eventos SDK ----
   retellWebClient.on("call_started", () => {
     isActive = true;
     paintToggle();
-    setStatus("Llamada activa");
+    setStatus("Retell: llamada iniciada");
+    openPanel();
+    emitEvent({ type: "call_started", call_id: lastCallId });
 
-    // notifica al portal
-    try {
-      if (window.opener && !window.opener.closed) {
-        window.opener.postMessage({ source: "retell", type: "call_started" }, window.location.origin);
-      }
-    } catch (_) {}
+    // polling para que el popup pueda obtener "final" y (si existe) transcript_object
+    startPolling();
   });
 
+  retellWebClient.on("agent_start_talking", () => {
+    setStatus("Retell: IA hablando…");
+  });
+
+  retellWebClient.on("agent_stop_talking", () => {
+    setStatus("Retell: escuchando…");
+  });
+
+  // update incremental => NO depender del panel: dispara hook
   retellWebClient.on("update", (update) => {
-    // En vivo: usar SDK, NO polling
-    const text = extractUpdateText(update);
+    const text = extractTranscriptText(update);
     if (!text) return;
 
-    const role = extractUpdateRole(update); // "AI" | "USER"
-    if (role === "USER") setLive("USER", text);
-    else setLive("AI", text);
+    const role = extractRole(update);
+
+    // panel opcional
+    openPanel();
+    setLiveText(text);
+
+    // hook para popup
+    try { onUpdate && onUpdate({ role, text, raw: update }); } catch (_) {}
   });
 
   retellWebClient.on("call_ended", async () => {
     isActive = false;
     paintToggle();
-    setStatus("Llamada finalizada");
+    setStatus("Retell: llamada finalizada");
+    stopPolling();
+    emitEvent({ type: "call_ended", call_id: lastCallId });
 
-    // final: usar get-call (call.transcript)
+    // Intentamos traer resumen final desde backend
     try {
-      const call = await fetchCallSummary(getCallUrlTemplate, lastCallId);
-      const transcript = String(call?.transcript || "").trim();
+      const json = await fetchCallJson();
+      try { onPollData && onPollData(json); } catch (_) {}
 
-      if (finalWrap && finalText) {
-        finalText.textContent = transcript || "Sin transcripción final disponible.";
-        finalWrap.classList.remove("hidden");
-      }
+      const call = json?.call || null;
+      const transcript = (call?.transcript || "").trim();
+
+      openPanel();
+      showFinalTranscript(transcript);
     } catch (_) {
-      if (finalWrap && finalText) {
-        finalText.textContent = "Sin transcripción final disponible.";
-        finalWrap.classList.remove("hidden");
-      }
+      openPanel();
+      showFinalTranscript(lastLiveText);
     }
-
-    // notifica al portal
-    try {
-      if (window.opener && !window.opener.closed) {
-        window.opener.postMessage({ source: "retell", type: "call_ended" }, window.location.origin);
-      }
-    } catch (_) {}
-
-    // mic UI off (si estaba activo)
-    try { micStop(); } catch (_) {}
   });
 
   retellWebClient.on("error", (error) => {
     isActive = false;
     paintToggle();
-    setStatus("Error en la llamada");
+    setStatus("Retell: error en la llamada");
+    stopPolling();
+    emitEvent({ type: "call_error", call_id: lastCallId, error });
 
-    try {
-      if (window.opener && !window.opener.closed) {
-        window.opener.postMessage(
-          { source: "retell", type: "call_error", message: error?.message || "" },
-          window.location.origin
-        );
+    openPanel();
+    showFinalTranscript(`Error: ${error?.message || "revisa consola"}`);
+    try { retellWebClient.stopCall(); } catch (_) {}
+  });
+
+  if (toggleBtn) {
+    toggleBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+
+      if (isActive) {
+        setStatus("Retell: colgando…");
+        stopCall();
+        return;
       }
-    } catch (_) {}
 
-    try { micStop(); } catch (_) {}
-  });
+      try {
+        await startCall();
+      } catch (err) {
+        openPanel();
 
-  // ---------- Botones ----------
-  toggleBtn?.addEventListener("click", async (e) => {
-    e.preventDefault();
+        if (String(err?.message || err) === "NO_PHONE") {
+          setStatus("Retell: no tienes número registrado");
+          showFinalTranscript(
+            "No tienes un número de teléfono registrado. Actualízalo en tu perfil o solicita al administrador que lo ingrese."
+          );
+        } else {
+          setStatus("Retell: no se pudo iniciar");
+          showFinalTranscript(`No se pudo iniciar la llamada. ${err?.message || err}`);
+        }
 
-    if (isActive) {
-      setStatus("Colgando…");
-      stopCall();
-      return;
-    }
-
-    try {
-      await startCall();
-    } catch (err) {
-      if (String(err?.message || err) === "NO_PHONE") {
-        setStatus("No tienes teléfono registrado");
-      } else {
-        setStatus(`No se pudo iniciar: ${err?.message || err}`);
+        isActive = false;
+        paintToggle();
       }
-      isActive = false;
-      paintToggle();
-    }
-  });
+    });
+  }
 
-  clearBtn?.addEventListener("click", () => clearUI());
-
-  closeBtn?.addEventListener("click", () => window.close());
-
-  copyFinalBtn?.addEventListener("click", async () => {
-    const txt = (finalText?.textContent || "").trim();
-    if (!txt) {
-      setStatus("No hay transcripción final");
-      setTimeout(() => setStatus(""), 1600);
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(txt);
-      setStatus("Transcripción copiada");
-      setTimeout(() => setStatus(""), 1600);
-    } catch (_) {
-      setStatus("No se pudo copiar (permiso)");
-      setTimeout(() => setStatus(""), 2200);
-    }
-  });
-
-  // init
   paintToggle();
   setStatus("");
 }

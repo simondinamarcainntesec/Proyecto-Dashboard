@@ -15,7 +15,7 @@ from tenants.decorators import tenant_required
 from tenants.models import Tenant
 from .models import IaSoar
 
-# 👇 Credenciales de blacklist/portal
+# Credenciales de blacklist/portal
 from home.models import TenantCredentials, WhitelistCountryPreference
 from home.countries import ALL_COUNTRIES
 

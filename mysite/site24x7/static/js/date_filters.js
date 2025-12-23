@@ -5,9 +5,8 @@
   const form = Q('#date-filter');
   const inpFrom = Q('#inp-from');
   const inpTo = Q('#inp-to');
-  const inpPeriod = Q('#inp-period');
 
-  if (!form || !inpPeriod) return;
+  if (!form) return;
 
   const DEBUG = false;
   const log = (...a) => DEBUG && console.log('[DATE_FILTERS]', ...a);
@@ -17,111 +16,35 @@
     return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : '';
   }
 
-  function setActiveChipByPeriod(periodValue) {
-    // Compatible con:
-    // 1) data-period (si lo agregas después)
-    // 2) name="period" value="X" (tu caso actual)
-    QA('.chip-btn').forEach(btn => {
-      const p = btn.dataset?.period || btn.value || btn.getAttribute('value') || '';
-      btn.classList.toggle('is-active', String(p) === String(periodValue));
-    });
-  }
+  // Cuando tocas un chip, limpia fechas ANTES del submit
+  // para que no se “cuelgue” en custom por from/to antiguos.
+  QA('.chip-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Solo chips de periodo (name=period value=...)
+      if (btn.name !== 'period') return;
 
-  function clearActiveChips() {
-    QA('.chip-btn').forEach(btn => btn.classList.remove('is-active'));
-  }
+      if (inpFrom) inpFrom.value = '';
+      if (inpTo) inpTo.value = '';
 
-  function navigateClean(params) {
-    const url = new URL(window.location.href);
-
-    // limpia SOLO lo de fechas (conserva otros params si existieran)
-    url.searchParams.delete('period');
-    url.searchParams.delete('from');
-    url.searchParams.delete('to');
-
-    if (params.period) url.searchParams.set('period', String(params.period));
-    if (params.from) url.searchParams.set('from', params.from);
-    if (params.to) url.searchParams.set('to', params.to);
-
-    log('NAV ->', url.toString());
-    window.location.href = url.toString();
-  }
-
-  function forceCustomIfBothDates() {
-    const from = normalizeDateStr(inpFrom?.value);
-    const to = normalizeDateStr(inpTo?.value);
-
-    if (from && to) {
-      // swap si vienen al revés
-      if (from > to) {
-        inpFrom.value = to;
-        inpTo.value = from;
-      }
-      inpPeriod.value = '50';
-      clearActiveChips();
-      return true;
-    }
-    return false;
-  }
-
-  // Init: carga desde URL y aplica estado visual
-  (function initFromUrl() {
-    const params = new URLSearchParams(window.location.search);
-
-    const urlFrom = normalizeDateStr(params.get('from'));
-    const urlTo = normalizeDateStr(params.get('to'));
-    let p = (params.get('period') || '3').trim() || '3';
-
-    if (inpFrom) inpFrom.value = urlFrom || '';
-    if (inpTo) inpTo.value = urlTo || '';
-
-    // si vienen from/to en URL => custom sí o sí
-    if (urlFrom && urlTo) {
-      p = '50';
-      inpPeriod.value = '50';
-      clearActiveChips();
-    } else {
-      inpPeriod.value = p;
-      setActiveChipByPeriod(p);
-    }
-  })();
-
-  // Chips: (tu HTML actual no tiene data-period, así que tomamos btn.value)
-  document.addEventListener('click', (e) => {
-    const btn = e.target.closest('.chip-btn');
-    if (!btn) return;
-
-    // solo si es botón de periodo (name="period" o data-period)
-    const p = btn.dataset?.period || btn.value || btn.getAttribute('value');
-    if (!p) return;
-
-    e.preventDefault();
-    e.stopPropagation();
-
-    inpPeriod.value = String(p);
-
-    if (inpFrom) inpFrom.value = '';
-    if (inpTo) inpTo.value = '';
-
-    setActiveChipByPeriod(p);
-    navigateClean({ period: p });
-  }, true);
-
-  // cambios manuales de fecha => period=50
-  inpFrom?.addEventListener('change', forceCustomIfBothDates);
-  inpTo?.addEventListener('change', forceCustomIfBothDates);
-
-  // Submit manual
-  form.addEventListener('submit', (e) => {
-    const didCustom = forceCustomIfBothDates();
-    if (didCustom) return; // deja que el form haga GET normal con period=50
-
-    // Si no hay rango completo, evita mandar from=&to=
-    e.preventDefault();
-    const p = (inpPeriod.value || '3').trim() || '3';
-    navigateClean({ period: p });
+      // deja que el submit normal ocurra
+      log('chip submit period=', btn.value);
+    }, true);
   });
 
-  // Refresh
-  Q('#btn-refresh')?.addEventListener('click', () => window.location.reload());
+  // Si el usuario pone ambas fechas, fuerza period=50 (en URL igual vendrán from/to)
+  function hasBothDates() {
+    const from = normalizeDateStr(inpFrom?.value);
+    const to = normalizeDateStr(inpTo?.value);
+    return !!(from && to);
+  }
+
+  // Enviar “Aplicar”:
+  // - si hay ambas fechas: ok, submit normal con from/to
+  // - si no: evita mandar from/to sueltos (limpia)
+  form.addEventListener('submit', () => {
+    if (!hasBothDates()) {
+      if (inpFrom && !normalizeDateStr(inpFrom.value)) inpFrom.value = '';
+      if (inpTo && !normalizeDateStr(inpTo.value)) inpTo.value = '';
+    }
+  }, true);
 })();

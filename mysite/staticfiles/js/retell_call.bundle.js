@@ -24527,46 +24527,52 @@ function extractTranscriptText(update) {
     const parts = t.map((x) => {
       if (!x) return "";
       if (typeof x === "string") return x;
-      return x.text || x.content || x.transcript || x.message || x.utterance || x.delta || x.partial || "";
+      return x.text || x.content || x.transcript || x.message || x.utterance || "";
     }).filter(Boolean);
     return parts.join(" ").trim();
   }
   if (t && typeof t === "object") {
-    return (t.text || t.content || t.transcript || t.message || t.utterance || t.delta || t.partial || "").toString().trim();
+    return (t.text || t.content || t.transcript || t.message || t.utterance || "").toString().trim();
   }
-  if (update && typeof update === "object") {
-    const alt = update.text || update.content || update.message || update.utterance || update.delta || update.partial || update?.data?.text || update?.data?.message || update?.payload?.text || update?.payload?.message || "";
-    if (alt) return alt.toString().trim();
-  }
-  try {
-    return JSON.stringify(update).slice(0, 500);
-  } catch {
-    return "";
-  }
+  return "";
+}
+function normalizeRole(raw) {
+  const s2 = String(raw || "").toLowerCase();
+  if (!s2) return "AI";
+  if (s2.includes("agent") || s2.includes("assistant") || s2.includes("ai") || s2.includes("bot")) return "AI";
+  if (s2.includes("user") || s2.includes("customer") || s2.includes("human") || s2.includes("client")) return "USER";
+  return "MIX";
+}
+function extractRole(update) {
+  if (!update || typeof update !== "object") return "AI";
+  return normalizeRole(
+    update.role || update.speaker || update.from || update.participant || update.type || update.source
+  );
 }
 function wireRetellButtons({
   createUrl,
   getCallUrlTemplate,
-  // "/integrations/retell/get-call/{call_id}/"
   toggleBtnId,
-  // "retellToggleBtn"
   statusId,
-  // "retellStatus"
   panelId,
-  // "retellTranscriptPanel"
   panelBodyId,
-  // "retellTranscriptBody"
   panelCloseBtnId,
-  // "retellTranscriptCloseBtn"
-  panelClearBtnId
-  // "retellTranscriptClearBtn"
+  panelClearBtnId,
+  // NUEVO: hooks (opcionales)
+  onUpdate,
+  // ({ role, text, raw }) => void   (SDK "update")
+  onPollData,
+  // (json) => void                  (backend get-call)
+  onEvent,
+  // ({type,...}) => void            (call_started/call_ended/error)
+  pollIntervalMs = 700
 }) {
-  const toggleBtn = document.getElementById(toggleBtnId);
-  const statusEl = document.getElementById(statusId);
-  const panel = document.getElementById(panelId);
-  const panelBody = document.getElementById(panelBodyId);
-  const panelCloseBtn = document.getElementById(panelCloseBtnId);
-  const panelClearBtn = document.getElementById(panelClearBtnId);
+  const toggleBtn = toggleBtnId ? document.getElementById(toggleBtnId) : null;
+  const statusEl = statusId ? document.getElementById(statusId) : null;
+  const panel = panelId ? document.getElementById(panelId) : null;
+  const panelBody = panelBodyId ? document.getElementById(panelBodyId) : null;
+  const panelCloseBtn = panelCloseBtnId ? document.getElementById(panelCloseBtnId) : null;
+  const panelClearBtn = panelClearBtnId ? document.getElementById(panelClearBtnId) : null;
   const setStatus = (t) => {
     const txt = (t || "").toString();
     if (statusEl) {
@@ -24589,31 +24595,53 @@ function wireRetellButtons({
   };
   if (panelCloseBtn) panelCloseBtn.addEventListener("click", closePanel);
   if (panelClearBtn) panelClearBtn.addEventListener("click", clearPanel);
-  function pushLine(text, who = "agent") {
+  let liveEl = null;
+  let lastLiveText = "";
+  function ensureLiveEl() {
+    if (!panelBody) return null;
+    if (liveEl && panelBody.contains(liveEl)) return liveEl;
+    panelBody.innerHTML = "";
+    liveEl = document.createElement("div");
+    liveEl.className = "retell-live";
+    liveEl.innerHTML = `<span class="who">IA</span><div class="txt"></div>`;
+    panelBody.appendChild(liveEl);
+    return liveEl;
+  }
+  function setLiveText(text) {
     if (!panelBody) return;
-    const t = (text || "").toString().trim();
+    const t = (text || "").trim();
     if (!t) return;
-    const line = document.createElement("div");
-    line.className = `retell-line ${who === "user" ? "is-user" : "is-agent"}`;
-    const whoEl = document.createElement("div");
-    whoEl.className = "who";
-    whoEl.textContent = who === "user" ? "T\xFA" : "IA";
-    const txtEl = document.createElement("div");
-    txtEl.className = "txt";
-    txtEl.textContent = t;
-    line.appendChild(whoEl);
-    line.appendChild(txtEl);
-    panelBody.appendChild(line);
-    while (panelBody.children.length > 120) {
-      panelBody.removeChild(panelBody.firstChild);
-    }
+    if (t === lastLiveText) return;
+    const box = ensureLiveEl();
+    if (!box) return;
+    const txtEl = box.querySelector(".txt");
+    if (txtEl) txtEl.textContent = t;
+    lastLiveText = t;
     panelBody.scrollTop = panelBody.scrollHeight;
+  }
+  function showFinalTranscript(finalText) {
+    if (!panelBody) return;
+    const t = (finalText || "").trim();
+    panelBody.innerHTML = "";
+    liveEl = document.createElement("div");
+    liveEl.className = "retell-live";
+    liveEl.innerHTML = `<span class="who">IA (final)</span><div class="txt"></div>`;
+    panelBody.appendChild(liveEl);
+    const txtEl = liveEl.querySelector(".txt");
+    if (txtEl) txtEl.textContent = t || "Sin transcripci\xF3n final disponible.";
+    lastLiveText = t || "";
+    panelBody.scrollTop = 0;
   }
   const retellWebClient = new s();
   let isActive = false;
   let lastCallId = null;
-  let lastAgentText = "";
-  let lastAgentAt = 0;
+  let pollTimer = null;
+  const emitEvent = (payload) => {
+    try {
+      onEvent && onEvent(payload);
+    } catch (_2) {
+    }
+  };
   const paintToggle = () => {
     if (!toggleBtn) return;
     if (isActive) {
@@ -24637,16 +24665,14 @@ function wireRetellButtons({
     });
     const data = await resp.json().catch(() => ({}));
     if (!resp.ok || !data?.ok) {
-      if (data?.error === "NO_PHONE") {
-        throw new Error("NO_PHONE");
-      }
+      if (data?.error === "NO_PHONE") throw new Error("NO_PHONE");
       throw new Error(
         data?.detail || data?.error || `Error creando llamada (${resp.status})`
       );
     }
     return data;
   }
-  async function fetchCallSummary() {
+  async function fetchCallJson() {
     if (!getCallUrlTemplate || !lastCallId) return null;
     const url = getCallUrlTemplate.replace(
       "{call_id}",
@@ -24654,15 +24680,42 @@ function wireRetellButtons({
     );
     const resp = await fetch(url, { credentials: "same-origin" });
     const data = await resp.json().catch(() => ({}));
-    if (!data?.ok) return null;
-    return data.call || null;
+    return data || null;
+  }
+  function startPolling() {
+    stopPolling();
+    if (!getCallUrlTemplate) return;
+    pollTimer = window.setInterval(async () => {
+      if (!isActive || !lastCallId) return;
+      try {
+        const json = await fetchCallJson();
+        if (!json) return;
+        try {
+          onPollData && onPollData(json);
+        } catch (_2) {
+        }
+        const st = String(json?.call?.call_status || json?.call_status || "").toLowerCase();
+        if (st === "ended") {
+          stopPolling();
+        }
+      } catch (_2) {
+      }
+    }, Math.max(250, Number(pollIntervalMs) || 700));
+  }
+  function stopPolling() {
+    if (pollTimer) {
+      window.clearInterval(pollTimer);
+      pollTimer = null;
+    }
   }
   async function startCall() {
     if (isActive) return;
-    setStatus("Retell: creando llamada\u2026");
+    setStatus("Inntesec Agent: creando llamada\u2026");
     const { access_token, call_id } = await createWebCallOnServer();
     lastCallId = call_id || null;
-    setStatus("Retell: conectando\u2026");
+    lastLiveText = "";
+    clearPanel();
+    setStatus("Inntesec Agent: conectando\u2026");
     await retellWebClient.startCall({ accessToken: access_token });
   }
   function stopCall() {
@@ -24671,76 +24724,60 @@ function wireRetellButtons({
     } catch (_2) {
     }
   }
-  function shouldFlushAgentLine(nextText) {
-    const now = Date.now();
-    const t = (nextText || "").trim();
-    if (!t) return false;
-    if (t === lastAgentText) return false;
-    const isPrefix = t.startsWith(lastAgentText) && lastAgentText.length >= 2;
-    if (isPrefix && now - lastAgentAt < 450) {
-      lastAgentText = t;
-      lastAgentAt = now;
-      return false;
-    }
-    const okByTime = now - lastAgentAt > 450;
-    const okByChange = !isPrefix;
-    if (okByTime || okByChange) {
-      lastAgentText = t;
-      lastAgentAt = now;
-      return true;
-    }
-    lastAgentText = t;
-    lastAgentAt = now;
-    return false;
-  }
   retellWebClient.on("call_started", () => {
     isActive = true;
     paintToggle();
-    setStatus("Retell: llamada iniciada");
+    setStatus("Inntesec Agent: llamada iniciada");
     openPanel();
+    emitEvent({ type: "call_started", call_id: lastCallId });
+    startPolling();
   });
   retellWebClient.on("agent_start_talking", () => {
-    setStatus("Retell: IA hablando\u2026");
+    setStatus("Inntesec Agent: IA hablando\u2026");
   });
   retellWebClient.on("agent_stop_talking", () => {
-    setStatus("Retell: escuchando\u2026");
-    const pending = (lastAgentText || "").trim();
-    if (pending) {
-      pushLine(pending, "agent");
-      openPanel();
-      lastAgentAt = Date.now();
-    }
+    setStatus("Inntesec Agent: escuchando\u2026");
   });
   retellWebClient.on("update", (update) => {
     const text = extractTranscriptText(update);
     if (!text) return;
-    if (!shouldFlushAgentLine(text)) return;
-    pushLine(text, "agent");
+    const role = extractRole(update);
     openPanel();
+    setLiveText(text);
+    try {
+      onUpdate && onUpdate({ role, text, raw: update });
+    } catch (_2) {
+    }
   });
   retellWebClient.on("call_ended", async () => {
     isActive = false;
     paintToggle();
-    setStatus("Retell: llamada finalizada");
+    setStatus("Inntesec Agent: llamada finalizada");
+    stopPolling();
+    emitEvent({ type: "call_ended", call_id: lastCallId });
     try {
-      const call = await fetchCallSummary();
-      if (call) {
-        const reason = call.disconnection_reason || "desconocida";
-        const status = call.call_status || "unknown";
-        const transcript = (call.transcript || "").trim();
-        pushLine(`Estado final: ${status} (${reason})`, "agent");
-        if (transcript && transcript !== lastAgentText) {
-          pushLine(transcript, "agent");
-        }
+      const json = await fetchCallJson();
+      try {
+        onPollData && onPollData(json);
+      } catch (_2) {
       }
+      const call = json?.call || null;
+      const transcript = (call?.transcript || "").trim();
+      openPanel();
+      showFinalTranscript(transcript);
     } catch (_2) {
+      openPanel();
+      showFinalTranscript(lastLiveText);
     }
   });
   retellWebClient.on("error", (error) => {
     isActive = false;
     paintToggle();
-    setStatus("Retell: error en la llamada");
-    pushLine(`Error: ${error?.message || "revisa consola"}`, "agent");
+    setStatus("Inntesec Agent: error en la llamada");
+    stopPolling();
+    emitEvent({ type: "call_error", call_id: lastCallId, error });
+    openPanel();
+    showFinalTranscript(`Error: ${error?.message || "revisa consola"}`);
     try {
       retellWebClient.stopCall();
     } catch (_2) {
@@ -24750,24 +24787,22 @@ function wireRetellButtons({
     toggleBtn.addEventListener("click", async (e2) => {
       e2.preventDefault();
       if (isActive) {
-        setStatus("Retell: colgando\u2026");
+        setStatus("Inntesec Agent: colgando\u2026");
         stopCall();
         return;
       }
       try {
         await startCall();
       } catch (err) {
+        openPanel();
         if (String(err?.message || err) === "NO_PHONE") {
-          setStatus("Retell: no tienes n\xFAmero registrado");
-          pushLine(
-            "No tienes un n\xFAmero de tel\xE9fono registrado. Actual\xEDzalo en tu perfil o solicita al administrador que lo ingrese.",
-            "agent"
+          setStatus("Inntesec Agent: no tienes n\xFAmero registrado");
+          showFinalTranscript(
+            "No tienes un n\xFAmero de tel\xE9fono registrado. Actual\xEDzalo en tu perfil o solicita al administrador que lo ingrese."
           );
-          openPanel();
         } else {
-          setStatus("Retell: no se pudo iniciar");
-          pushLine(`No se pudo iniciar la llamada. ${err?.message || err}`, "agent");
-          openPanel();
+          setStatus("Inntesec Agent: no se pudo iniciar");
+          showFinalTranscript(`No se pudo iniciar la llamada. ${err?.message || err}`);
         }
         isActive = false;
         paintToggle();
@@ -24780,3 +24815,4 @@ function wireRetellButtons({
 export {
   wireRetellButtons
 };
+//# sourceMappingURL=retell_call.bundle.js.map

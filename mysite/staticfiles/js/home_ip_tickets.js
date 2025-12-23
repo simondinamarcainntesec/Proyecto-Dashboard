@@ -79,7 +79,7 @@
 
     const formData = new FormData(form);
 
-    // 👀 Loader local
+    // Loader local
     showTicketLoading('Creando ticket…');
 
     try {

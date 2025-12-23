@@ -1,0 +1,19 @@
+{# templates/two_factor/_base.html #}
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  {# OJO: NO meto admin/base.css extra, solo lo normal que ya trae base_site #}
+  <link rel="stylesheet" href="{% static 'admin/css/login.css' %}">
+  <link rel="stylesheet" href="{% static 'two_factor/css/tf_base.css' %}">
+{% endblock %}
+
+{% block bodyclass %}{{ block.super }} login{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+
+{% block content %}
+  {% block two_factor_content %}
+    {% block tf_content %}{% endblock %}
+  {% endblock %}
+{% endblock %}

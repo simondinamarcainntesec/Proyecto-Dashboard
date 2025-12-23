@@ -38,7 +38,7 @@
   border-radius: 1rem;
   box-shadow: 0 10px 40px rgba(2, 6, 23, 0.6);
 
-  /* ✅ MÁS ANCHA (antes 480px) */
+  /* MÁS ANCHA (antes 480px) */
   width: min(96vw, 680px);
 
   padding: 1.5rem 1.75rem;
@@ -184,7 +184,7 @@
   transition: all 0.2s ease;
   font-weight: 600;
 
-  /* ✅ ayuda a que “calce” todo en una línea */
+  /* ayuda a que “calce” todo en una línea */
   gap: 14px;
   flex-wrap: nowrap;
 }
@@ -277,7 +277,7 @@
 }
 
 #configModal.modal-overlay > .modal-card{
-  /* ✅ MÁS ANCHA (antes 480px) */
+  /* MÁS ANCHA (antes 480px) */
   width: min(96vw, 680px) !important;
 
   max-height: calc(100dvh - 2 * clamp(12px, 3vh, 28px)) !important;

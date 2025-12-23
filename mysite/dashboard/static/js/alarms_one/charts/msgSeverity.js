@@ -50,11 +50,11 @@ export function renderMsgSeverityBar(payload, activeKey) {
             grid: { color: "rgba(229,231,235,0.14)" },
           },
           y: {
-            // 👇 Forzamos escala categórica para evitar 0,1,2,3
+            // Forzamos escala categórica para evitar 0,1,2,3
             type: "category",
             ticks: {
               color: "#E5E7EB",
-              // 👇 Leemos SIEMPRE desde chart.data.labels (no cerramos sobre `labels`)
+              // Leemos SIEMPRE desde chart.data.labels (no cerramos sobre `labels`)
               callback: (_, i) => (chart?.data?.labels?.[i] ?? ""),
             },
             grid: { color: "rgba(229,231,235,0.14)" },

@@ -115,3 +115,96 @@ body {
   pointer-events: none;
   z-index: 500;
 }
+
+.brand-nowrap{
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.hidden { display: none !important; }
+
+/* =========================================================
+ * Modal Export Info (mismo estilo que Anomalías)
+ * ========================================================= */
+#exportInfoModal.modal:not(.hidden){
+  display: flex;               /* en vez de block */
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* Mantén el backdrop igual */
+#exportInfoModal .modal-backdrop{
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+}
+
+/* Card centrada y compacta */
+#exportInfoModal .modal-card{
+  max-width: 640px;
+  width: calc(100% - 32px);
+  margin: 0;                   /* clave para centrar con flex */
+  padding: 26px 24px;
+  border-radius: 18px;
+  background: #0c1428;         /* mismo feeling del otro */
+  border: 1px solid var(--border, #1e293b);
+  box-shadow: 0 18px 48px rgba(2,6,23,.55);
+  text-align: center;
+}
+
+/* Header como título grande centrado */
+#exportInfoModal .modal-header{
+  justify-content: center;
+  border-bottom: 0;
+  margin-bottom: 8px;
+  padding-bottom: 0;
+}
+
+/* Oculta la X (modal solo con OK, como el otro) */
+#exportInfoModal .modal-close{
+  display: none;
+}
+
+/* Título grande */
+#exportInfoTitle{
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  color: #eaf1ff;
+}
+
+/* Body sin scroll, centrado */
+#exportInfoModal .modal-body{
+  max-height: none;
+  overflow: visible;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Texto */
+#exportInfoModal .export-info-text{
+  margin: 6px 0 14px;
+  color: #cbd5e1;
+  font-size: 15px;
+  line-height: 1.55;
+  max-width: 520px;
+}
+
+/* Acciones centradas */
+#exportInfoModal .export-info-actions{
+  display: flex;
+  justify-content: center;
+}
+
+/* Botón OK similar al del otro */
+#exportInfoModal .btn.primary{
+  padding: 10px 18px;
+  border-radius: 14px;
+  min-width: 78px;
+}
+
+/* Evita que "Inn-Monitor" se parta */
+#exportInfoModal .brand-nowrap{
+  white-space: nowrap;
+  display: inline-block;
+}

@@ -24,67 +24,11 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
   <script defer src="{% static 'js/home_alarms_chart.js' %}?v={% now 'U' %}"></script>
-
-  <!-- Mic indicator (solo aparece durante la llamada Retell) -->
-  <style>
-    .call-mic-wrap {
-      display: inline-flex;
-      align-items: center;
-      gap: .5rem;
-      margin-left: .5rem;
-    }
-
-    .call-mic-wrap.hidden {
-      display: none !important;
-    }
-
-    .call-mic {
-      position: relative;
-      width: 38px;
-      height: 38px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, .12);
-      background: rgba(255, 255, 255, .06);
-      color: #fff;
-      cursor: pointer;
-      display: inline-grid;
-      place-items: center;
-      user-select: none;
-      outline: none;
-      padding: 0;
-    }
-
-    .call-mic:focus-visible {
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, .35);
-    }
-
-    .call-mic__icon {
-      font-size: 18px;
-      transform: scale(var(--mic-scale, 1));
-      transition: transform 80ms linear;
-      line-height: 1;
-    }
-
-    .call-mic__halo {
-      position: absolute;
-      inset: -10px;
-      border-radius: 999px;
-      background: radial-gradient(circle, rgba(59, 130, 246, .35), transparent 60%);
-      opacity: var(--mic-glow, 0);
-      transform: scale(var(--mic-halo-scale, 1));
-      transition: opacity 80ms linear, transform 80ms linear;
-      pointer-events: none;
-    }
-
-    .call-mic.is-on {
-      border-color: rgba(59, 130, 246, .5);
-    }
-  </style>
 </head>
 
 <body class="home-page" data-username="{{ request.user.username|default:'anon' }}">
 
-  <!-- ✅ Wrapper grid SOLO para sidebar + content -->
+  <!-- Wrapper grid SOLO para sidebar + content -->
   <div class="layout">
 
     <!-- Sidebar -->
@@ -178,6 +122,8 @@
               href="{% url 'site24x7:monitor_status' %}">
               Monitores
             </a>
+            <a class="tenant-option nav-subitem {% if url_name == 'anomaly_status' %}is-active{% endif %}"
+                       href="{% url 'site24x7:anomaly_status' %}">Anomalías</a>
             <a class="tenant-option nav-subitem {% if url_name == 'dashboard' %}is-active{% endif %}"
               href="{% url 'site24x7:dashboard' %}">
               Dashboard
@@ -257,13 +203,19 @@
               <button type="button" data-export-format="csv">📊 Exportar CSV</button>
             </div>
           </div>
+        
+          <button id="showCoachBtn" class="btn ghost" title="Mostrar guía rápida" onclick="window.startInntesecCoach()">
+            💡 Guía rápida
+          </button>
+
+
+          <a>Inntesec Agent:</a>
 
           <button class="btn ghost" type="button" onclick="window.openRetellCallWindow()">
             📞 Llamar
           </button>
-
-          <button id="showCoachBtn" class="btn ghost" title="Mostrar guía rápida" onclick="window.startInntesecCoach()">
-            💡 Guía rápida
+          <button class="btn ghost" type="button" onclick="openChatPopup()">
+            💬 Abrir chat
           </button>
 
           <div class="user-menu" id="userMenu">
@@ -637,6 +589,7 @@
   <script defer src="{% static 'js/alarms_one/page-loader-universal.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/coach_allinone.js' %}?v={% now 'U' %}"></script>
   <script src="{% static 'js/home_whitelist_scroll.js' %}?v={% now 'U' %}"></script>
+  <script src="{% static 'js/chat_popup_launcher.js' %}?v={% now 'U' %}"></script>
 
   <!-- Librerías para exportar Home -->
   <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>

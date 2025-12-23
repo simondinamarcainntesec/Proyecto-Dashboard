@@ -1,0 +1,97 @@
+{# templates/two_factor/core/setup.html #}
+{% extends "two_factor/_base.html" %}
+{% load i18n static %}
+
+{% block two_factor_title %}Activar Autenticación de Dos Factores{% endblock %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'two_factor/css/tf_setup.css' %}">
+  <link rel="stylesheet" href="{% static 'two_factor/css/tf_theme_toggle.css' %}">
+
+{% endblock %}
+
+{# SOLO LO NECESARIO: JS que crea/activa el botón dark/light #}
+{% block extrahead %}
+  {{ block.super }}
+  <script defer src="{% static 'two_factor/js/tf_theme_toggle.js' %}"></script>
+{% endblock %}
+
+{% block two_factor_content %}
+  {% with step=wizard.steps.current|default_if_none:"" %}
+    {% if wizard.form.errors %}
+      <p class="errornote">Por favor corrige el error abajo indicado.</p>
+    {% endif %}
+
+    <h1 class="tf-title">Activar Autenticación de Dos Factores</h1>
+
+    <form method="post" id="tf-setup-form" action="" data-step="{{ step|escape }}">
+      {% csrf_token %}
+      {{ wizard.management_form }}
+
+      {% if step == "welcome" %}
+        <p class="tf-lead">
+          Estás a punto de llevar la seguridad de tu cuenta al siguiente nivel.
+          Sigue los pasos de este asistente para habilitar la autenticación de dos factores.
+        </p>
+
+      {% elif step == "generator" %}
+        <p class="tf-help">
+          Abre tu autenticador (Google Authenticator, Microsoft Authenticator, Authy, etc.),
+          escanea el QR y luego ingresa el código de 6 dígitos.
+        </p>
+
+        <div class="tf-qr-wrap">
+          <img class="tf-qr" src="{% url 'two_factor:qr' %}" alt="QR Code">
+        </div>
+
+        <div class="tf-subtle" style="margin-bottom:10px;">
+          Si no puedes escanear el QR, usa este secreto TOTP manualmente en tu autenticador:
+        </div>
+
+        <div class="tf-secret">
+          <code class="tf-code">{{ secret_key }}</code>
+        </div>
+
+        {% for field in wizard.form.visible_fields %}
+          <div class="form-row{% if field.field.required %} required{% endif %}">
+            {{ field.errors }}
+            <label for="{{ field.id_for_label }}">Código (6 dígitos)</label>
+            {{ field }}
+          </div>
+        {% endfor %}
+
+      {% else %}
+        {% for field in wizard.form.visible_fields %}
+          <div class="form-row{% if field.field.required %} required{% endif %}">
+            {{ field.errors }}
+            {{ field.label_tag }}
+            {{ field }}
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <div class="tf-actions">
+        {% if step == "generator" %}
+          <input type="submit" value="Finalizar">
+        {% else %}
+          <input type="submit" value="Siguiente">
+        {% endif %}
+        <a class="cancel-link" href="{% url 'admin:index' %}">Cancelar</a>
+      </div>
+    </form>
+
+    {# Modal OK (siempre oculto; JS lo abre SOLO en éxito real) #}
+    <div class="tf-ok-backdrop" id="tfOkBackdrop" aria-hidden="true">
+      <div class="tf-ok-modal" role="dialog" aria-modal="true" aria-labelledby="tfOkTitle">
+        <h2 id="tfOkTitle">2FA activado</h2>
+        <p>Tu cuenta quedó protegida con autenticación de dos factores.</p>
+        <div class="tf-ok-actions">
+          <button type="button" class="button default" id="tfOkBtn">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="{% static 'two_factor/js/tf_setup.js' %}" defer></script>
+  {% endwith %}
+{% endblock %}

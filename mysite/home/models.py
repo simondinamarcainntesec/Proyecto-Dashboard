@@ -151,39 +151,27 @@ class TenantCredentials(models.Model):
 
 
 class WhitelistCountryPreference(models.Model):
-    """
-    Mapea agent.whitelist_country_preference.
-
-    Guarda la lista de países (valores de IPWhitelist.pais) que se quiere ver en la whitelist.
-    Debe existir un único registro por tenant.
-    """
-
-    tenant = models.ForeignKey(
+    tenant = models.OneToOneField(
         Tenant,
         on_delete=models.CASCADE,
-        related_name="whitelist_country_prefs",
-        db_column="tenant_id",  # <-- FK a public.tenants_tenant.id
+        related_name="whitelist_country_preference",
     )
 
+    # coincide con Postgres: paises _text
     paises = ArrayField(
-        base_field=models.CharField(max_length=255),
-        blank=True,
+        base_field=models.TextField(),
         default=list,
+        blank=True,
     )
 
-    updated_at = models.DateTimeField()
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        # como tu tabla está en schema agent
         managed = False
         db_table = 'agent"."whitelist_country_preference'
-        constraints = [
-            models.UniqueConstraint(
-                fields=["tenant"],
-                name="uniq_whitelist_country_pref_per_tenant",
-            )
-        ]
-        verbose_name = "Preferencia de países de whitelist"
-        verbose_name_plural = "Preferencias de países de whitelist"
+        verbose_name = "Whitelist Country Preference"
+        verbose_name_plural = "Whitelist Country Preferences"
 
     def __str__(self):
-        return f"{self.tenant} · {', '.join(self.paises or [])}"
+        return f"{getattr(self.tenant, 'name', 'Tenant')} ({self.tenant_id})"

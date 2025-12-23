@@ -337,7 +337,7 @@ def build_realtime_context(alarms: list[dict], value_for_column, tzname="America
         "severityByLevelRaw":             out.get("severity_counts_by_level", {}),
         "levelCountsByHourRaw":           {h: dict(c) for h, c in level_by_hour.items()},
 
-        # ⬇ alias correcto para Subtype → Level
+        # alias correcto para Subtype → Level
         "levelBySubtypeRaw":              out.get("level_counts_by_subtype", {}),  #  subtype -> {level: n}
 
         "subtypeCountsRaw":               dict(subtype_counts),

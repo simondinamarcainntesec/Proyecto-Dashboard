@@ -1,0 +1,18 @@
+{% extends "two_factor/_base.html" %}
+{% load i18n %}
+
+{% block two_factor_title %}2FA configurado{% endblock %}
+
+{% block two_factor_content %}
+  <div id="content-main">
+    <h1>Autenticación de Dos Factores activada</h1>
+    <div class="tf-subtle">
+      Tu cuenta ya quedó protegida con 2FA. Serás redirigido al Administrador.
+    </div>
+
+    <div class="tf-actions">
+      <a class="button default" href="{% url 'admin:index' %}">Ir al Admin</a>
+      <a class="cancel-link" href="{% url 'admin:index' %}">Cerrar</a>
+    </div>
+  </div>
+{% endblock %}

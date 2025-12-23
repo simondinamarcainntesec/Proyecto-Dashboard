@@ -1,7 +1,7 @@
 # home/views.py
 from __future__ import annotations
 
-from datetime import datetime, timezone as dt_timezone
+from datetime import datetime, timezone as dt_timezone, timedelta
 import logging
 import os
 import base64
@@ -135,13 +135,43 @@ def _parse_country_codes(raw: str) -> list[str]:
     return [c.strip().upper() for c in raw.split(",") if c.strip()]
 
 
+def _ensure_list_of_str(val) -> list[str]:
+    """
+    Normaliza cualquier cosa a list[str].
+    - None -> []
+    - 'CL,AR' -> ['CL,AR'] (no parsea, solo normaliza tipo)
+    - tuple/set -> list(...)
+    - list -> filtra None y castea a str
+    """
+    if val is None:
+        return []
+    if isinstance(val, list):
+        out = []
+        for x in val:
+            if x is None:
+                continue
+            sx = str(x).strip()
+            if sx:
+                out.append(sx)
+        return out
+    if isinstance(val, (tuple, set)):
+        out = []
+        for x in list(val):
+            if x is None:
+                continue
+            sx = str(x).strip()
+            if sx:
+                out.append(sx)
+        return out
+    # cualquier otro tipo: lo metemos como un solo item string
+    s = str(val).strip()
+    return [s] if s else []
+
+
 def _save_country_pref(tenant, paises: list[str]) -> None:
     """
     Guarda en agent.whitelist_country_preference la lista de países (NOMBRES)
     seleccionados POR TENANT (UN REGISTRO POR TENANT).
-
-    - Siempre hay un único registro por tenant.
-    - Si paises es [], se deja la preferencia vacía (filtro limpio).
     """
     from django.utils import timezone as _tz
 
@@ -151,20 +181,16 @@ def _save_country_pref(tenant, paises: list[str]) -> None:
     WhitelistCountryPreference.objects.update_or_create(
         tenant=tenant,
         defaults={
-            "paises": paises,
+            "paises": _ensure_list_of_str(paises),
             "updated_at": _tz.now(),
         },
     )
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Helper: IP del cliente (funciona con o sin proxy si Apache/Nginx está ok)
+# Helper: IP del cliente
 # ──────────────────────────────────────────────────────────────────────────────
 def _get_client_ip(request) -> str:
-    """
-    Devuelve la IP del cliente. Si hay proxy/reverso, usa la primera de X-Forwarded-For.
-    Asegúrate en prod de tener mod_remoteip (Apache) o real_ip (Nginx) configurado.
-    """
     xff = (request.META.get("HTTP_X_FORWARDED_FOR") or "").strip()
     if xff:
         return xff.split(",")[0].strip()
@@ -172,23 +198,12 @@ def _get_client_ip(request) -> str:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Upsert a agent.ip_whitelist al descargar: registra IP/cliente/tenant y fechas
+# Upsert a agent.ip_whitelist al descargar
 # ──────────────────────────────────────────────────────────────────────────────
 def _upsert_whitelist_from_download(
     request,
     creds: TenantCredentials | None = None,
 ) -> None:
-    """
-    Crea o actualiza un registro en agent.ip_whitelist:
-      - ip                  -> IP pública del cliente
-      - cliente             -> NOMBRE DEL TENANT que descarga
-      - organizacion        -> NOMBRE DEL TENANT (igual que cliente)
-      - motivo              -> 'Automatizado' (solo al crear)
-      - fecha_creacion      -> now (solo al crear)
-      - fecha_actualizacion -> now (siempre en descarga)
-      - tenant_id           -> id del tenant actual (si se puede resolver)
-                               (primero con tenant FK, luego con TenantCredentials)
-    """
     try:
         logger.info(
             "[WHITELIST UPSERT] Iniciando upsert. creds_pk=%s",
@@ -304,10 +319,6 @@ def _upsert_whitelist_from_download(
 
 
 def _build_severity_summary(qs):
-    """
-    Devuelve una lista de dicts con los niveles de severidad y sus conteos.
-    Niveles: critical, high, medium, low, info, na (Sin información / N/A).
-    """
     if qs is None:
         return []
 
@@ -332,7 +343,6 @@ def _build_severity_summary(qs):
         raw = (raw or "").strip()
         if not raw or raw.lower() in {"n/a", "na", "none", "desconocido"}:
             return "na"
-
         r = raw.lower()
         if r in CRITICAL_TERMS:
             return "critical"
@@ -383,6 +393,40 @@ def _build_severity_summary(qs):
     return summary
 
 
+def _home_last_days_range_utc(days: int = 7):
+    """
+    Retorna (dt_from_utc, dt_to_utc_exclusive) para últimos N días.
+    """
+    now = datetime.now(tz=dt_timezone.utc)
+    start = now - timedelta(days=days)
+    return start, now
+
+
+def _home_last_days_dates_local(days: int = 7):
+    """
+    Lista de fechas (date) para últimos N días, en timezone local de Django.
+    Útil para rellenar el gráfico con ceros.
+    """
+    tz = dj_timezone.get_current_timezone()
+    today_local = dj_timezone.localtime(dj_timezone.now(), timezone=tz).date()
+    start = today_local - timedelta(days=days - 1)
+    return [start + timedelta(days=i) for i in range(days)]
+
+
+def _first_existing_dt_field(model, candidates: list[str]) -> str | None:
+    """
+    Devuelve el primer campo datetime/date existente en el modelo (por nombre).
+    """
+    try:
+        field_names = {f.name for f in model._meta.get_fields()}
+    except Exception:
+        return None
+    for name in candidates:
+        if name in field_names:
+            return name
+    return None
+
+
 @login_required
 @tenant_required
 def home_index(request):
@@ -421,19 +465,24 @@ def home_index(request):
     severity_summary: list[dict] = []
 
     if can_view_monitoring and norm_tid:
-        dt_from_utc = datetime(1970, 1, 1, tzinfo=dt_timezone.utc)
-        dt_to_utc_exclusive = datetime.now(tz=dt_timezone.utc)
+        # últimos 7 días por defecto
+        dt_from_utc, dt_to_utc_exclusive = _home_last_days_range_utc(days=7)
+        days_local = _home_last_days_dates_local(days=7)
+        tz = dj_timezone.get_current_timezone()
+
         try:
             qs_base = make_base_qs(dt_from_utc, dt_to_utc_exclusive)
             qs_base = _annotate_severity_fields(qs_base)
 
+            # KPIs últimos 7 días
             alarms_total = qs_base.count()
             alarms_critical_total = qs_base.filter(CRITICAL_FILTER).count()
 
+            # Serie diaria últimos 7 días (rellena días sin datos)
             daily_qs = qs_base.exclude(event_time__isnull=True)
             daily = (
                 daily_qs
-                .annotate(day=TruncDate("event_time"))
+                .annotate(day=TruncDate("event_time", tzinfo=tz))
                 .values("day")
                 .annotate(
                     total=Count("id"),
@@ -442,14 +491,19 @@ def home_index(request):
                 .order_by("day")
             )
 
-            for row in daily:
-                alarms_daily_labels.append(str(row["day"]))
-                alarms_daily_total.append(row["total"])
-                alarms_daily_critical.append(row["critical"])
+            day_map = {row["day"]: row for row in daily}
 
+            for d in days_local:
+                alarms_daily_labels.append(d.isoformat())
+                row = day_map.get(d)
+                alarms_daily_total.append(int(row["total"]) if row else 0)
+                alarms_daily_critical.append(int(row["critical"]) if row else 0)
+
+            # Severidades últimos 7 días
             severity_summary = _build_severity_summary(qs_base)
 
         except Exception:
+            # fallback por si make_base_qs falla
             try:
                 qs_fallback = _annotate_norm_field(
                     Alarm.objects.all(), "tags", "norm_aotag"
@@ -457,13 +511,19 @@ def home_index(request):
                 base_fb = qs_fallback.filter(norm_aotag=norm_tid)
                 base_fb = _annotate_severity_fields(base_fb)
 
+                # IMPORTANTÍSIMO: aplicar rango 7 días en fallback también
+                base_fb = base_fb.filter(
+                    event_time__gte=dt_from_utc,
+                    event_time__lt=dt_to_utc_exclusive,
+                )
+
                 alarms_total = base_fb.count()
                 alarms_critical_total = base_fb.filter(CRITICAL_FILTER).count()
 
                 daily_fb = (
                     base_fb
                     .exclude(event_time__isnull=True)
-                    .annotate(day=TruncDate("event_time"))
+                    .annotate(day=TruncDate("event_time", tzinfo=tz))
                     .values("day")
                     .annotate(
                         total=Count("id"),
@@ -472,28 +532,46 @@ def home_index(request):
                     .order_by("day")
                 )
 
-                for row in daily_fb:
-                    alarms_daily_labels.append(str(row["day"]))
-                    alarms_daily_total.append(row["total"])
-                    alarms_daily_critical.append(row["critical"])
+                day_map = {row["day"]: row for row in daily_fb}
+
+                for d in days_local:
+                    alarms_daily_labels.append(d.isoformat())
+                    row = day_map.get(d)
+                    alarms_daily_total.append(int(row["total"]) if row else 0)
+                    alarms_daily_critical.append(int(row["critical"]) if row else 0)
 
                 severity_summary = _build_severity_summary(base_fb)
 
             except Exception as e:
                 logger.exception("[HOME] Error KPI Alarmas (fallback): %s", e)
 
+
     # =======================
-    # KPI SOAR
+    # KPI SOAR (últimos 7 días)
     # =======================
     soar_total = 0
     if can_view_monitoring and norm_tid:
         try:
+            # rango en fecha local (sin hora)
+            today = dj_timezone.localdate()
+            from_date = today - dj_timezone.timedelta(days=6)  # incluye hoy => 7 días
+
             qs_soar = _annotate_norm_field(
                 IncidenteSOAR.objects.all(), "aotag", "norm_aotag"
             )
-            soar_total = qs_soar.filter(norm_aotag=norm_tid).count()
+
+            soar_total = qs_soar.filter(
+                norm_aotag=norm_tid,
+                date__isnull=False,
+                date__gte=from_date,
+                date__lte=today,
+            ).count()
+
         except Exception as e:
             logger.exception("[HOME] Error KPI SOAR: %s", e)
+
+    
+
 
     # =======================
     # KPI Telegram
@@ -564,7 +642,7 @@ def home_index(request):
     try:
         if effective_tenant_for_pref:
             pref = WhitelistCountryPreference.objects.get(tenant=effective_tenant_for_pref)
-            selected_paises = pref.paises or []
+            selected_paises = _ensure_list_of_str(getattr(pref, "paises", None))
         else:
             selected_paises = []
     except WhitelistCountryPreference.DoesNotExist:
@@ -573,7 +651,7 @@ def home_index(request):
         logger.exception("[HOME WHITELIST] Error leyendo preferencias de países: %s", e)
         selected_paises = []
 
-    # ✅ Convertir NOMBRES (BD) -> CÓDIGOS (UI)
+    # Convertir NOMBRES (BD) -> CÓDIGOS (UI)
     CODE_BY_NAME = {v: k for k, v in COUNTRY_BY_CODE.items()}
     selected_country_codes = [CODE_BY_NAME.get(n) for n in (selected_paises or [])]
     selected_country_codes = [c for c in selected_country_codes if c]
@@ -706,9 +784,9 @@ def home_index(request):
         "whitelist_not_found_terms": whitelist_not_found_terms,
         "show_whitelist_modal": show_whitelist_modal,
         "whitelist_countries": ALL_COUNTRIES,
-        # ✅ desde BD
+        # desde BD
         "selected_paises": selected_paises,
-        # ✅ para marcar checkboxes (value=CL,AR,...)
+        # para marcar checkboxes (value=CL,AR,...)
         "selected_country_codes": selected_country_codes,
         # Credenciales TXT
         "cred": cred,
@@ -1346,7 +1424,7 @@ def config_notificaciones(request):
         return HttpResponseRedirect(reverse("home:index"))
 
 
-# ✅ NUEVO: endpoint GET para cargar selección por tenant (devuelve nombres + códigos)
+# Endpoint GET para cargar selección por tenant (devuelve nombres + códigos)
 @login_required
 @tenant_required
 @require_GET
@@ -1356,8 +1434,8 @@ def whitelist_get_countries(request):
         return JsonResponse({"ok": False, "message": "Tenant no resuelto."}, status=400)
 
     try:
-        obj = WhitelistCountryPreference.objects.filter(tenant=tenant).first()
-        selected_paises = (obj.paises or []) if obj else []
+        obj = WhitelistCountryPreference.objects.filter(tenant_id=tenant.id).only("paises").first()
+        selected_paises = _ensure_list_of_str(getattr(obj, "paises", None)) if obj else []
 
         CODE_BY_NAME = {v: k for k, v in COUNTRY_BY_CODE.items()}
         selected_codes = [CODE_BY_NAME.get(n) for n in selected_paises]
@@ -1368,7 +1446,7 @@ def whitelist_get_countries(request):
             status=200,
         )
     except Exception as e:
-        logger.exception("[HOME WHITELIST AJAX] Error leyendo preferencias de países: %s", e)
+        logger.exception("[HOME WHITELIST AJAX] GET error tenant_id=%s: %s", tenant.id, e)
         return JsonResponse(
             {"ok": False, "message": "Error interno al leer preferencias de países."},
             status=500,
@@ -1379,11 +1457,6 @@ def whitelist_get_countries(request):
 @tenant_required
 @require_http_methods(["POST"])
 def whitelist_save_countries(request):
-    """
-    Guarda las preferencias de países de whitelist vía AJAX (POR TENANT).
-    Espera en POST:
-      - countries: string tipo "CL,AR,US"
-    """
     tenant = getattr(request, "tenant", None) or getattr(request.user, "tenant", None)
     if not tenant:
         return JsonResponse({"ok": False, "message": "Tenant no resuelto."}, status=400)
@@ -1391,25 +1464,25 @@ def whitelist_save_countries(request):
     raw_country_codes = (request.POST.get("countries") or "").strip()
     codes_from_query = _parse_country_codes(raw_country_codes)
 
-    # ✅ solo códigos válidos
+    # Solo códigos válidos
     selected_codes = [c for c in codes_from_query if c in COUNTRY_BY_CODE]
 
-    # ✅ se guardan NOMBRES en BD
+    # Se guardan nombres en BD (list[str])
     selected_paises = [COUNTRY_BY_CODE[c] for c in selected_codes]
+    selected_paises = _ensure_list_of_str(selected_paises)
 
     try:
-        _save_country_pref(tenant, selected_paises)
-        logger.info(
-            "[HOME WHITELIST AJAX] Preferencias países guardadas para tenant_id=%s: %s",
-            getattr(tenant, "id", None),
-            selected_paises,
+        WhitelistCountryPreference.objects.update_or_create(
+            tenant_id=tenant.id,
+            defaults={"paises": selected_paises},
         )
+
         return JsonResponse(
             {"ok": True, "selected_paises": selected_paises, "selected_codes": selected_codes},
             status=200,
         )
     except Exception as e:
-        logger.exception("[HOME WHITELIST AJAX] Error guardando preferencias de países: %s", e)
+        logger.exception("[HOME WHITELIST AJAX] SAVE error tenant_id=%s: %s", tenant.id, e)
         return JsonResponse(
             {"ok": False, "message": "Error interno al guardar preferencias de países."},
             status=500,

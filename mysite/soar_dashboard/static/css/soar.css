@@ -466,3 +466,25 @@ td.is-right{ text-align:right; }
 .export-menu button:hover{
   background: rgba(255,255,255,.06);
 }
+
+/* ===== Loader en tabla (modal SOAR) ===== */
+#soarIncidentsModal .ao-loading{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  padding:16px 10px;
+  color:#cbd5e1;
+  font-weight:700;
+}
+
+#soarIncidentsModal .ao-spinner{
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  border:3px solid rgba(229,231,235,0.25);
+  border-top-color: rgba(229,231,235,0.95);
+  animation: ao-spin .8s linear infinite;
+}
+
+@keyframes ao-spin { to { transform: rotate(360deg); } }

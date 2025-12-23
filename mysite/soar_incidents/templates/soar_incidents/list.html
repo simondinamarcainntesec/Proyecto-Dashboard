@@ -14,9 +14,12 @@
   <link rel="stylesheet" href="{% static 'css/config_notificaciones_modal.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/cred_modal.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/country_filter_modal.css' %}?v={% now 'U' %}">
+
+  <!-- NUEVO -->
+  <link rel="stylesheet" href="{% static 'css/soar_assign_ticket_modal.css' %}?v={% now 'U' %}">
 </head>
 
-<body class="layout">
+<body class="layout" data-soar-tenant-users-url="{% url 'soar_incidents:api_tenant_users' %}">
   <div id="loading-overlay" role="status" aria-live="polite" aria-label="Cargando">
     <div class="loading-card">
       <div class="spinner" aria-hidden="true"></div>
@@ -109,13 +112,11 @@
         </summary>
         <div class="tenant-list nav-submenu">
           <a class="tenant-option nav-subitem {% if url_name == 'monitor_status' %}is-active{% endif %}"
-            href="{% url 'site24x7:monitor_status' %}">
-            Monitores
-          </a>
+            href="{% url 'site24x7:monitor_status' %}">Monitores</a>
+          <a class="tenant-option nav-subitem {% if url_name == 'anomaly_status' %}is-active{% endif %}"
+            href="{% url 'site24x7:anomaly_status' %}">Anomalías</a>
           <a class="tenant-option nav-subitem {% if url_name == 'dashboard' %}is-active{% endif %}"
-            href="{% url 'site24x7:dashboard' %}">
-            Dashboard
-          </a>
+            href="{% url 'site24x7:dashboard' %}">Dashboard</a>
         </div>
       </details>
       {% endwith %}
@@ -139,9 +140,7 @@
             href="{% url 'cambiar_contrasena' %}">🔒 Cambiar contraseña</a>
           <a class="tenant-option nav-subitem" href="#" onclick="toggleCredModal(true)">🔑 Credenciales</a>
           <a class="tenant-option nav-subitem" href="#" onclick="toggleConfigModal(true)">🔔 Notificaciones</a>
-          <a class="tenant-option nav-subitem" href="#" onclick="toggleCountryModal(true)">
-          🌎 Filtro países whitelist
-          </a>
+          <a class="tenant-option nav-subitem" href="#" onclick="toggleCountryModal(true)">🌎 Filtro países whitelist</a>
         </div>
       </details>
     </nav>
@@ -179,42 +178,26 @@
       </div>
 
       <div class="top-right">
-        <!-- Refrescar -->
         <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
 
-        <!-- Botón flecha + menú desplegable de export -->
         <div class="export-wrapper">
-          <button
-            type="button"
-            class="btn ghost small"
-            id="soarExportToggleBtn"
-            title="Exportar incidentes"
-            aria-haspopup="true"
-            aria-expanded="false"
-          >
+          <button type="button" class="btn ghost small" id="soarExportToggleBtn"
+            title="Exportar incidentes" aria-haspopup="true" aria-expanded="false">
             ⬇
           </button>
 
           <div class="export-menu" id="soarExportMenu" role="menu" aria-hidden="true">
-            <button
-              type="button"
-              data-export-scope="current"
-              data-export-url="{% url 'soar_incidents:export_csv_current' %}"
-            >
+            <button type="button" data-export-scope="current"
+              data-export-url="{% url 'soar_incidents:export_csv_current' %}">
               📊 Exportar incidentes actuales
             </button>
-
-            <button
-              type="button"
-              data-export-scope="all"
-              data-export-url="{% url 'soar_incidents:export_csv_all' %}"
-            >
+            <button type="button" data-export-scope="all"
+              data-export-url="{% url 'soar_incidents:export_csv_all' %}">
               📁 Exportar todos los incidentes
             </button>
           </div>
         </div>
 
-        <!-- Menú usuario (solo logout) -->
         <div class="user-menu" id="userMenu">
           <button type="button" id="userButton" class="user-button">
             <div class="user-avatar">
@@ -239,129 +222,128 @@
     </header>
 
     {% if not tenant.alarms_one_id %}
-      <!-- ======= SIN SERVICIO: oculta filtros/tabla y muestra mensaje ======= -->
-      <section class="empty-state">
-        <div class="empty-card">
-          <h2>Servicio no disponible</h2>
-          <p>La empresa <strong>{{ tenant.name|default:"—" }}</strong> no tiene el servicio de alarmas contratado.</p>
-          <p>Por favor, contacte con un administrador.</p>
-        </div>
-      </section>
+    <section class="empty-state">
+      <div class="empty-card">
+        <h2>Servicio no disponible</h2>
+        <p>La empresa <strong>{{ tenant.name|default:"—" }}</strong> no tiene el servicio de alarmas contratado.</p>
+        <p>Por favor, contacte con un administrador.</p>
+      </div>
+    </section>
     {% else %}
-      <!-- Toolbar -->
-      <section class="toolbar">
-        <form id="filters-form" method="get" class="toolbar-row" role="search">
-          <div class="tb-left">
-            <input type="search" name="q" id="q" value="{{ q|default:'' }}" placeholder="Buscar (cualquier campo)…"
-                  autocomplete="off" />
-            <button class="btn ghost-sm" type="button" id="btn-search-live">Buscar</button>
-          </div>
 
-          <div class="tb-spacer"></div>
+    <section class="toolbar">
+      <form id="filters-form" method="get" class="toolbar-row" role="search">
+        <div class="tb-left">
+          <input type="search" name="q" id="q" value="{{ q|default:'' }}" placeholder="Buscar (cualquier campo)…"
+            autocomplete="off" />
+          <button class="btn ghost-sm" type="button" id="btn-search-live">Buscar</button>
+        </div>
 
-          <div class="tb-right">
-            <button type="button" class="chip-btn" data-range="7d">Últimos 7 días</button>
-            <button type="button" class="chip-btn" data-range="30d">Últimos 30 días</button>
-            <button type="button" class="chip-btn" data-range="month">Este mes</button>
+        <div class="tb-spacer"></div>
 
-            <label class="date-range">
-              <span>Desde</span>
-              <input id="inp-from" type="date" name="from" value="{{ from_date_str }}">
-            </label>
-            <label class="date-range">
-              <span>Hasta</span>
-              <input id="inp-to" type="date" name="to" value="{{ to_date_str }}">
-            </label>
+        <div class="tb-right">
+          <button type="button" class="chip-btn" data-range="7d">Últimos 7 días</button>
+          <button type="button" class="chip-btn" data-range="30d">Últimos 30 días</button>
+          <button type="button" class="chip-btn" data-range="month">Este mes</button>
 
-            <button class="btn primary" id="btn-apply" type="submit">Aplicar</button>
-            <a class="btn ghost" id="btn-clear" href="?">Limpiar</a>
-          </div>
-        </form>
-      </section>
+          <label class="date-range">
+            <span>Desde</span>
+            <input id="inp-from" type="date" name="from" value="{{ from_date_str }}">
+          </label>
+          <label class="date-range">
+            <span>Hasta</span>
+            <input id="inp-to" type="date" name="to" value="{{ to_date_str }}">
+          </label>
 
-      {% if page_obj|length > 0 %}
-      <!-- Tabla -->
-      <section class="wrap">
-        <div class="card">
-          <div class="card-body">
-            <div class="table-wrap">
-              <table class="tbl" id="tbl-incidentes">
-                <thead>
-                  <tr>
-                    <th>ID Alarma</th>
-                    <th>Dispositivo</th>
-                    <th>Tipo de amenaza</th>
-                    <th>Nivel de severidad</th>
-                    <th>Fecha</th>
-                    <th>Hora</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for it in page_obj %}
-                  <tr data-id="{{ it.alarmd_id|escape }}" data-dispositivo="{{ it.dispositivo|default:''|escape }}"
-                      data-tipo="{{ it.tipo_de_amenaza|default:''|escape }}"
-                      data-sev="{{ it.nivel_de_severidad|default:''|escape }}"
-                      data-date="{% if it.date %}{{ it.date|date:'Y-m-d' }}{% endif %}"
-                      data-time="{% if it.time %}{{ it.time|time:'H:i:s' }}{% endif %}"
-                      data-descripcion="{{ it.descripcion_incidente|default:''|escape }}"
-                      data-analisis="{{ it.analisis_criticidad|default:''|escape }}"
-                      data-acciones="{{ it.medidas_correctivas|default:''|escape }}"
-                      data-resumen="{{ it.resumen_humano|default:''|escape }}"
-                      data-riesgo="{{ it.riego_detectado|default:''|escape }}"
-                      data-app="{{ it.application|default:''|escape }}">
-                    <td class="mono nowrap">{{ it.alarmd_id }}</td>
-                    <td class="w-240" title="{{ it.dispositivo }}">{{ it.dispositivo|default:"—" }}</td>
-                    <td class="w-320" title="{{ it.tipo_de_amenaza }}">{{ it.tipo_de_amenaza|default:"—" }}</td>
-                    <td class="nowrap">
-                      {% with sev=it.nivel_de_severidad|default:"n/a"|lower %}
-                        <span class="pill
-                          {% if sev == 'critical' or sev == 'crítico' or sev == 'critico' %}sev-critical
-                          {% elif sev == 'high' or sev == 'alto' %}sev-high
-                          {% elif sev == 'medium' or sev == 'medio' %}sev-medium
-                          {% elif sev == 'low' or sev == 'bajo' %}sev-low
-                          {% elif sev == 'info' %}sev-info
-                          {% else %}sev-na{% endif %}">
-                          {{ it.nivel_de_severidad|default:"N/A" }}
-                        </span>
-                      {% endwith %}
-                    </td>
-                    {% with d=it.date|date:"Y-m-d" t=it.time|time:"H:i:s" %}
-                    <td class="mono nowrap">{% if d %}{{ d }}{% else %}—{% endif %}</td>
-                    <td class="mono nowrap">{% if t %}{{ t }}{% else %}—{% endif %}</td>
+          <button class="btn primary" id="btn-apply" type="submit">Aplicar</button>
+          <a class="btn ghost" id="btn-clear" href="?">Limpiar</a>
+        </div>
+      </form>
+    </section>
+
+    {% if page_obj|length > 0 %}
+    <section class="wrap">
+      <div class="card">
+        <div class="card-body">
+          <div class="table-wrap">
+            <table class="tbl" id="tbl-incidentes">
+              <thead>
+                <tr>
+                  <th>ID Alarma</th>
+                  <th>Dispositivo</th>
+                  <th>Tipo de amenaza</th>
+                  <th>Nivel de severidad</th>
+                  <th>Fecha</th>
+                  <th>Hora</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for it in page_obj %}
+                <tr class="soar-row"
+                  data-id="{{ it.alarmd_id|escape }}"
+                  data-dispositivo="{{ it.dispositivo|default:''|escape }}"
+                  data-tipo="{{ it.tipo_de_amenaza|default:''|escape }}"
+                  data-sev="{{ it.nivel_de_severidad|default:''|escape }}"
+                  data-date="{% if it.date %}{{ it.date|date:'Y-m-d' }}{% endif %}"
+                  data-time="{% if it.time %}{{ it.time|time:'H:i:s' }}{% endif %}"
+                  data-descripcion="{{ it.descripcion_incidente|default:''|escape }}"
+                  data-analisis="{{ it.analisis_criticidad|default:''|escape }}"
+                  data-acciones="{{ it.medidas_correctivas|default:''|escape }}"
+                  data-resumen="{{ it.resumen_humano|default:''|escape }}"
+                  data-riesgo="{{ it.riego_detectado|default:''|escape }}"
+                  data-app="{{ it.application|default:''|escape }}">
+                  <td class="mono nowrap">{{ it.alarmd_id }}</td>
+                  <td class="w-240" title="{{ it.dispositivo }}">{{ it.dispositivo|default:"—" }}</td>
+                  <td class="w-320" title="{{ it.tipo_de_amenaza }}">{{ it.tipo_de_amenaza|default:"—" }}</td>
+                  <td class="nowrap">
+                    {% with sev=it.nivel_de_severidad|default:"n/a"|lower %}
+                    <span class="pill
+                      {% if sev == 'critical' or sev == 'crítico' or sev == 'critico' %}sev-critical
+                      {% elif sev == 'high' or sev == 'alto' %}sev-high
+                      {% elif sev == 'medium' or sev == 'medio' %}sev-medium
+                      {% elif sev == 'low' or sev == 'bajo' %}sev-low
+                      {% elif sev == 'info' %}sev-info
+                      {% else %}sev-na{% endif %}">
+                      {{ it.nivel_de_severidad|default:"N/A" }}
+                    </span>
                     {% endwith %}
-                  </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
+                  </td>
+                  {% with d=it.date|date:"Y-m-d" t=it.time|time:"H:i:s" %}
+                  <td class="mono nowrap">{% if d %}{{ d }}{% else %}—{% endif %}</td>
+                  <td class="mono nowrap">{% if t %}{{ t }}{% else %}—{% endif %}</td>
+                  {% endwith %}
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
 
-            {% if page_obj %}
-            <div class="paginate" id="paginate">
-              {% if page_obj.has_previous %}
-              <a href="?page={{ page_obj.previous_page_number }}">&laquo; Anterior</a>
-              {% else %}
-              <span class="meta">&laquo; Anterior</span>
-              {% endif %}
-              <span class="current">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
-              {% if page_obj.has_next %}
-              <a href="?page={{ page_obj.next_page_number }}">Siguiente &raquo;</a>
-              {% else %}
-              <span class="meta">Siguiente &raquo;</span>
-              {% endif %}
-            </div>
+          {% if page_obj %}
+          <div class="paginate" id="paginate">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}">&laquo; Anterior</a>
+            {% else %}
+            <span class="meta">&laquo; Anterior</span>
+            {% endif %}
+            <span class="current">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}">Siguiente &raquo;</a>
+            {% else %}
+            <span class="meta">Siguiente &raquo;</span>
             {% endif %}
           </div>
+          {% endif %}
         </div>
-      </section>
-      {% else %}
-      <!-- ======= EMPTY STATE (sin datos) ======= -->
-      <section class="empty-state">
-        <div class="empty-card">
-          <h2>Sin incidentes disponibles</h2>
-          <p>No se encontraron registros para <strong>{{ tenant.name|default:"—" }}</strong> en el rango seleccionado.</p>
-        </div>
-      </section>
-      {% endif %}
+      </div>
+    </section>
+    {% else %}
+    <section class="empty-state">
+      <div class="empty-card">
+        <h2>Sin incidentes disponibles</h2>
+        <p>No se encontraron registros para <strong>{{ tenant.name|default:"—" }}</strong> en el rango seleccionado.</p>
+      </div>
+    </section>
+    {% endif %}
     {% endif %}
   </div>
 
@@ -398,16 +380,117 @@
     </div>
   </div>
 
+  <!-- Menú contextual -->
+  <div id="soarCtxMenu" class="ctx-menu hidden" role="menu" aria-hidden="true">
+    <button type="button" id="ctxAssignTicketBtn" role="menuitem">🎫 Asignar Ticket</button>
+  </div>
+
+  <!-- Modal Asignación Ticket -->
+  <div id="assignTicketModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-assign-backdrop></div>
+
+    <div class="modal-card modal-card-assign" role="dialog" aria-modal="true" aria-labelledby="assign-title">
+      <!-- Header general (título + close) -->
+      <div class="assign-head">
+        <div class="assign-head-row">
+          <div class="assign-head-title">
+            <span class="head-ico is-ok" aria-hidden="true"></span>
+            <span id="assign-title">Asignar Evento a Usuario</span>
+          </div>
+          <button class="modal-close" data-assign-close type="button" aria-label="Cerrar">&times;</button>
+        </div>
+
+        <!-- “Evento” con iconos (SIN “Evento detectado”) -->
+        <div class="assign-head-card">
+          <div class="assign-head-main">
+            <span class="meta-ico is-alert" aria-hidden="true"></span>
+            <span id="assign-event-title" class="assign-head-text">—</span>
+          </div>
+
+          <div class="assign-head-sub mono">
+            <span class="meta-ico is-id" aria-hidden="true"></span>
+            <span>ID:</span>
+            <span id="assign-event-id">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-body">
+        <div class="assign-grid">
+          <div class="block">
+            <h4 class="h-ico">
+              <span class="meta-ico is-tenant"></span>
+              Tenant
+            </h4>
+            <div class="assign-static" id="assign-tenant-static"
+                data-tenant-id="{{ tenant.id }}">
+              {{ tenant.name }}
+            </div>
+          </div>
+
+
+          <div class="block">
+            <h4 class="h-ico">
+              <span class="meta-ico is-user"></span>
+              Asignar a usuario
+            </h4>
+            <select id="assign-user" class="assign-select" disabled>
+              <option value="">Cargando usuarios…</option>
+            </select>
+            <div class="assign-hint muted" id="assign-user-hint">
+              Selecciona un usuario para asignar el ticket.
+            </div>
+          </div>
+
+          <div class="block">
+            <h4 class="h-ico">
+              <span class="meta-ico is-duration"></span>
+              Duración de la tarea
+            </h4>
+            <select id="assign-duration" class="assign-select">
+              <option value="7">7 días</option>
+              <option value="14">14 días</option>
+              <option value="30">30 días</option>
+              <option value="custom">Personalizada…</option>
+            </select>
+
+            <div id="assign-custom-date-wrap" class="assign-custom-date hidden">
+              <label class="date-range" style="margin-top:10px;">
+                <span>Vence</span>
+                <input id="assign-custom-date" type="date" value="">
+              </label>
+            </div>
+
+            <div class="assign-due muted" id="assign-due-text">Fecha de vencimiento: —</div>
+          </div>
+        </div>
+
+        <div class="block assign-warning">
+          Esta alarma será asignada como un ticket al usuario seleccionado.
+        </div>
+
+        <div class="assign-actions">
+          <button type="button" class="btn ghost" id="assign-cancel">Cancelar</button>
+          <button type="button" class="btn primary" id="assign-submit" disabled>Asignar Ticket</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- JS -->
   {% if tenant.alarms_one_id %}
-    <script src="{% static 'js/date_filters.js' %}?v={% now 'U' %}" defer></script>
-    <script src="{% static 'js/list.js' %}?v={% now 'U' %}" defer></script>
+  <script src="{% static 'js/date_filters.js' %}?v={% now 'U' %}" defer></script>
+  <script src="{% static 'js/list.js' %}?v={% now 'U' %}" defer></script>
   {% endif %}
   <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/page-loader-universal.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/home_portal.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/soar_incidents_export.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/country_filter_modal.js' %}?v={% now 'U' %}"></script>
+
+  <!-- NUEVO -->
+  <script defer src="{% static 'js/soar_assign_ticket.js' %}?v={% now 'U' %}"></script>
+
   {% include 'partials/config_notificaciones_modal.html' %}
   {% include 'partials/_country_filter_modal.html' %}
   {% include 'partials/cred_modal.html' %}

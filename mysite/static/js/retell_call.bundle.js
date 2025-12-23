@@ -24517,31 +24517,55 @@ function getCookie(name) {
   if (parts.length === 2) return parts.pop().split(";").shift();
   return "";
 }
-async function safeJson(resp) {
-  try {
-    return await resp.json();
-  } catch (_2) {
-    return {};
+function extractTranscriptText(update) {
+  if (!update) return "";
+  if (typeof update === "string") return update;
+  if (typeof update.transcript === "string") return update.transcript;
+  const t = update.transcript;
+  if (Array.isArray(t)) {
+    if (t.every((x) => typeof x === "string")) return t.join(" ");
+    const parts = t.map((x) => {
+      if (!x) return "";
+      if (typeof x === "string") return x;
+      return x.text || x.content || x.transcript || x.message || x.utterance || "";
+    }).filter(Boolean);
+    return parts.join(" ").trim();
   }
+  if (t && typeof t === "object") {
+    return (t.text || t.content || t.transcript || t.message || t.utterance || "").toString().trim();
+  }
+  return "";
+}
+function normalizeRole(raw) {
+  const s2 = String(raw || "").toLowerCase();
+  if (!s2) return "AI";
+  if (s2.includes("agent") || s2.includes("assistant") || s2.includes("ai") || s2.includes("bot")) return "AI";
+  if (s2.includes("user") || s2.includes("customer") || s2.includes("human") || s2.includes("client")) return "USER";
+  return "MIX";
+}
+function extractRole(update) {
+  if (!update || typeof update !== "object") return "AI";
+  return normalizeRole(
+    update.role || update.speaker || update.from || update.participant || update.type || update.source
+  );
 }
 function wireRetellButtons({
   createUrl,
   getCallUrlTemplate,
-  // ".../get-call/{call_id}/"
   toggleBtnId,
   statusId,
-  // Opcionales (si alguna vista quiere panel; si no, pásalos null)
   panelId,
   panelBodyId,
   panelCloseBtnId,
   panelClearBtnId,
-  // Hooks
+  // NUEVO: hooks (opcionales)
+  onUpdate,
+  // ({ role, text, raw }) => void   (SDK "update")
   onPollData,
-  // (data) => void
+  // (json) => void                  (backend get-call)
   onEvent,
-  // (ev) => void
-  pollIntervalMs = 900
-  // polling razonable
+  // ({type,...}) => void            (call_started/call_ended/error)
+  pollIntervalMs = 700
 }) {
   const toggleBtn = toggleBtnId ? document.getElementById(toggleBtnId) : null;
   const statusEl = statusId ? document.getElementById(statusId) : null;
@@ -24549,31 +24573,11 @@ function wireRetellButtons({
   const panelBody = panelBodyId ? document.getElementById(panelBodyId) : null;
   const panelCloseBtn = panelCloseBtnId ? document.getElementById(panelCloseBtnId) : null;
   const panelClearBtn = panelClearBtnId ? document.getElementById(panelClearBtnId) : null;
-  const retellWebClient = new s();
-  let isActive = false;
-  let lastCallId = null;
-  let pollTimer = null;
-  const emit = (ev) => {
-    try {
-      onEvent && onEvent(ev);
-    } catch (_2) {
-    }
-  };
   const setStatus = (t) => {
     const txt = (t || "").toString();
     if (statusEl) {
       statusEl.textContent = txt;
       statusEl.title = txt;
-    }
-  };
-  const paintToggle = () => {
-    if (!toggleBtn) return;
-    if (isActive) {
-      toggleBtn.textContent = "\u26D4 Colgar";
-      toggleBtn.title = "Colgar (Retell)";
-    } else {
-      toggleBtn.textContent = "\u{1F4DE} Llamar";
-      toggleBtn.title = "Llamar (Retell)";
     }
   };
   const openPanel = () => {
@@ -24591,6 +24595,63 @@ function wireRetellButtons({
   };
   if (panelCloseBtn) panelCloseBtn.addEventListener("click", closePanel);
   if (panelClearBtn) panelClearBtn.addEventListener("click", clearPanel);
+  let liveEl = null;
+  let lastLiveText = "";
+  function ensureLiveEl() {
+    if (!panelBody) return null;
+    if (liveEl && panelBody.contains(liveEl)) return liveEl;
+    panelBody.innerHTML = "";
+    liveEl = document.createElement("div");
+    liveEl.className = "retell-live";
+    liveEl.innerHTML = `<span class="who">IA</span><div class="txt"></div>`;
+    panelBody.appendChild(liveEl);
+    return liveEl;
+  }
+  function setLiveText(text) {
+    if (!panelBody) return;
+    const t = (text || "").trim();
+    if (!t) return;
+    if (t === lastLiveText) return;
+    const box = ensureLiveEl();
+    if (!box) return;
+    const txtEl = box.querySelector(".txt");
+    if (txtEl) txtEl.textContent = t;
+    lastLiveText = t;
+    panelBody.scrollTop = panelBody.scrollHeight;
+  }
+  function showFinalTranscript(finalText) {
+    if (!panelBody) return;
+    const t = (finalText || "").trim();
+    panelBody.innerHTML = "";
+    liveEl = document.createElement("div");
+    liveEl.className = "retell-live";
+    liveEl.innerHTML = `<span class="who">IA (final)</span><div class="txt"></div>`;
+    panelBody.appendChild(liveEl);
+    const txtEl = liveEl.querySelector(".txt");
+    if (txtEl) txtEl.textContent = t || "Sin transcripci\xF3n final disponible.";
+    lastLiveText = t || "";
+    panelBody.scrollTop = 0;
+  }
+  const retellWebClient = new s();
+  let isActive = false;
+  let lastCallId = null;
+  let pollTimer = null;
+  const emitEvent = (payload) => {
+    try {
+      onEvent && onEvent(payload);
+    } catch (_2) {
+    }
+  };
+  const paintToggle = () => {
+    if (!toggleBtn) return;
+    if (isActive) {
+      toggleBtn.textContent = "\u26D4 Colgar";
+      toggleBtn.title = "Colgar (Retell)";
+    } else {
+      toggleBtn.textContent = "\u{1F4DE} Llamar";
+      toggleBtn.title = "Llamar (Retell)";
+    }
+  };
   async function createWebCallOnServer() {
     const csrftoken = getCookie("csrftoken");
     const resp = await fetch(createUrl, {
@@ -24602,48 +24663,59 @@ function wireRetellButtons({
       },
       body: JSON.stringify({})
     });
-    const data = await safeJson(resp);
+    const data = await resp.json().catch(() => ({}));
     if (!resp.ok || !data?.ok) {
       if (data?.error === "NO_PHONE") throw new Error("NO_PHONE");
-      throw new Error(data?.detail || data?.error || `Error creando llamada (${resp.status})`);
+      throw new Error(
+        data?.detail || data?.error || `Error creando llamada (${resp.status})`
+      );
     }
     return data;
   }
-  async function fetchCallSummary() {
+  async function fetchCallJson() {
     if (!getCallUrlTemplate || !lastCallId) return null;
-    const url = getCallUrlTemplate.replace("{call_id}", encodeURIComponent(lastCallId));
+    const url = getCallUrlTemplate.replace(
+      "{call_id}",
+      encodeURIComponent(lastCallId)
+    );
     const resp = await fetch(url, { credentials: "same-origin" });
-    const data = await safeJson(resp);
-    if (!data?.ok) return null;
-    return data;
-  }
-  function stopPolling() {
-    if (pollTimer) {
-      clearInterval(pollTimer);
-      pollTimer = null;
-    }
+    const data = await resp.json().catch(() => ({}));
+    return data || null;
   }
   function startPolling() {
     stopPolling();
-    if (!onPollData) return;
-    pollTimer = setInterval(async () => {
-      if (!isActive) return;
+    if (!getCallUrlTemplate) return;
+    pollTimer = window.setInterval(async () => {
+      if (!isActive || !lastCallId) return;
       try {
-        const data = await fetchCallSummary();
-        if (data) onPollData(data);
+        const json = await fetchCallJson();
+        if (!json) return;
+        try {
+          onPollData && onPollData(json);
+        } catch (_2) {
+        }
+        const st = String(json?.call?.call_status || json?.call_status || "").toLowerCase();
+        if (st === "ended") {
+          stopPolling();
+        }
       } catch (_2) {
       }
-    }, Math.max(400, pollIntervalMs));
+    }, Math.max(250, Number(pollIntervalMs) || 700));
+  }
+  function stopPolling() {
+    if (pollTimer) {
+      window.clearInterval(pollTimer);
+      pollTimer = null;
+    }
   }
   async function startCall() {
     if (isActive) return;
-    setStatus("Retell: creando llamada\u2026");
-    emit({ type: "call_creating" });
+    setStatus("Inntesec Agent: creando llamada\u2026");
     const { access_token, call_id } = await createWebCallOnServer();
     lastCallId = call_id || null;
+    lastLiveText = "";
     clearPanel();
-    setStatus("Retell: conectando\u2026");
-    emit({ type: "call_connecting", call_id: lastCallId });
+    setStatus("Inntesec Agent: conectando\u2026");
     await retellWebClient.startCall({ accessToken: access_token });
   }
   function stopCall() {
@@ -24655,39 +24727,57 @@ function wireRetellButtons({
   retellWebClient.on("call_started", () => {
     isActive = true;
     paintToggle();
-    setStatus("Retell: llamada iniciada");
+    setStatus("Inntesec Agent: llamada iniciada");
     openPanel();
-    emit({ type: "call_started", call_id: lastCallId });
+    emitEvent({ type: "call_started", call_id: lastCallId });
     startPolling();
   });
   retellWebClient.on("agent_start_talking", () => {
-    setStatus("Retell: IA hablando\u2026");
-    emit({ type: "agent_start_talking" });
+    setStatus("Inntesec Agent: IA hablando\u2026");
   });
   retellWebClient.on("agent_stop_talking", () => {
-    setStatus("Retell: escuchando\u2026");
-    emit({ type: "agent_stop_talking" });
+    setStatus("Inntesec Agent: escuchando\u2026");
   });
-  retellWebClient.on("update", () => {
+  retellWebClient.on("update", (update) => {
+    const text = extractTranscriptText(update);
+    if (!text) return;
+    const role = extractRole(update);
+    openPanel();
+    setLiveText(text);
+    try {
+      onUpdate && onUpdate({ role, text, raw: update });
+    } catch (_2) {
+    }
   });
   retellWebClient.on("call_ended", async () => {
     isActive = false;
     paintToggle();
-    setStatus("Retell: llamada finalizada");
-    emit({ type: "call_ended", call_id: lastCallId });
+    setStatus("Inntesec Agent: llamada finalizada");
     stopPolling();
+    emitEvent({ type: "call_ended", call_id: lastCallId });
     try {
-      const data = await fetchCallSummary();
-      if (data && onPollData) onPollData(data);
+      const json = await fetchCallJson();
+      try {
+        onPollData && onPollData(json);
+      } catch (_2) {
+      }
+      const call = json?.call || null;
+      const transcript = (call?.transcript || "").trim();
+      openPanel();
+      showFinalTranscript(transcript);
     } catch (_2) {
+      openPanel();
+      showFinalTranscript(lastLiveText);
     }
   });
   retellWebClient.on("error", (error) => {
     isActive = false;
     paintToggle();
+    setStatus("Inntesec Agent: error en la llamada");
     stopPolling();
-    setStatus("Retell: error en la llamada");
-    emit({ type: "call_error", message: error?.message || "unknown", raw: error });
+    emitEvent({ type: "call_error", call_id: lastCallId, error });
+    openPanel();
+    showFinalTranscript(`Error: ${error?.message || "revisa consola"}`);
     try {
       retellWebClient.stopCall();
     } catch (_2) {
@@ -24697,31 +24787,32 @@ function wireRetellButtons({
     toggleBtn.addEventListener("click", async (e2) => {
       e2.preventDefault();
       if (isActive) {
-        setStatus("Retell: colgando\u2026");
-        emit({ type: "call_hanging_up" });
+        setStatus("Inntesec Agent: colgando\u2026");
         stopCall();
         return;
       }
       try {
         await startCall();
       } catch (err) {
+        openPanel();
+        if (String(err?.message || err) === "NO_PHONE") {
+          setStatus("Inntesec Agent: no tienes n\xFAmero registrado");
+          showFinalTranscript(
+            "No tienes un n\xFAmero de tel\xE9fono registrado. Actual\xEDzalo en tu perfil o solicita al administrador que lo ingrese."
+          );
+        } else {
+          setStatus("Inntesec Agent: no se pudo iniciar");
+          showFinalTranscript(`No se pudo iniciar la llamada. ${err?.message || err}`);
+        }
         isActive = false;
         paintToggle();
-        if (String(err?.message || err) === "NO_PHONE") {
-          setStatus("Retell: no tienes n\xFAmero registrado");
-        } else {
-          setStatus("Retell: no se pudo iniciar");
-        }
-        emit({ type: "call_error", message: String(err?.message || err) });
       }
     });
   }
   paintToggle();
   setStatus("");
-  return {
-    stopCall
-  };
 }
 export {
   wireRetellButtons
 };
+//# sourceMappingURL=retell_call.bundle.js.map

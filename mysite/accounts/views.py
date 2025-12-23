@@ -63,7 +63,7 @@ def registro_cliente(request):
             print("⚠️ No se ingresó correo, redirigiendo...")
             return redirect("auth_registro_cliente")
 
-        # 1️⃣ Buscar cliente existente
+        # 1️ Buscar cliente existente
         cliente = Client.objects.filter(email__iexact=email).first()
         print("👤 Cliente encontrado:", cliente)
 
@@ -72,7 +72,7 @@ def registro_cliente(request):
             print("❌ Cliente no encontrado, deteniendo flujo.")
             return redirect("auth_registro_cliente")
 
-        # 2️⃣ Buscar tenant asociado
+        # 2️ Buscar tenant asociado
         tenant = Tenant.objects.filter(clients=cliente).first()
         print("🏢 Tenant encontrado:", tenant)
 
@@ -85,7 +85,7 @@ def registro_cliente(request):
         password = get_random_string(10)
 
         try:
-            # ⚙️ Buscar si el usuario ya existe
+            # Buscar si el usuario ya existe
             existing_user = User.objects.filter(email=email).first()
 
             if existing_user:
@@ -96,7 +96,7 @@ def registro_cliente(request):
                 )
                 return redirect("login")
 
-            # ✅ Crear usuario nuevo
+            # Crear usuario nuevo
             user_id = getattr(cliente, "id", None)
             user = User.objects.create_user(
                 id=user_id,
@@ -113,7 +113,7 @@ def registro_cliente(request):
             print("❌ Error de integridad: usuario ya existente.")
             return redirect("auth_registro_cliente")
 
-        # 3️⃣ Enviar correo corporativo de bienvenida (usando Microsoft Graph API)
+        # 3️ Enviar correo corporativo de bienvenida (usando Microsoft Graph API)
         url_login = "https://ia.inntesec.com/login"
 
         try:

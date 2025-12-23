@@ -10,14 +10,14 @@ from django.db.models import Q, F, Value, TextField
 from django.db.models.functions import Lower, Replace, Trim, Cast
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render, redirect
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
 from tenants.decorators import tenant_required
-from tenants.models import Tenant
+from tenants.models import Tenant, TenantUser
 from urllib.parse import urlparse
 
 from .models import IncidenteSOAR
 
-# 👇 credenciales de blacklist/portal + preferencias de países
+# credenciales de blacklist/portal + preferencias de países
 from home.models import TenantCredentials, WhitelistCountryPreference  # noqa
 from home.countries import ALL_COUNTRIES
 
@@ -380,3 +380,88 @@ def api_incidents_by_alarm_ids(request):
     except Exception as e:
         logger.exception("[api_by_alarm_ids] Error: %s", e)
         return JsonResponse([], safe=False)
+
+def _is_inntesec_user(request) -> bool:
+    try:
+        ut = getattr(request.user, "tenant", None)
+        return bool(ut and (ut.name or "").strip().lower() == "inntesec")
+    except Exception:
+        return False
+
+
+def _get_active_tenant(request):
+    """
+    Resuelve tenant efectivo con prioridad:
+    1) request.tenant (middleware/decorator tenant_required)
+    2) session['tenant_id'] / session['active_tenant_id']
+    3) request.user.tenant
+    """
+    t = getattr(request, "tenant", None)
+    if t:
+        return t
+
+    tid = request.session.get("tenant_id") or request.session.get("active_tenant_id")
+    if tid:
+        try:
+            return Tenant.objects.filter(id=int(tid)).first()
+        except Exception:
+            return None
+
+    return getattr(request.user, "tenant", None)
+
+
+def _serialize_tenant_user(u: TenantUser) -> dict:
+    full = (f"{u.first_name or ''} {u.last_name or ''}").strip()
+    if not full:
+        full = u.username or f"User {u.id}"
+    return {
+        "id": u.id,
+        "full_name": full,
+        "username": u.username or "",
+        "email": u.email or "",
+    }
+
+
+@login_required
+@tenant_required
+@require_POST
+def api_tenant_users(request):
+    """
+    POST JSON:
+      {"tenant_id": 123}  # solo Inntesec puede solicitar otro tenant
+    RESP:
+      {"users": [{id, full_name, username, email}, ...]}
+    """
+    try:
+        payload = json.loads((request.body or b"{}").decode("utf-8"))
+    except Exception:
+        payload = {}
+
+    tenant = None
+
+    # Inntesec puede elegir tenant explícito
+    if _is_inntesec_user(request):
+        tid = payload.get("tenant_id")
+        if tid:
+            tenant = Tenant.objects.filter(id=int(tid)).first()
+
+    # resto: siempre tenant activo
+    if tenant is None:
+        tenant = _get_active_tenant(request)
+
+    if not tenant:
+        return JsonResponse({"users": []}, status=200)
+
+    try:
+        qs = (
+            TenantUser.objects
+            .filter(tenant_id=tenant.id, is_active=True)
+            .order_by("first_name", "last_name", "username")
+        )
+
+        users = [_serialize_tenant_user(u) for u in qs]
+        return JsonResponse({"users": users}, status=200)
+
+    except Exception as e:
+        logger.exception("[SOAR] api_tenant_users error: %s", e)
+        return JsonResponse({"users": []}, status=200)

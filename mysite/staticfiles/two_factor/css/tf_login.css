@@ -1,0 +1,79 @@
+/* static/two_factor/css/tf_login.css */
+:root{
+  --tf-field-width: 280px; /* inputs */
+  --tf-card-width: 380px;  /* tarjeta completa (header + content) */
+}
+
+/* ✅ La “tarjeta” completa (incluye header) */
+body.login #container{
+  width: var(--tf-card-width);
+  max-width: calc(100vw - 40px);
+  margin: 90px auto 0;
+  box-sizing: border-box;
+}
+
+/* ✅ Header que no corte el título */
+body.login #header{
+  width: 100%;
+  box-sizing: border-box;
+  position: relative; /* para que el botón de tema se ubique bien */
+  overflow: hidden;   /* evita cosas raras */
+}
+
+/* ✅ Content alineado al ancho del container */
+body.login #content{
+  width: 100%;
+  box-sizing: border-box;
+  padding-bottom: 0 !important;
+}
+
+body.login #content-main{
+  float: none;
+  width: 100%;
+}
+
+/* ✅ Filas centradas y con ancho real */
+body.login #content-main .form-row{
+  float: none;
+  display: block;
+  width: var(--tf-field-width);
+  max-width: 100%;
+  margin: 0 auto 12px;
+  box-sizing: border-box;
+}
+
+/* ✅ Label alineado con el inicio del input */
+body.login #content-main .form-row label{
+  float: none;
+  display: block;
+  margin: 0 0 6px;
+  text-align: left;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ✅ Input ocupa todo el ancho */
+body.login #content-main .form-row input,
+body.login #content-main .form-row select{
+  float: none;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+}
+
+/* ✅ Botón centrado y mismo ancho */
+body.login .submit-row{
+  width: var(--tf-field-width);
+  max-width: 100%;
+  margin: 16px auto 0;
+  box-sizing: border-box;
+}
+
+/* ✅ Ayuda OTP mismo ancho */
+body.login .otp-help{
+  width: var(--tf-field-width);
+  max-width: 100%;
+  margin: 0 auto 12px;
+  text-align: left;
+}

@@ -168,25 +168,27 @@ def fetch_anomaly_summary(
     zaaid: str,
     period: int = 3,
     monitor_type: str | None = None,
-    start_ms: int | None = None,
-    end_ms: int | None = None,
+    start_ms: int | None = None,  # se mantiene por compatibilidad, pero NO se usa
+    end_ms: int | None = None,    # se mantiene por compatibilidad, pero NO se usa
 ) -> Dict[str, AnyType]:
+    """
+    /reports/anomaly NO soporta start_time/end_time.
+    Si los envías, Site24x7 responde 1107 (extra parameter start_time).
+    """
     headers = {
         "Accept": "application/json; version=2.0",
         "Authorization": f"Zoho-oauthtoken {access_token}",
     }
 
     params: Dict[str, AnyType] = {
-        "period": period,
+        "period": int(period),
         "zaaid": zaaid,
     }
 
     if monitor_type:
         params["monitor_type"] = monitor_type
 
-    if start_ms and end_ms:
-        params["start_time"] = int(start_ms)
-        params["end_time"] = int(end_ms)
+    # NO enviar start_time / end_time aquí
 
     url = f"{SITE24X7_BASE_URL}{ANOMALY_DASHBOARD_PATH}"
     resp = requests.get(url, headers=headers, params=params, timeout=30)
@@ -198,6 +200,7 @@ def fetch_anomaly_summary(
 
     data = resp.json()
     return (data.get("data") or {}).get("anomaly_summary") or {}
+
 
 
 def fetch_anomaly_by_monitor(

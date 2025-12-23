@@ -1,0 +1,111 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}{% trans "Log in" %}{% endblock %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/login.css' %}">
+  <style>
+    /* Feeling admin + label arriba, alineado con input */
+    .login #content-main .form-row { float: none; display: block; }
+
+    .login #content-main .form-row label,
+    .login #content-main .form-row input {
+      width: 260px;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    .login #content-main .form-row label {
+      float: none;
+      display: block;
+      margin: 0 auto 6px;
+      text-align: left;
+    }
+
+    .login #content-main .form-row input {
+      float: none;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .otp-help {
+      width: 260px;
+      max-width: 100%;
+      margin: 0 auto 12px;
+      color: var(--body-quiet-color, #9ca3af);
+      font-size: 12px;
+      line-height: 1.35;
+      text-align: left;
+    }
+  </style>
+{% endblock %}
+
+{% block bodyclass %}{{ block.super }} login{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+
+{% block content %}
+  {# Paso actual del wizard (por si cambia el nombre según versión) #}
+  {% with step=wizard.steps.current|default_if_none:"" %}
+    {% if wizard.form.errors %}
+      <p class="errornote">
+        {% if "token" in step or "otp" in step %}
+          Código incorrecto. Vuelve a intentarlo otra vez.
+        {% else %}
+          Por favor corrija el error abajo indicado.
+        {% endif %}
+      </p>
+    {% endif %}
+
+    <div id="content-main">
+      <form action="" method="post" id="login-form">
+        {% csrf_token %}
+        {{ wizard.management_form }}
+
+        {# Mensaje explicativo SOLO cuando pide el código #}
+        {% if "token" in step or "otp" in step %}
+          <div class="otp-help">
+            Ingresa a tu autenticador registrado 
+            e ingresa el código de 6 dígitos que ves en la aplicación.
+          </div>
+        {% endif %}
+
+        {% for field in wizard.form.visible_fields %}
+          <div class="form-row{% if field.field.required %} required{% endif %}">
+            {{ field.errors }}
+
+            {# Si estamos en el paso OTP, cambiamos el label a algo más claro #}
+            {% if "token" in step or "otp" in step %}
+              <label for="{{ field.id_for_label }}">Código de verificación</label>
+              {{ field }}
+            {% else %}
+              {{ field.label_tag }}
+              {{ field }}
+            {% endif %}
+          </div>
+        {% endfor %}
+
+        {% if next %}
+          <input type="hidden" name="next" value="{{ next }}">
+        {% endif %}
+
+        <div class="submit-row">
+          {% if "token" in step or "otp" in step %}
+            <input type="submit" value="Verificar">
+          {% else %}
+            <input type="submit" value="{% trans 'Log in' %}">
+          {% endif %}
+        </div>
+      </form>
+    </div>
+
+    <script>
+      (function () {
+        const first = document.querySelector('#login-form input:not([type="hidden"]):not([disabled])');
+        if (first) first.focus();
+      })();
+    </script>
+  {% endwith %}
+{% endblock %}
+

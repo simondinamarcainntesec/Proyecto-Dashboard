@@ -1,85 +1,178 @@
 // ===============================
-// Modal: Filtro de países whitelist
+// Modal: Filtro de países whitelist (POR TENANT)
 // ===============================
 
 // Helper CSRF desde cookies (Django)
 function getCookie(name) {
   var value = "; " + document.cookie;
   var parts = value.split("; " + name + "=");
-  if (parts.length === 2) {
-    return parts.pop().split(";").shift();
-  }
+  if (parts.length === 2) return parts.pop().split(";").shift();
   return null;
 }
 
-// Mostrar / ocultar modal de países
-function toggleCountryModal(show) {
-  var modal = document.getElementById("countryModal");
-  if (!modal) return;
-
-  if (show) {
-    modal.classList.remove("hidden");
-
-    // Estado inicial viene desde el backend (selected_paises).
-
-    // Aplicar filtro actual del buscador (si hubiera texto escrito)
-    var searchInput = document.getElementById("countrySearch");
-    var term = "";
-    if (searchInput) {
-      term = (searchInput.value || "").toLowerCase().trim();
-    }
-    filterCountries(term);
-  } else {
-    modal.classList.add("hidden");
-  }
+function getModalEl() {
+  return document.getElementById("countryModal");
 }
 
-// Cerrar al hacer click en el fondo (pero no dentro de la tarjeta)
-function backdropClickCountry(event) {
-  if (event.target && event.target.id === "countryModal") {
-    toggleCountryModal(false);
+function getTenantIdFromModal() {
+  var modal = getModalEl();
+  if (!modal) return "";
+  return (modal.getAttribute("data-tenant-id") || "").trim();
+}
+
+function getLoadUrlFromModal() {
+  var modal = getModalEl();
+  if (!modal) return "";
+  return (
+    modal.getAttribute("data-load-url") ||
+    window.WHITELIST_GET_COUNTRIES_URL ||
+    "/home/whitelist/get-countries/"
+  );
+}
+
+function getSaveUrlFromModal() {
+  var modal = getModalEl();
+  if (!modal) return "";
+  return (
+    modal.getAttribute("data-save-url") ||
+    window.WHITELIST_SAVE_COUNTRIES_URL ||
+    "/home/whitelist/save-countries/"
+  );
+}
+
+// ===============================
+// Fetch helper: maneja 500/HTML y muestra detalle real
+// ===============================
+function fetchJsonOrThrow(url, options) {
+  return fetch(url, options).then(function (resp) {
+    // Intentar leer el body siempre
+    return resp.text().then(function (text) {
+      var data = null;
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch (e) {
+        data = null; // puede venir HTML (debug) o texto plano
+      }
+
+      if (!resp.ok) {
+        var err = new Error("HTTP " + resp.status + " " + resp.statusText);
+        err.status = resp.status;
+        err.bodyText = text;
+        err.bodyJson = data;
+        throw err;
+      }
+
+      // 200 OK, pero si no era JSON válido, igual devolvemos algo útil
+      return data !== null ? data : { ok: false, message: "Respuesta no-JSON", raw: text };
+    });
+  });
+}
+
+// ===============================
+// UI helpers
+// ===============================
+
+// Devuelve array de códigos ISO seleccionados (['CL', 'AR', ...])
+function getSelectedCountryCodes() {
+  var checkboxes = document.querySelectorAll("#countryModal .country-checkbox:checked");
+  var selected = [];
+  checkboxes.forEach(function (cb) {
+    if (cb.value) selected.push(cb.value);
+  });
+  return selected;
+}
+
+// Aplica selección a UI (checkbox + pill) usando CÓDIGOS
+function applySelectedCountries(codes) {
+  var set = {};
+  (codes || []).forEach(function (c) {
+    if (!c) return;
+    set[String(c).trim().toUpperCase()] = true;
+  });
+
+  var all = document.querySelectorAll("#countryModal .country-checkbox");
+  all.forEach(function (cb) {
+    var code = (cb.value || "").trim().toUpperCase();
+    var checked = !!set[code];
+    cb.checked = checked;
+
+    var pill = cb.closest(".country-pill");
+    if (pill) pill.classList.toggle("is-selected", checked);
+  });
+}
+
+// Lee lo que ya venía renderizado en el template (fallback si falla AJAX)
+function getSelectedCodesFromRenderedHTML() {
+  var codes = [];
+  var checked = document.querySelectorAll("#countryModal .country-checkbox:checked");
+  checked.forEach(function (cb) {
+    if (cb.value) codes.push(String(cb.value).trim().toUpperCase());
+  });
+  return codes;
+}
+
+// ===============================
+// Cargar selección desde backend (por tenant actual)
+// ===============================
+function loadCountriesAjax() {
+  var modal = getModalEl();
+  if (!modal) return Promise.resolve([]);
+
+  var baseUrl = getLoadUrlFromModal();
+  var tenantId = getTenantIdFromModal();
+
+  // anexar tenant_id como querystring (aunque el backend lo ignore si no coincide)
+  var url = baseUrl;
+  try {
+    var u = new URL(baseUrl, window.location.origin);
+    if (tenantId) u.searchParams.set("tenant_id", tenantId);
+    url = u.toString();
+  } catch (e) {
+    // si baseUrl ya es relativo raro, fallback simple
+    if (tenantId) {
+      url = baseUrl + (baseUrl.indexOf("?") >= 0 ? "&" : "?") + "tenant_id=" + encodeURIComponent(tenantId);
+    }
   }
+
+  return fetchJsonOrThrow(url, {
+    method: "GET",
+    headers: { "X-Requested-With": "XMLHttpRequest" }
+  })
+    .then(function (data) {
+      if (!data || !data.ok) {
+        console.error("[COUNTRY MODAL] Backend respondió ok=false en GET:", data);
+        return [];
+      }
+      return (data.selected_codes || []).map(function (c) { return String(c).trim().toUpperCase(); });
+    })
+    .catch(function (err) {
+      // Aquí verás el error real (incluye bodyText cuando es 500)
+      console.error("[COUNTRY MODAL] GET falló:", err);
+      if (err.bodyJson) console.error("[COUNTRY MODAL] GET bodyJson:", err.bodyJson);
+      if (err.bodyText) console.error("[COUNTRY MODAL] GET bodyText (primeros 1200):", String(err.bodyText).slice(0, 1200));
+      return [];
+    });
 }
 
 // ===============================
 // Guardado vía AJAX (sin recargar)
 // ===============================
-
-// Devuelve array de códigos ISO seleccionados (['CL', 'AR', ...])
-function getSelectedCountryCodes() {
-  var checkboxes = document.querySelectorAll(
-    "#countryModal .country-checkbox:checked"
-  );
-  var selected = [];
-  checkboxes.forEach(function (cb) {
-    if (cb.value) {
-      selected.push(cb.value);
-    }
-  });
-  return selected;
-}
-
-// Llamada AJAX al backend para guardar países
 function saveCountriesAjax(codes) {
-  var modal = document.getElementById("countryModal");
+  var modal = getModalEl();
   if (!modal) {
-    console.error("No se encontró #countryModal");
+    console.error("[COUNTRY MODAL] No se encontró #countryModal");
     return Promise.resolve(false);
   }
 
-  // URL de guardado: data-save-url en el modal o variable global de respaldo
-  var saveUrl =
-    modal.getAttribute("data-save-url") ||
-    window.WHITELIST_SAVE_COUNTRIES_URL || // opcional
-    "/home/whitelist/save-countries/"; // fallback por si acaso
-
+  var saveUrl = getSaveUrlFromModal();
+  var tenantId = getTenantIdFromModal();
   var csrfToken = getCookie("csrftoken") || "";
 
   var params = new URLSearchParams();
-  // backend recibirá "countries=CL,AR,US"
-  params.append("countries", codes.join(","));
+  params.append("countries", (codes || []).join(","));
+  if (tenantId) params.append("tenant_id", tenantId);
 
-  return fetch(saveUrl, {
+  return fetchJsonOrThrow(saveUrl, {
     method: "POST",
     headers: {
       "X-Requested-With": "XMLHttpRequest",
@@ -88,117 +181,124 @@ function saveCountriesAjax(codes) {
     },
     body: params.toString()
   })
-    .then(function (resp) {
-      return resp.json();
-    })
     .then(function (data) {
-      if (!data.ok) {
-        console.error("Error guardando países:", data);
-        // Podrías mostrar un mensaje de error en la propia modal si quieres
+      if (!data || !data.ok) {
+        console.error("[COUNTRY MODAL] Backend respondió ok=false en POST:", data);
         return false;
       }
 
-      console.log(
-        "Preferencias de países guardadas en servidor:",
-        data.selected_paises
-      );
+      applySelectedCountries((data.selected_codes || []).map(function (c) { return String(c).trim().toUpperCase(); }));
 
-      // Mostrar mensaje dentro de la modal ANTES de cerrarla
       var toast = document.getElementById("countrySaveToast");
       if (toast) {
         toast.classList.remove("hidden");
         toast.classList.add("show");
-
-        // Dejamos visible el mensaje un momento y luego cerramos la modal
         setTimeout(function () {
           toast.classList.remove("show");
           toggleCountryModal(false);
-        }, 1500); // ajusta el tiempo a gusto
+        }, 1500);
       } else {
-        // Si no hay toast, cerramos directamente
         toggleCountryModal(false);
       }
 
       return true;
     })
     .catch(function (err) {
-      console.error("Error AJAX guardando países:", err);
+      console.error("[COUNTRY MODAL] POST falló:", err);
+      if (err.bodyJson) console.error("[COUNTRY MODAL] POST bodyJson:", err.bodyJson);
+      if (err.bodyText) console.error("[COUNTRY MODAL] POST bodyText (primeros 1200):", String(err.bodyText).slice(0, 1200));
       return false;
     });
 }
 
-// Guardar selección (solo AJAX, sin recargar)
+// ===============================
+// Mostrar / ocultar modal
+// ===============================
+function toggleCountryModal(show) {
+  var modal = getModalEl();
+  if (!modal) return;
+
+  if (show) {
+    modal.classList.remove("hidden");
+
+    // 1) Fallback inmediato: deja lo que venía renderizado
+    applySelectedCountries(getSelectedCodesFromRenderedHTML());
+
+    // 2) Luego intenta cargar desde BD
+    loadCountriesAjax().then(function (selectedCodes) {
+      if (selectedCodes && selectedCodes.length) {
+        applySelectedCountries(selectedCodes);
+      }
+
+      var searchInput = document.getElementById("countrySearch");
+      var term = "";
+      if (searchInput) term = (searchInput.value || "").toLowerCase().trim();
+      filterCountries(term);
+    });
+  } else {
+    modal.classList.add("hidden");
+  }
+}
+
+// Cerrar al hacer click en el fondo
+function backdropClickCountry(event) {
+  if (event.target && event.target.id === "countryModal") {
+    toggleCountryModal(false);
+  }
+}
+
+// Guardar selección
 function saveCountryFilter() {
   var selected = getSelectedCountryCodes();
-  // Ahora el cierre de la modal se maneja dentro de saveCountriesAjax,
-  // después de mostrar el mensaje.
   saveCountriesAjax(selected);
 }
 
-// Limpiar checkboxes y quitar filtro (en servidor también)
+// Reset selección
 function resetCountryFilter() {
-  var checkboxes = document.querySelectorAll(
-    "#countryModal .country-checkbox"
-  );
-
+  var checkboxes = document.querySelectorAll("#countryModal .country-checkbox");
   checkboxes.forEach(function (cb) {
     cb.checked = false;
     var pill = cb.closest(".country-pill");
-    if (pill) {
-      pill.classList.remove("is-selected");
-    }
+    if (pill) pill.classList.remove("is-selected");
   });
 
-  // Limpiar buscador visualmente y mostrar todos los países
   var searchInput = document.getElementById("countrySearch");
-  if (searchInput) {
-    searchInput.value = "";
-  }
+  if (searchInput) searchInput.value = "";
   filterCountries("");
 
-  // Persistir en servidor lista vacía (sin países seleccionados)
-  // Puedes decidir si aquí también quieres mostrar un mensaje y cerrar,
-  // o solo dejar la modal abierta. En este ejemplo solo guardamos en backend.
   saveCountriesAjax([]);
 }
 
-// Marcar / desmarcar pill visualmente al cambiar checkbox
+// Marcar/desmarcar pill al cambiar checkbox
 document.addEventListener("change", function (event) {
   if (event.target && event.target.matches("#countryModal .country-checkbox")) {
     var cb = event.target;
     var pill = cb.closest(".country-pill");
-    if (pill) {
-      pill.classList.toggle("is-selected", cb.checked);
-    }
+    if (pill) pill.classList.toggle("is-selected", cb.checked);
   }
 });
 
 // ===============================
-// Buscador de países en el modal
+// Buscador de países
 // ===============================
-
-// Función helper para aplicar el filtro a los pills
 function filterCountries(term) {
   term = (term || "").toLowerCase().trim();
   var pills = document.querySelectorAll("#countryModal .country-pill");
 
   pills.forEach(function (pill) {
     var name = (pill.textContent || "").toLowerCase();
-    // Mostrar solo los que contengan el término
     pill.style.display = name.indexOf(term) !== -1 ? "" : "none";
   });
 }
 
-// Escuchar cambios de texto en el input de búsqueda
 document.addEventListener("input", function (event) {
   if (event.target && event.target.id === "countrySearch") {
-    var term = event.target.value;
-    filterCountries(term);
+    filterCountries(event.target.value);
   }
 });
 
-// Exponer funciones al ámbito global para que el HTML las pueda usar
-window.toggleCountryModal     = toggleCountryModal;
-window.backdropClickCountry   = backdropClickCountry;
-window.saveCountryFilter      = saveCountryFilter;
-window.resetCountryFilter     = resetCountryFilter;
+// Exponer funciones
+window.toggleCountryModal = toggleCountryModal;
+window.backdropClickCountry = backdropClickCountry;
+window.saveCountryFilter = saveCountryFilter;
+window.resetCountryFilter = resetCountryFilter;

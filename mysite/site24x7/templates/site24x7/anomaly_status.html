@@ -182,6 +182,17 @@
       <div class="top-right">
         <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
 
+        {# ===== Exportar (solo UI; NO exporta, abre modal) ===== #}
+        {% if tenant and tenant.site24x7_id %}
+          <div class="export-wrapper" id="exportWrapper">
+            <button class="btn ghost" title="Exportar" id="btn-export-toggle">⬇︎</button>
+            <div class="export-dropdown" id="export-menu">
+              <button type="button" data-export-format="pdf">📄 Exportar PDF</button>
+              <button type="button" data-export-format="csv">📊 Exportar CSV</button>
+            </div>
+          </div>
+        {% endif %}
+
         <div class="user-menu" id="userMenu">
           <button type="button" id="userButton" class="user-button">
             <div class="user-avatar">
@@ -205,12 +216,11 @@
       </div>
     </header>
 
-    {# ====================== TOOLBAR FECHAS ====================== #}
+    {# ====================== TOOLBAR FECHAS (solo botones) ====================== #}
     {% if tenant and tenant.site24x7_id %}
       <section class="wrap">
         <section class="toolbar">
           <form id="date-filter" method="get" action="" class="toolbar-row">
-
             <div class="group">
               <button
                 type="submit"
@@ -233,36 +243,22 @@
                 value="5"
               >Últimos 30 días</button>
             </div>
-
-            <div class="group">
-              <input type="hidden" name="period" id="inp-period" value="{{ period|default:'3' }}">
-
-              <label class="date-range">
-                <span>Desde</span>
-                <input type="date" name="from" id="inp-from" value="{{ from_date|default:'' }}">
-              </label>
-
-              <label class="date-range">
-                <span>Hasta</span>
-                <input type="date" name="to" id="inp-to" value="{{ to_date|default:'' }}">
-              </label>
-
-              <button type="submit" class="btn primary">Aplicar</button>
-              <a class="btn ghost" href="?">Limpiar</a>
-            </div>
-
           </form>
         </section>
       </section>
     {% endif %}
 
-    {# ===== Estados especiales ===== #}
+    {# ===== Estados especiales (con botón OK -> Home) ===== #}
     {% if not tenant %}
       <section class="empty-state">
         <div class="empty-card">
           <h2>Servicio Inn-Monitor no disponible</h2>
           <p>No se pudo determinar el tenant para este usuario.</p>
           <p>Por favor, contacte con un administrador.</p>
+
+          <div style="margin-top:16px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
+            <a class="btn primary" href="{% url 'home:index' %}">OK</a>
+          </div>
         </div>
       </section>
 
@@ -275,6 +271,10 @@
             no tiene configurado el servicio de <strong>Site24x7</strong>.
           </p>
           <p>Por favor, contacte con un administrador.</p>
+
+          <div style="margin-top:16px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
+            <a class="btn primary" href="{% url 'home:index' %}">OK</a>
+          </div>
         </div>
       </section>
 
@@ -287,6 +287,10 @@
             para la empresa <strong>{{ tenant.name|default:"—" }}</strong>.
           </p>
           <p>Por favor, contacte con un administrador.</p>
+
+          <div style="margin-top:16px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
+            <a class="btn primary" href="{% url 'home:index' %}">OK</a>
+          </div>
         </div>
       </section>
 
@@ -295,12 +299,14 @@
         <div class="empty-card">
           <h2>Sin anomalías en el período</h2>
           <p>No se detectaron anomalías para <strong>{{ tenant.name|default:"—" }}</strong> en el rango consultado.</p>
+
+          <div style="margin-top:16px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
+            <a class="btn primary" href="{% url 'home:index' %}">OK</a>
+          </div>
         </div>
       </section>
 
     {% else %}
-
-      {# ✅ KPIs fuera del card de monitores/anomalías (debajo de la barra) #}
       <section class="wrap">
         <section class="grid grid-kpis kpis-site24x7">
           <div class="card kpi">
@@ -345,7 +351,6 @@
         </section>
       </section>
 
-      {# ✅ Card solo para la tabla (monitores/anomalías) #}
       <section class="wrap" id="anomalies-export-area" data-page-slug="Inn-monitor_Anomalias">
         <div class="card">
           <div class="card-head">
@@ -440,6 +445,30 @@
     </div>
   </div>
 
+  {# ===== Modal "Exportación" (solo informativo) ===== #}
+  <div id="exportInfoModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-export-info></div>
+
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="exportInfoTitle">
+      <div class="modal-header">
+        <h3 id="exportInfoTitle">Exportación</h3>
+        <button class="modal-close" type="button" data-close-export-info>&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p class="export-info-text">
+          Para visualizar esta información debe acceder al sitio oficial de <span class="brand-nowrap">Inn-Monitor</span>
+        </p>
+
+
+        <div class="export-info-actions">
+          <button type="button" class="btn primary" id="btn-export-info-ok">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
   <!-- JS base -->
   <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/page-loader-universal.js' %}?v={% now 'U' %}"></script>
@@ -451,6 +480,8 @@
 
   <!-- JS anomalías -->
   <script defer src="{% static 'js/site24x7_anomalies.js' %}?v={% now 'U' %}"></script>
+
+  <script defer src="{% static 'js/export_info_modal.js' %}?v={% now 'U' %}"></script>
 
   {% include 'partials/config_notificaciones_modal.html' %}
   {% include 'partials/_country_filter_modal.html' %}

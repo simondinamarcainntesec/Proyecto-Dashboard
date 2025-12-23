@@ -6,6 +6,7 @@
   // · Barra de búsqueda (alineada a la izquierda, bajo el título)
   // · Filtro local en vivo sobre la lista cargada
   // · Loteo de alarm_ids para evitar 414 (URL demasiado larga)
+  // · Loader "Cargando datos..." dentro de la MODAL al abrir
   // =========================================
 
   const LIST_MODAL_ID   = "soarIncidentsModal";
@@ -104,6 +105,37 @@
     $$("[data-close]", m).forEach(n => n.addEventListener("click", ()=>close(m)));
   }
   wireClose(listModal); wireClose(detailModal);
+
+  // Loader dentro del tbody (modal listado)
+  function renderListLoading() {
+    return `
+      <tr class="loading-row">
+        <td colspan="6">
+          <div class="ao-loading">
+            <div class="ao-spinner" aria-hidden="true"></div>
+            <span>Cargando datos...</span>
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+
+  function setListLoading(isOn) {
+    if (!tbody) return;
+
+    if (isOn) {
+      tbody.innerHTML = renderListLoading();
+
+      const empty = $("#si-empty", listModal);
+      if (empty) empty.style.display = "none";
+
+      open(listModal);
+      ensureCloseX();
+      ensureSearchBar();
+      return;
+    }
+    // Al apagar: renderList() se encarga de pintar la tabla real
+  }
 
   // ----- cerrar único: crea/ubica la X y elimina duplicados -----
   function ensureCloseX() {
@@ -239,7 +271,7 @@
   function paintDetail(it) {
     if (!detailModal) return;
 
-    // 🚨 título como en la referencia: icono + severidad en negrita + dispositivo en “muted”
+    // título como en la referencia: icono + severidad en negrita + dispositivo en “muted”
     if (dTitle) {
       const sev = val(it.severity);
       const dev = val(it.device);
@@ -361,11 +393,23 @@
   // ----- API pública -----
   window.SOAR_Incidents = {
     async showForAlarmIds(alarmIds = []) {
+      if (!alarmIds.length) {
+        alert("No hay alarmas para mostrar con el filtro actual.");
+        return;
+      }
+
+      // abre y muestra loader inmediato dentro de la modal
+      setListLoading(true);
+
       try {
-        if (!alarmIds.length) { alert("No hay alarmas para mostrar con el filtro actual."); return; }
         const rows = await fetchList(alarmIds);
-        if (!rows.length) { alert("No se encontraron incidentes para esos IDs."); return; }
-        renderList(rows);
+        if (!rows.length) {
+          if (tbody) tbody.innerHTML = "";
+          const empty = $("#si-empty", listModal);
+          if (empty) empty.style.display = "";
+          return;
+        }
+        renderList(rows); // pisa el loader con la tabla real
       } catch (err) {
         console.error("[SOAR_Incidents] Error:", err);
         alert("No se pudieron cargar los incidentes. Intenta nuevamente.");

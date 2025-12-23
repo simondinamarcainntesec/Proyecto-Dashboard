@@ -1,0 +1,47 @@
+/* static/two_factor/css/tf_admin.css */
+
+/* El header está dentro del cuadro: aseguramos espacio para el toggle */
+body.login #header{
+  position: relative;
+  overflow: visible;
+}
+
+/* Centra el título pero deja espacio real para el botón del tema */
+body.login #branding{
+  width: 100%;
+  text-align: center;
+  padding-right: 56px; /* espacio para el toggle */
+  box-sizing: border-box;
+}
+
+/* Fuerza el botón del tema visible y fijo a la derecha */
+body.login #header .theme-toggle{
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+}
+
+/* Botón tema inyectado SOLO si el admin no lo renderiza */
+#header { position: relative; }
+
+#header .tf-theme-toggle{
+  position: absolute;
+  right: 14px;
+  top: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(0,0,0,.10);
+  color: var(--header-link-color, #fff);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+#header .tf-theme-toggle:hover{
+  background: rgba(0,0,0,.18);
+}

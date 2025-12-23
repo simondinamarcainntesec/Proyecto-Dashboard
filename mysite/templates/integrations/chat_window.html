@@ -1,0 +1,45 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat{% if tenant %} – {{ tenant.name }}{% endif %}</title>
+
+  <link rel="stylesheet" href="{% static 'css/chat_window.css' %}?v={% now 'U' %}">
+
+  <meta name="csrf-token" content="{{ csrf_token }}">
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <div class="title">Chat</div>
+        <div class="sub">
+          {% if tenant %}Tenant: {{ tenant.name }} · {% endif %}
+          Usuario:
+          {% if request.user.get_full_name %}{{ request.user.get_full_name }}{% else %}{{ request.user.username }}{% endif %}
+        </div>
+      </div>
+
+      <div class="sub" id="status">Listo</div>
+    </div>
+
+    <div class="log" id="chatLog" aria-live="polite"></div>
+
+    <div class="bar">
+      <textarea class="in" id="chatInput" placeholder="Escribe tu mensaje... (Enter para enviar, Shift+Enter para salto)"></textarea>
+      <button class="btn" id="sendBtn">Enviar</button>
+    </div>
+  </div>
+
+  <script>
+    // Variables que necesita el JS externo (sin exponer passkey; solo endpoint y csrf)
+    window.CHAT_API_URL = "{% url 'integrations:chat_send_message' %}";
+    window.CHAT_CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+  </script>
+
+  <script src="{% static 'js/chat_window.js' %}?v={% now 'U' %}"></script>
+</body>
+</html>

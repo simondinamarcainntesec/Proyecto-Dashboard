@@ -24,7 +24,7 @@ urlpatterns = [
     # Config notificaciones
     path("config/notificaciones/", views.config_notificaciones, name="config_notificaciones"),
 
-    # ✅ Whitelist: preferencias países (POR TENANT)
+    # Whitelist: preferencias países (POR TENANT)
     path(
         "whitelist/get-countries/",
         views.whitelist_get_countries,

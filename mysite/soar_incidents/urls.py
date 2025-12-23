@@ -5,6 +5,7 @@ from .views import (
     switch_tenant,
     export_csv_current,
     export_csv_all,
+    api_tenant_users,  # nuevo
 )
 
 app_name = "soar_incidents"
@@ -21,6 +22,8 @@ urlpatterns = [
     path("export/csv/all/", export_csv_all, name="export_csv_all"),
 
     # API JSON para el dashboard SOAR
-    # /soar/incidentes/api/by-alarm-ids/?alarm_ids=ID1,ID2,ID3
     path("api/by-alarm-ids/", api_incidents_by_alarm_ids, name="api_by_alarm_ids"),
+
+    # API: usuarios por tenant (para el modal de asignación)
+    path("api/tenant-users/", api_tenant_users, name="api_tenant_users"),
 ]

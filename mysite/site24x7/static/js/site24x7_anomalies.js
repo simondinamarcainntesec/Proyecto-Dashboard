@@ -142,9 +142,110 @@
     else urlObj.searchParams.delete('to');
   }
 
+  // ===== Loader tipo "Realtime" (fila en tabla) =====
+  function renderListLoading() {
+    return `
+      <div class="block">
+        <h4>Listado</h4>
+        <div class="table-wrap">
+          <table class="tbl" id="tbl-anomaly-list">
+            <thead>
+              <tr>
+                <th class="nowrap">Máquina / Monitor</th>
+                <th class="nowrap">Fecha</th>
+                <th class="nowrap">Hora</th>
+                <th class="nowrap">Severidad</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="loading-row">
+                <td colspan="4">
+                  <div class="ao-loading">
+                    <div class="ao-spinner" aria-hidden="true"></div>
+                    <span>Cargando datos...</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="muted" style="padding-top:.45rem">
+          * Clic en una fila para ver el detalle completo.
+        </div>
+      </div>
+    `;
+  }
+
+  // Fecha/Hora con SEGUNDOS (HH:MM:SS)
+  function splitDateTime(raw) {
+    const s = String(raw || '').trim();
+    // 2025-12-19T14:33:58-0300  | 2025-12-19 14:33:58  | 2025-12-19T14:33:58
+    const m = s.match(/^(\d{4}-\d{2}-\d{2})[T\s](\d{2}:\d{2}:\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/);
+    if (m) return { date: m[1], time: m[2], full: s };
+
+    // fallback si viene sin segundos: 14:33 -> 14:33:00
+    const m2 = s.match(/^(\d{4}-\d{2}-\d{2})[T\s](\d{2}:\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/);
+    if (m2) return { date: m2[1], time: `${m2[2]}:00`, full: s };
+
+    return { date: s || '—', time: '—', full: s || '—' };
+  }
+
+  function ensureDateTimeColumns(root) {
+    const table = Q('#tbl-anomaly-list', root);
+    if (!table) return;
+
+    if (table.dataset.dtSplit === '1') return;
+    table.dataset.dtSplit = '1';
+
+    const theadRow = Q('thead tr', table);
+    if (theadRow) {
+      const ths = QA('th', theadRow);
+
+      // tabla original: [Monitor, Hora, Severidad]
+      if (ths.length >= 3) {
+        ths[1].textContent = 'Fecha';
+
+        const thHora = document.createElement('th');
+        thHora.className = 'nowrap';
+        thHora.textContent = 'Hora';
+        ths[1].after(thHora);
+      }
+    }
+
+    QA('tbody tr.anom-row', table).forEach(tr => {
+      const tds = QA('td', tr);
+      if (tds.length < 3) return;
+
+      const tdTime = tds[1];
+      const raw = tdTime.textContent.trim();
+      const parts = splitDateTime(raw);
+
+      tdTime.textContent = parts.date;
+      tdTime.classList.add('mono', 'nowrap', 'td-date');
+      tdTime.setAttribute('title', parts.full);
+
+      const tdHora = document.createElement('td');
+      tdHora.className = 'mono nowrap td-time';
+      tdHora.textContent = parts.time;
+      tdHora.setAttribute('title', parts.full);
+
+      tdTime.after(tdHora);
+    });
+
+    // fila "sin anomalías": colspan 3 -> 4
+    QA('tbody tr', table).forEach(tr => {
+      if (tr.classList.contains('anom-row')) return;
+      const onlyCell = Q('td[colspan="3"]', tr);
+      if (onlyCell) onlyCell.setAttribute('colspan', '4');
+    });
+  }
+
   async function openListForMonitor(monitorId, monitorName) {
     if (listTitle) listTitle.textContent = `Anomalias - ${monitorName || 'Monitor'}`;
-    if (listBody) listBody.innerHTML = `<div class="block"><p class="muted">Cargando</p></div>`;
+
+    // Loader tipo Realtime
+    if (listBody) listBody.innerHTML = renderListLoading();
 
     listModal.open();
 
@@ -156,7 +257,11 @@
 
     const res = await fetch(url.toString(), { headers: { 'X-Requested-With': 'fetch' } });
     const html = await res.text();
+
     if (listBody) listBody.innerHTML = html;
+
+    // split Fecha/Hora (con segundos)
+    ensureDateTimeColumns(listBody);
 
     const script = Q('#anomaly-json', listBody);
 

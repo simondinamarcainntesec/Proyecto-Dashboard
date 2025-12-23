@@ -57,6 +57,16 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # necesario para django-two-factor-auth
+    'django.contrib.sites',
+
+    # 2FA (OTP)
+    'django_otp',
+    'django_otp.plugins.otp_totp',
+    'django_otp.plugins.otp_static',
+    'two_factor',
+
     'inyeccion_api',
     'dashboard',
     'integrations',
@@ -70,12 +80,16 @@ INSTALLED_APPS = [
     'tenants.apps.TenantsConfig',
 ]
 
+SITE_ID = 1
+
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django_otp.middleware.OTPMiddleware',
     'tenants.middleware.ActiveTenantMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -181,7 +195,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'es-ES'
 
-# ✅ Chile (maneja DST). NO usar 'UTC' aquí si quieres ver hora local en Django.
+# Chile (maneja DST). NO usar 'UTC' aquí si quieres ver hora local en Django.
 TIME_ZONE = "America/Santiago"
 
 USE_I18N = True
@@ -273,7 +287,7 @@ LOGGING = {
 }
 
 # ============================================
-# 📧 CONFIGURACIÓN MICROSOFT GRAPH (OAuth2)
+# CONFIGURACIÓN MICROSOFT GRAPH (OAuth2)
 # ============================================
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"

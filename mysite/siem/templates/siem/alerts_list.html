@@ -115,6 +115,8 @@
             href="{% url 'site24x7:monitor_status' %}">
             Monitores
           </a>
+          <a class="tenant-option nav-subitem {% if url_name == 'anomaly_status' %}is-active{% endif %}"
+                       href="{% url 'site24x7:anomaly_status' %}">Anomalías</a>
           <a class="tenant-option nav-subitem {% if url_name == 'dashboard' %}is-active{% endif %}"
             href="{% url 'site24x7:dashboard' %}">
             Dashboard

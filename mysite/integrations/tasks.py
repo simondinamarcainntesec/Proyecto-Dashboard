@@ -15,7 +15,7 @@ from django.conf import settings
 
 from inyeccion_api.models import Alarm
 from inyeccion_api.utils import _map_api_alarm_to_model
-from tenants.models import Tenant, Client  # 👈 añadimos Client
+from tenants.models import Tenant, Client  # añadimos Client
 
 TOKEN_FILE = Path(settings.BASE_DIR) / "token.txt"
 
@@ -134,7 +134,7 @@ def fetch_soporte_users_page(start_index: int = 1, row_count: int = 100) -> dict
     Requiere en settings.py:
         SOPORTE_AUTHTOKEN = "token_zoho"
     """
-    authtoken = getattr(settings, "SOPORTE_AUTHTOKEN", None)
+    authtoken = os.getenv("SOPORTE_AUTHTOKEN")
     if not authtoken:
         logger.error("[SoporteUsers] Falta settings.SOPORTE_AUTHTOKEN")
         raise RuntimeError("Falta SOPORTE_AUTHTOKEN en settings")
@@ -244,7 +244,7 @@ def tarea_ingesta_api():
         page_size = 200
         max_alarms = 10_000
 
-        # ✅ PRIMER TOKEN (como realtime) + ✅ header correcto
+        # PRIMER TOKEN (como realtime) + header correcto
         token = _get_alarmsone_token_first()
         headers = {"Authorization": f"Zoho-oauthtoken {token}"}
 
@@ -313,7 +313,7 @@ def ingesta_mensual_ciclica():
         total_inserted = 0
         tramo_num = 1
 
-        # ✅ Token una vez por corrida (primer token)
+        # Token una vez por corrida (primer token)
         token = _get_alarmsone_token_first()
         headers = {"Authorization": f"Zoho-oauthtoken {token}"}
 
@@ -514,7 +514,7 @@ def tarea_sync_clientes_soporte():
 def tarea_sync_empresas():
     """
     Llama a la API de cuentas de soporte.inntesec.com y sincroniza el listado
-    de empresas con la tabla tenants_tenant.
+    de empresas con la tabla tenants_tenant, omitiendo "Inntesec SpA".
     """
     try:
         logger.info("🏢 Inicio sync empresas desde soporte.inntesec.com")
@@ -545,19 +545,33 @@ def tarea_sync_empresas():
 
         insertados = 0
         actualizados = 0
+        omitidos = 0
+
+        def clean(val):
+            if val is None:
+                return None
+            s = str(val).strip()
+            return s or None
+
+        def norm_name(s: str) -> str:
+            # normaliza para comparar de forma tolerante (espacios y case)
+            return " ".join((s or "").strip().lower().split())
+
+        OMIT_NAME = norm_name("Inntesec SpA")
 
         for acc in accounts:
             name = acc.get("name") or acc.get("account_name")
+            name = clean(name)
             if not name:
                 continue
 
-            udf_fields = acc.get("accountudf_fields") or {}
+            # === OMITIR Inntesec SpA ===
+            if norm_name(name) == OMIT_NAME:
+                omitidos += 1
+                logger.info("⏭️ Omitiendo empresa (no se guarda): %s", name)
+                continue
 
-            def clean(val):
-                if val is None:
-                    return None
-                s = str(val).strip()
-                return s or None
+            udf_fields = acc.get("accountudf_fields") or {}
 
             alarms_one_id = clean(udf_fields.get("udf_sline_601"))
             site24x7_id = clean(udf_fields.get("udf_sline_602"))
@@ -589,15 +603,15 @@ def tarea_sync_empresas():
                     insertados += 1
 
         logger.info(
-            "🏢 Sync empresas completado. Recibidas: %s, nuevas: %s, actualizadas: %s",
+            "🏢 Sync empresas completado. Recibidas: %s, omitidas: %s, nuevas: %s, actualizadas: %s",
             len(accounts),
+            omitidos,
             insertados,
             actualizados,
         )
 
     except Exception as e:
         logger.exception("❌ Error en tarea_sync_empresas: %s", e)
-
 
 # === NUEVA TAREA: Sync user_groups Site24x7 → Client.site24x7_user_group (por email) ===
 @shared_task

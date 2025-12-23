@@ -1,13 +1,18 @@
-/* ===== Mic animado (solo durante llamada Retell) ===== */
+/* ===== Mic animado (siempre visible) ===== */
 
 .call-mic-wrap{
   display:inline-flex;
   align-items:center;
-  gap:.5rem;
-  margin-left:.5rem;
+  /* opcional: separa un poco del botón Llamar */
+  margin-left: .25rem;
 }
 
+/* Si algún día quieres volver a ocultarlo con JS, esta clase sirve */
 .call-mic-wrap.hidden{
+  display:none !important;
+}
+
+.call-mic.hidden{
   display:none !important;
 }
 
@@ -51,4 +56,10 @@
 
 .call-mic.is-on{
   border-color:rgba(59,130,246,.5);
+}
+
+/* (Opcional) feedback visual cuando bloqueamos "Llamar" */
+#retellToggleBtn.is-loading{
+  opacity:.7;
+  pointer-events:none;
 }

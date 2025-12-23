@@ -1,6 +1,7 @@
 /* ==========================================================
    Modal flotante de Configuración de Notificaciones (Inntesec)
    FIX ZOOM + footer siempre visible (scope: #configModal)
+   + MODAL MÁS ANCHA (secciones en una línea)
    ========================================================== */
 
 /* Overlay */
@@ -37,8 +38,8 @@
   border-radius: 1rem;
   box-shadow: 0 10px 40px rgba(2, 6, 23, 0.6);
 
-  /* clave: ancho fluido para zoom */
-  width: min(92vw, 480px);
+  /* MÁS ANCHA (antes 480px) */
+  width: min(96vw, 680px);
 
   padding: 1.5rem 1.75rem;
   color: var(--text, #e5e7eb);
@@ -69,7 +70,6 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.25rem;
-
   flex: 0 0 auto;
 }
 
@@ -183,6 +183,10 @@
   border: 1px solid var(--border, #1e293b);
   transition: all 0.2s ease;
   font-weight: 600;
+
+  /* ayuda a que “calce” todo en una línea */
+  gap: 14px;
+  flex-wrap: nowrap;
 }
 
 #configModal .config-option.is-active {
@@ -273,7 +277,9 @@
 }
 
 #configModal.modal-overlay > .modal-card{
-  width: min(92vw, 480px) !important;
+  /* MÁS ANCHA (antes 480px) */
+  width: min(96vw, 680px) !important;
+
   max-height: calc(100dvh - 2 * clamp(12px, 3vh, 28px)) !important;
   max-height: calc(100vh - 2 * clamp(12px, 3vh, 28px)) !important;
 

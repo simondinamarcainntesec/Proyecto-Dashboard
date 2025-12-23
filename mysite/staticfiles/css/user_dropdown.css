@@ -295,7 +295,7 @@
   font-weight: 600;
 }
 
-/* Ícono (🔒 / 🔔) alineado con el texto */
+/* Ícono alineado con el texto */
 .tenant-option.nav-subitem span,
 .tenant-option.nav-subitem svg,
 .tenant-option.nav-subitem::before {

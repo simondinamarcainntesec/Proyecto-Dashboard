@@ -62,7 +62,7 @@ class TenantUserAdmin(UserAdmin):
 
     fieldsets = (
         (None, {"fields": ("username", "password")}),
-        ("Información personal", {"fields": ("first_name", "last_name", "email", "phone")}),  # ✅ phone editable
+        ("Información personal", {"fields": ("first_name", "last_name", "email", "phone")}),  # phone editable
         ("Tenant", {"fields": ("tenant",)}),
 
         ("Notificaciones y Alarmas", {
@@ -80,7 +80,7 @@ class TenantUserAdmin(UserAdmin):
             "classes": ("wide",),
             "fields": (
                 "id",
-                "username", "email", "phone",  # ✅ phone al crear
+                "username", "email", "phone",  # phone al crear
                 "password1", "password2",
                 "tenant", "is_active", "is_staff", "is_superuser",
                 "Alarma_Telegram", "Alarma_Telefono", "Alarma_Correo",
@@ -242,7 +242,7 @@ class NotificationChannelPreferenceAdminForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # ✅ Dropdown user: "Nombre (Tenant) — correo/username" (SIN ID)
+        # Dropdown user: "Nombre (Tenant) — correo/username" (SIN ID)
         uf = self.fields.get("user")
         if uf:
             uf.queryset = TenantUser.objects.select_related("tenant").all()
@@ -256,7 +256,7 @@ class NotificationChannelPreferenceAdminForm(forms.ModelForm):
 
             uf.label_from_instance = _label
 
-        # ✅ Iniciales desde dict JSON -> lista checkeada
+        # Iniciales desde dict JSON -> lista checkeada
         inst = getattr(self, "instance", None)
         if inst and getattr(inst, "pk", None):
             self.initial["telefono"] = [k for k, _ in SEVERITY_CHOICES if (inst.telefono or {}).get(k) is True]
@@ -282,7 +282,7 @@ class NotificationChannelPreferenceAdmin(admin.ModelAdmin):
     form = NotificationChannelPreferenceAdminForm
     list_select_related = ("user", "user__tenant")
 
-    # ✅ tabla: Usuario + severidades activas por canal
+    # tabla: Usuario + severidades activas por canal
     list_display = ("user_display", "telefono_levels", "correo_levels", "telegram_levels")
     list_display_links = ("user_display",)
 
@@ -295,7 +295,7 @@ class NotificationChannelPreferenceAdmin(admin.ModelAdmin):
     )
     list_filter = ("user__tenant",)
 
-    # ✅ “barras/títulos” por canal (como en tus otros módulos)
+    # “barras/títulos” por canal (como en tus otros módulos)
     fieldsets = (
         ("Usuario", {"fields": ("user",)}),
         ("Teléfono", {"fields": ("telefono",)}),
@@ -303,7 +303,7 @@ class NotificationChannelPreferenceAdmin(admin.ModelAdmin):
         ("Telegram", {"fields": ("telegram",)}),
     )
 
-    # ✅ al editar: user bloqueado (evita mover prefs a otro user)
+    # al editar: user bloqueado (evita mover prefs a otro user)
     def get_readonly_fields(self, request, obj=None):
         return ("user",) if obj else ()
 

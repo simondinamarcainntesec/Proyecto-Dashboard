@@ -5,7 +5,7 @@ from django.db.models.functions import Lower
 
 
 # ======================================================
-# 🧩 MODELO BASE Tenant
+# MODELO BASE Tenant
 # ======================================================
 class Tenant(models.Model):
     name = models.CharField(max_length=255, unique=True, help_text="Nombre de la empresa (campo 'Empresa' de la API)")
@@ -21,14 +21,14 @@ class Tenant(models.Model):
 
 
 # ======================================================
-# 🧩 MODELO PROXY de la tabla externa telegram.solicitudes
+# MODELO PROXY de la tabla externa telegram.solicitudes
 # ======================================================
 class Solicitud(models.Model):
     id = models.BigAutoField(primary_key=True)
     Chat_ID = models.BigIntegerField(db_column='Chat_ID')  # usa el nombre exacto de la columna
 
     class Meta:
-        managed = False  # 👈 Django no intentará crear ni borrar esta tabla
+        managed = False  # Django no intentará crear ni borrar esta tabla
         db_table = 'telegram.solicitudes'  # nombre exacto de la tabla externa
 
     def __str__(self):
@@ -36,7 +36,7 @@ class Solicitud(models.Model):
 
 
 # ======================================================
-# 🧩 CLIENTES (asociados a un Tenant)
+# CLIENTES (asociados a un Tenant)
 # ======================================================
 class Client(models.Model):
     id = models.IntegerField(
@@ -64,7 +64,7 @@ class Client(models.Model):
 
 
 # ======================================================
-# 🧩 USUARIOS por Tenant
+# USUARIOS por Tenant
 # ======================================================
 class TenantUser(AbstractUser):
     id = models.IntegerField(primary_key=True)
@@ -76,7 +76,7 @@ class TenantUser(AbstractUser):
     phone = models.CharField(max_length=50, null=True, blank=True, help_text="Teléfono del cliente (campo 'Telefono' de la API)")
     hora_fin = models.TimeField(null=True, blank=True)
 
-    # ✅ Campo numérico para almacenar el Chat_ID de Telegram
+    # Campo numérico para almacenar el Chat_ID de Telegram
     telegram_id = models.CharField(
         max_length=100,
         null=True,
