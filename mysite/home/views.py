@@ -545,7 +545,6 @@ def home_index(request):
             except Exception as e:
                 logger.exception("[HOME] Error KPI Alarmas (fallback): %s", e)
 
-
     # =======================
     # KPI SOAR (últimos 7 días)
     # =======================
@@ -569,9 +568,6 @@ def home_index(request):
 
         except Exception as e:
             logger.exception("[HOME] Error KPI SOAR: %s", e)
-
-    
-
 
     # =======================
     # KPI Telegram
@@ -607,10 +603,25 @@ def home_index(request):
     blacklist_removed_raw = (request.GET.get("blacklist_removed") or "").strip()
     whitelist_removed_raw = (request.GET.get("whitelist_removed") or "").strip()
 
+    # DBG: punto 1 (inputs)
+    logger.info("[DBG WL] GET whitelist_q='%s'", whitelist_q_raw)
+
     blacklist_terms = _split_search_terms(blacklist_q_raw)
     whitelist_terms = _split_search_terms(whitelist_q_raw)
     blacklist_removed_terms = _split_search_terms(blacklist_removed_raw)
     whitelist_removed_terms = _split_search_terms(whitelist_removed_raw)
+
+    # DBG: punto 1 (terms)
+    logger.info(
+        "[DBG WL] whitelist_q_raw='%s' whitelist_terms=%s",
+        whitelist_q_raw,
+        whitelist_terms,
+    )
+    logger.info(
+        "[DBG WL] removed_raw='%s' removed_terms=%s",
+        whitelist_removed_raw,
+        whitelist_removed_terms,
+    )
 
     blacklist_results = IPBlacklist.objects.none()
 
@@ -656,54 +667,90 @@ def home_index(request):
     selected_country_codes = [CODE_BY_NAME.get(n) for n in (selected_paises or [])]
     selected_country_codes = [c for c in selected_country_codes if c]
 
-    # 2) Base: whitelist del tenant (listado)  → sin filtro por país, solo tenant
-    whitelist_table = IPWhitelist.objects.all()
+    # 2) Base: whitelist del tenant (sin filtro por país, solo tenant)
+    whitelist_base = IPWhitelist.objects.annotate(ip_txt=Cast(F("ip"), TextField()))
+
     if tenant:
         t_name = (getattr(tenant, "name", "") or "").strip()
         t_id = getattr(tenant, "id", None)
+
         logger.info(
-            "[HOME WHITELIST] Filtrando whitelist por tenant_id=%s o cliente/organizacion='%s'",
+            "[HOME WHITELIST] Filtrando whitelist por tenant_id=%s o cliente/organizacion(iexact)='%s'",
             t_id,
             t_name,
         )
+
         q = Q()
         if t_id is not None:
             q |= Q(tenant_id=t_id)
         if t_name:
-            q |= Q(cliente=t_name) | Q(organizacion=t_name)
-        if q:
-            whitelist_table = whitelist_table.filter(q)
-        else:
-            whitelist_table = IPWhitelist.objects.none()
+            q |= Q(cliente__iexact=t_name) | Q(organizacion__iexact=t_name)
 
-    # 3) Búsqueda dentro de la whitelist del tenant (sin países)
+        whitelist_base = whitelist_base.filter(q) if q else IPWhitelist.objects.none()
+    else:
+        # Si no hay tenant, por seguridad no mostramos nada
+        whitelist_base = IPWhitelist.objects.none()
+
+    # 3) Excluir IPs “removidas” SIEMPRE (afecta tabla y chequeo de existencia)
+    if whitelist_removed_terms:
+        whitelist_base = whitelist_base.exclude(ip__in=whitelist_removed_terms)
+
+    # 4) Tabla final parte desde la base (tenant + removed)
+    whitelist_table = whitelist_base.order_by("ip", "-fecha_actualizacion")
+
+    # DBG: punto 1 (counts base/tabla antes de buscar)
+    try:
+        t_name_dbg = (getattr(tenant, "name", "") or "").strip() if tenant else ""
+        t_id_dbg = getattr(tenant, "id", None) if tenant else None
+        base_count = whitelist_base.count()
+        table_count_before_search = whitelist_table.count()
+        logger.info(
+            "[DBG WL] tenant_name='%s' tenant_id=%s base_count=%s table_count_before_search=%s",
+            t_name_dbg,
+            t_id_dbg,
+            base_count,
+            table_count_before_search,
+        )
+    except Exception as e:
+        logger.exception("[DBG WL] error calculando counts pre-search: %s", e)
+
+    # 5) Aplicar búsqueda (OR por cada término) y hacer que la TABLA muestre esos resultados
     if whitelist_terms:
         try:
             q_wl = Q()
             for term in whitelist_terms:
-                q_wl |= Q(ip__icontains=term)
+                q_wl |= Q(ip_txt__icontains=term)
 
-            qs_wl = whitelist_table.filter(q_wl)
+            whitelist_table = whitelist_table.filter(q_wl)
 
-            if whitelist_removed_terms:
-                qs_wl = qs_wl.exclude(ip__in=whitelist_removed_terms)
+            # DBG: punto 1 (SQL + count post-search)
+            try:
+                logger.info("[DBG WL] search_sql=%s", str(whitelist_table.query))
+            except Exception:
+                logger.exception("[DBG WL] error logeando search_sql")
 
-            if qs_wl.exists():
-                whitelist_table = qs_wl
-                whitelist_results = qs_wl
+            try:
+                table_count_after_search = whitelist_table.count()
+                logger.info("[DBG WL] table_count_after_search=%s", table_count_after_search)
+            except Exception:
+                logger.exception("[DBG WL] error calculando table_count_after_search")
 
-                existing_ips = list(qs_wl.values_list("ip", flat=True))
-                whitelist_not_found_terms = [
-                    ip for ip in whitelist_terms if ip not in existing_ips
-                ]
-                show_whitelist_modal = bool(whitelist_not_found_terms)
-            else:
-                whitelist_results = IPWhitelist.objects.none()
-                whitelist_not_found_terms = whitelist_terms
-                show_whitelist_modal = True
+            # Compatibilidad: si tu template usa whitelist_results, queda igual a la tabla
+            whitelist_results = whitelist_table
+
+            # “No encontrado” por término (correcto para búsquedas parciales)
+            # Un término se considera encontrado si existe al menos una IP que lo contenga
+            not_found = []
+            for term in whitelist_terms:
+                if not whitelist_base.filter(ip_txt__icontains=term).exists():
+                    not_found.append(term)
+
+            whitelist_not_found_terms = not_found
+            show_whitelist_modal = bool(whitelist_not_found_terms)
 
         except Exception as e:
             logger.exception("[HOME] Error búsqueda whitelist: %s", e)
+            whitelist_results = whitelist_table
     else:
         whitelist_results = whitelist_table
 
@@ -804,6 +851,29 @@ def home_index(request):
         "tg_alta": tg_alta,
         "tg_critica": tg_critica,
     }
+
+    # DBG: punto 1 (ctx sanity)
+    try:
+        wr_count = whitelist_results.count() if whitelist_results is not None else None
+        wt_count = whitelist_table.count() if whitelist_table is not None else None
+        logger.info("[DBG WL] ctx: whitelist_results_count=%s whitelist_table_count=%s", wr_count, wt_count)
+
+        first_ip_results = (
+            whitelist_results.values_list("ip", flat=True).first()
+            if whitelist_results is not None else None
+        )
+        first_ip_table = (
+            whitelist_table.values_list("ip", flat=True).first()
+            if whitelist_table is not None else None
+        )
+        logger.info(
+            "[DBG WL] ctx: first_ip_results=%r first_ip_table=%r",
+            first_ip_results,
+            first_ip_table,
+        )
+    except Exception:
+        logger.exception("[DBG WL] error logeando ctx sanity")
+
     return render(request, "home/index.html", ctx)
 
 

@@ -1,11 +1,16 @@
 // static/js/date_filters.js
 // Filtros de fecha (solo back). El buscador #q NO recarga la página.
+// ✅ Ahora preserva también sev y assigned al aplicar / chips / refresh / paginación.
 (function () {
   const form = document.getElementById("filters-form");
   const fromInput = document.getElementById("inp-from");
   const toInput   = document.getElementById("inp-to");
   const chips = document.querySelectorAll(".chip-btn");
   const btnRefresh = document.getElementById("btn-refresh");
+
+  // ✅ nuevos selects (si existen)
+  const sevSelect = document.getElementById("f-sev");
+  const assignedSelect = document.getElementById("f-assigned");
 
   if (!form) return;
 
@@ -26,16 +31,25 @@
     chips.forEach(c=>c.classList.toggle('is-active', c.dataset.range===range));
   }
 
-  function submitPreservingDateOnly({page} = {}) {
+  // ✅ Antes: solo fechas. Ahora: fechas + sev + assigned.
+  function submitPreservingFilters({page} = {}) {
     const params = new URLSearchParams(window.location.search);
+
     const f = (fromInput?.value || "").trim();
     const t = (toInput?.value || "").trim();
+
+    const sev = (sevSelect?.value || "").trim();
+    const assigned = (assignedSelect?.value || "").trim();
 
     params.delete('page');
     if (page) params.set('page', page);
 
     if (f) params.set('from', f); else params.delete('from');
     if (t) params.set('to', t); else params.delete('to');
+
+    // preserva filtros nuevos
+    if (sev) params.set('sev', sev); else params.delete('sev');
+    if (assigned) params.set('assigned', assigned); else params.delete('assigned');
 
     // expulsamos cualquier 'q' para no mezclar con live-search
     params.delete('q');
@@ -54,7 +68,7 @@
     if (fromInput) fromInput.value = toLocalIsoDate(from);
     if (toInput)   toInput.value   = toLocalIsoDate(now);
     setActiveChip(range);
-    submitPreservingDateOnly({page: null});
+    submitPreservingFilters({page: null});
   }
 
   chips.forEach(btn => btn.addEventListener("click", () => goWithRange(btn.dataset.range)));
@@ -77,10 +91,10 @@
     } catch {}
   }
 
-  /* ====== Submit (Aplicar) — SOLO fechas ===== */
+  /* ====== Submit (Aplicar) — fechas + sev + assigned ===== */
   form.addEventListener("submit", (e) => {
     e.preventDefault();
-    submitPreservingDateOnly({page: null});
+    submitPreservingFilters({page: null});
   });
 
   /* ====== Refresh mantiene from/to y renueva 'to' ===== */
@@ -88,27 +102,37 @@
     btnRefresh.addEventListener("click", () => {
       const now = new Date();
       toInput.value = toLocalIsoDate(now);
-      submitPreservingDateOnly({page: null});
+      submitPreservingFilters({page: null});
     });
   }
 
-  /* ====== Paginación: preserva SOLO from/to ===== */
+  /* ====== Paginación: preserva from/to + sev + assigned ===== */
   const pag = document.getElementById("paginate");
   if (pag) {
     const params = new URLSearchParams(window.location.search);
+
     const f = (fromInput?.value || "").trim();
     const t = (toInput?.value || "").trim();
 
+    const sev = (sevSelect?.value || params.get('sev') || "").trim();
+    const assigned = (assignedSelect?.value || params.get('assigned') || "").trim();
+
     if (f) params.set('from', f); else params.delete('from');
     if (t) params.set('to', t); else params.delete('to');
+
+    if (sev) params.set('sev', sev); else params.delete('sev');
+    if (assigned) params.set('assigned', assigned); else params.delete('assigned');
+
     params.delete('q');
 
     pag.querySelectorAll('a[href]').forEach(a => {
       const url = new URL(a.href, window.location.origin);
       const out = new URLSearchParams(url.search);
-      ['from','to'].forEach(k=>{
+
+      ['from','to','sev','assigned'].forEach(k=>{
         if (params.has(k)) out.set(k, params.get(k)); else out.delete(k);
       });
+
       out.delete('q');
       a.href = url.pathname + '?' + out.toString();
     });
@@ -116,13 +140,11 @@
 
   /* ====== Forzar apertura del date picker al clickear el área del calendario ===== */
   (function ensureCalendarIconClickable() {
-    // Área "clickable" en el extremo derecho del contenedor (simula el ícono)
     const ICON_HIT = 36; // px
     document.querySelectorAll('.date-range').forEach(box => {
       const input = box.querySelector('input[type="date"]');
       if (!input) return;
 
-      // Click en el contenedor: si se hace en el lado derecho, abrimos el picker
       box.addEventListener('click', (e) => {
         const r = box.getBoundingClientRect();
         const onIconArea = (e.clientX >= r.right - ICON_HIT);
@@ -133,16 +155,13 @@
         }
       });
 
-      // Click directo al input → siempre intentamos abrir el picker nativo
       input.addEventListener('mousedown', (e) => {
-        // Algunos navegadores ya lo abren; en otros ayudamos con showPicker
         if (typeof input.showPicker === 'function') {
           e.preventDefault();
           input.showPicker();
         }
       });
 
-      // Asegura que al enfocar por teclado también se pueda abrir rápido con Space/Enter
       input.addEventListener('keydown', (e) => {
         if ((e.key === ' ' || e.key === 'Enter') && typeof input.showPicker === 'function') {
           e.preventDefault();

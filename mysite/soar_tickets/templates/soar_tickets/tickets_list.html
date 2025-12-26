@@ -1,0 +1,610 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOAR – Tickets</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/list.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/user_dropdown.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/config_notificaciones_modal.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/cred_modal.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/country_filter_modal.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/coachmark.css' %}?v={% now 'U' %}">
+
+  <!-- Tickets -->
+  <link rel="stylesheet" href="{% static 'css/soar_tickets.css' %}?v={% now 'U' %}">
+</head>
+
+<body class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="{% static 'img/inntesec CSS negro 1.avif' %}" alt="Logo Inntesec" />
+    </div>
+
+    <nav class="nav">
+
+      {# ===== HOME (siempre que exista tenant) ===== #}
+      {% if tenant %}
+        <a id="homeNav"
+           class="nav-item {% if request.resolver_match.app_name == 'home' %}is-active{% endif %}"
+           href="{% url 'home:index' %}">
+          <span class="nav-ico">🏠</span>Home
+          <span id="coachDotHome" class="coachmark-dot hidden"></span>
+        </a>
+      {% endif %}
+
+      {# ===== Alarmas / AlarmsOne (requiere alarms_one_id) ===== #}
+      {% if tenant and tenant.alarms_one_id %}
+        {% with url_name=request.resolver_match.url_name %}
+        <details class="tenant-dropdown nav-dropdown"
+                 {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}open{% endif %}>
+          <summary id="alarmsSummary"
+                   class="nav-item {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}is-active{% endif %}">
+            <span class="nav-ico">📊</span>Alarmas
+            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
+            <span id="coachDotAlarms" class="coachmark-dot hidden"></span>
+          </summary>
+          <div class="tenant-list nav-submenu">
+            <a class="tenant-option nav-subitem {% if url_name == 'dashboard_alarmsone' %}is-active{% endif %}"
+               href="{% url 'dashboard:dashboard_alarmsone' %}">Dashboard</a>
+            <a class="tenant-option nav-subitem {% if url_name == 'dashboard_realtime' %}is-active{% endif %}"
+               href="{% url 'dashboard:dashboard_realtime' %}">Tiempo Real</a>
+          </div>
+        </details>
+        {% endwith %}
+      {% endif %}
+
+      {# ===== SOAR (depende de alarms_one_id, igual que tu realtime; NO quitar tickets) ===== #}
+      {% if tenant and tenant.alarms_one_id %}
+        {% with app_name=request.resolver_match.app_name %}
+        <details class="tenant-dropdown nav-dropdown"
+                 {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' or app_name == 'soar_tickets' %}open{% endif %}>
+          <summary id="soarSummary"
+                   class="nav-item {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' or app_name == 'soar_tickets' %}is-active{% endif %}">
+            <span class="nav-ico">🚨</span>SOAR
+            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
+            <span id="coachDotSoar" class="coachmark-dot hidden"></span>
+          </summary>
+          <div class="tenant-list nav-submenu">
+            <a class="tenant-option nav-subitem {% if app_name == 'soar_dashboard' %}is-active{% endif %}"
+               href="{% url 'soar_dashboard:dashboard' %}">Dashboard</a>
+            <a class="tenant-option nav-subitem {% if app_name == 'soar_incidents' %}is-active{% endif %}"
+               href="{% url 'soar_incidents:list' %}">Eventos</a>
+            <a class="tenant-option nav-subitem {% if app_name == 'soar_tickets' %}is-active{% endif %}"
+               href="{% url 'soar_tickets:list' %}">Tickets</a>
+          </div>
+        </details>
+        {% endwith %}
+      {% endif %}
+
+      {# ===== SIEM / Log360 (requiere logs360siem_id válido) ===== #}
+      {% if tenant %}
+        {% with raw_siem_id=tenant.logs360siem_id|default_if_none:"" %}
+        {% with siem_id=raw_siem_id|stringformat:"s" %}
+          {% if siem_id and siem_id != "0" and siem_id != "null" and siem_id != "NULL" and siem_id != "None" %}
+            <a class="nav-item {% if request.resolver_match.app_name == 'siem' %}is-active{% endif %}"
+               href="{% url 'siem:alerts_logs360' %}">
+              <span class="nav-ico">🧠</span>SIEM
+              <span id="coachDotSiem" class="coachmark-dot hidden"></span>
+            </a>
+          {% endif %}
+        {% endwith %}
+        {% endwith %}
+      {% endif %}
+
+      {# ===== Site24x7 / Inn-Monitor (requiere site24x7_id válido) ===== #}
+      {% if tenant %}
+        {% with raw_site_id=tenant.site24x7_id|default_if_none:"" %}
+        {% with site_id=raw_site_id|stringformat:"s" %}
+          {% if site_id and site_id != "0" and site_id != "null" and site_id != "NULL" and site_id != "None" %}
+            {% with url_name=request.resolver_match.url_name %}
+            <details class="tenant-dropdown nav-dropdown"
+                     {% if request.resolver_match.app_name == 'site24x7' %}open{% endif %}>
+              <summary class="nav-item {% if request.resolver_match.app_name == 'site24x7' %}is-active{% endif %}">
+                <span class="nav-ico">📡</span>Inn-Monitor
+                <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+                </svg>
+                <span id="coachDotInnMonitor" class="coachmark-dot hidden"></span>
+              </summary>
+              <div class="tenant-list nav-submenu">
+                <a class="tenant-option nav-subitem {% if url_name == 'monitor_status' %}is-active{% endif %}"
+                   href="{% url 'site24x7:monitor_status' %}">Monitores</a>
+                <a class="tenant-option nav-subitem {% if url_name == 'anomaly_status' %}is-active{% endif %}"
+                   href="{% url 'site24x7:anomaly_status' %}">Anomalías</a>
+                <a class="tenant-option nav-subitem {% if url_name == 'dashboard' %}is-active{% endif %}"
+                   href="{% url 'site24x7:dashboard' %}">Dashboard</a>
+              </div>
+            </details>
+            {% endwith %}
+          {% endif %}
+        {% endwith %}
+        {% endwith %}
+      {% endif %}
+
+      {# ===== Configuración ===== #}
+      <details class="tenant-dropdown nav-dropdown"
+               {% if request.resolver_match.url_name == 'cambiar_contrasena' %}open{% endif %}>
+        <summary id="settingsSummary"
+                 class="nav-item {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}">
+          <span class="nav-ico">⚙️</span>Configuración
+          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24">
+            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+          <span id="coachDotConfig" class="coachmark-dot hidden"></span>
+        </summary>
+        <div class="tenant-list nav-submenu">
+          <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}"
+             href="{% url 'cambiar_contrasena' %}">🔒 Cambiar contraseña</a>
+          <a class="tenant-option nav-subitem" href="#" onclick="toggleCredModal(true)">🔑 Credenciales</a>
+          <a class="tenant-option nav-subitem" href="#" onclick="toggleConfigModal(true)">🔔 Notificaciones</a>
+          <a class="tenant-option nav-subitem" href="#" onclick="toggleCountryModal(true)">🌎 Filtro países whitelist</a>
+        </div>
+      </details>
+    </nav>
+  </aside>
+
+  <!-- Main -->
+  <div class="content">
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="top-left">
+        <h1 class="top-title">
+          Tenant:
+          {% if request.user.tenant.name|lower == "inntesec" %}
+          <details class="tenant-dropdown">
+            <summary class="tenant-summary">
+              {{ tenant.name }}
+              <span class="caret">▼</span>
+            </summary>
+            <div class="tenant-list">
+              {% for t in all_tenants %}
+              <form method="post" action="{% url 'dashboard:switch_tenant' t.id %}">
+                {% csrf_token %}
+                <!-- ✅ conserva querystring -->
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="tenant-option {% if tenant.id == t.id %}is-active{% endif %}">
+                  {{ t.name }}
+                </button>
+              </form>
+              {% endfor %}
+            </div>
+          </details>
+          {% else %}
+          <span class="top-tenant">{{ tenant.name }}</span>
+          {% endif %}
+        </h1>
+      </div>
+    
+      <div class="top-right">
+        <button class="btn ghost" title="Actualizar" onclick="location.reload()" data-loading="instant">⟳</button>
+    
+        <!-- Guía rápida -->
+        <button id="showCoachBtn" class="btn ghost" title="Mostrar guía rápida" onclick="window.startInntesecCoach()">
+          💡 Guía rápida
+        </button>
+    
+        <!-- Inntesec Agent: texto + botones -->
+        <a>Inntesec Agent:</a>
+    
+        <button class="btn ghost" type="button" onclick="window.openRetellCallWindow()">
+          📞 Llamar
+        </button>
+    
+        <button class="btn ghost" type="button" onclick="openChatPopup()">
+          💬 Chat
+        </button>
+    
+        <div class="user-menu" id="userMenu">
+          <button type="button" id="userButton" class="user-button">
+            <div class="user-avatar">
+              {{ request.user.username|default:"U"|slice:":1"|upper }}
+            </div>
+            <div class="user-name">
+              {{ request.user.get_full_name|default:request.user.username }}
+            </div>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
+          </button>
+    
+          <div class="dropdown-menu">
+            <form action="{% url 'logout' %}" method="post">
+              {% csrf_token %}
+              <button type="submit">🚪 Cerrar sesión</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </header>
+
+
+    <section class="wrap">
+      <div class="card">
+        <div class="card-body">
+
+          <div class="tickets-head">
+            <div>
+              <h2 class="tickets-title">Mis Tickets</h2>
+              <p class="tickets-sub">Gestiona tus tickets asignados</p>
+            </div>
+
+            <div class="tickets-tabs">
+              <a class="tab {% if status == 'OPEN' %}is-active{% endif %}"
+                 href="?status=OPEN&scope={{ scope }}">
+                Abiertas ({{ open_count|default:0 }})
+              </a>
+
+              <a class="tab {% if status == 'CLOSED' %}is-active{% endif %}"
+                 href="?status=CLOSED&scope={{ scope }}">
+                Cerradas ({{ closed_count|default:0 }})
+              </a>
+
+              <a class="tab {% if status == 'ALL' %}is-active{% endif %}"
+                 href="?status=ALL&scope={{ scope }}">
+                Todas ({{ open_count|default:0|add:closed_count|default:0 }})
+              </a>
+
+              {% if request.user.tenant.name|lower == "inntesec" %}
+                <span class="tab-sep"></span>
+                <a class="tab {% if scope == 'mine' %}is-active{% endif %}"
+                   href="?status={{ status }}&scope=mine">Mías</a>
+                <a class="tab {% if scope == 'all' %}is-active{% endif %}"
+                   href="?status={{ status }}&scope=all">Todas</a>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="tbl" id="tbl-tickets">
+              <thead>
+                <tr>
+                  <th class="nowrap">Ticket ID</th>
+                  <th class="nowrap">Alarma ID</th>
+                  <th>Dispositivo</th>
+                  <th>Tipo de amenaza</th>
+                  <th class="nowrap">Severidad</th>
+                  <th class="nowrap">Estado</th>
+                  <th class="nowrap">Creado por</th>
+
+                  {% if status == 'CLOSED' or status == 'ALL' %}
+                    <th class="nowrap">Cerrado por</th>
+                    <th class="nowrap">Fecha cierre</th>
+                  {% endif %}
+
+                  <th class="nowrap">Tenant</th>
+                  <th class="nowrap">Fecha creación</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {% for t in tickets %}
+                  {% with sev=t.nivel_de_severidad|default:"n/a"|lower %}
+                  <tr class="ticket-row"
+                      data-ticket-id="{{ t.id }}"
+                      data-ticket-code="TICKET-{{ t.id|stringformat:'04d' }}"
+                      data-alarm-id="{{ t.alarm_id|default:''|escape }}"
+                      data-device="{{ t.dispositivo|default:''|escape }}"
+                      data-type="{{ t.tipo_de_amenaza|default:''|escape }}"
+                      data-sev="{{ t.nivel_de_severidad|default:''|escape }}"
+                      data-status="{{ t.status|default:'OPEN'|escape }}"
+                      data-tenant="{{ tenant.name|default:''|escape }}"
+                      data-opened="{{ t.opened_at|date:'d/m/Y, H:i' }}"
+                      data-updated="{{ t.updated_at|date:'d/m/Y, H:i' }}"
+                      data-due="{{ t.due_date|date:'Y-m-d' }}"
+                      data-assigned="{{ t.assigned_to.get_full_name|default:t.assigned_to.username|escape }}"
+                      data-created="{% if t.created_by %}{{ t.created_by.get_full_name|default:t.created_by.username|escape }}{% else %}—{% endif %}"
+                      data-closed-by="{% if t.closed_by %}{{ t.closed_by.get_full_name|default:t.closed_by.username|escape }}{% else %}{% endif %}"
+                      data-closed-at="{% if t.closed_at %}{{ t.closed_at|date:'d/m/Y, H:i' }}{% else %}{% endif %}"
+                      data-event-date="{% if t.event_date %}{{ t.event_date|date:'Y-m-d' }}{% endif %}"
+                      data-event-time="{% if t.event_time %}{{ t.event_time|time:'H:i:s' }}{% endif %}"
+                      data-desc="{{ t.descripcion_incidente|default:''|escape }}"
+                      data-analisis="{{ t.analisis_criticidad|default:''|escape }}"
+                      data-acciones="{{ t.medidas_correctivas|default:''|escape }}"
+                      data-resumen="{{ t.resumen_humano|default:''|escape }}"
+                      data-riesgo="{{ t.riesgo_detectado|default:''|escape }}"
+                      data-app="{{ t.application|default:''|escape }}"
+                      data-notes="{{ t.notes|default_if_none:''|escape }}"
+                  >
+                    <td class="mono nowrap">TICKET-{{ t.id|stringformat:"04d" }}</td>
+                    <td class="mono nowrap">{{ t.alarm_id|default:"—" }}</td>
+                    <td class="w-240" title="{{ t.dispositivo }}">{{ t.dispositivo|default:"—" }}</td>
+                    <td class="w-320" title="{{ t.tipo_de_amenaza }}">{{ t.tipo_de_amenaza|default:"—" }}</td>
+
+                    <td class="nowrap">
+                      <span class="pill
+                        {% if sev == 'critical' or sev == 'crítico' or sev == 'critico' %}sev-critical
+                        {% elif sev == 'high' or sev == 'alto' %}sev-high
+                        {% elif sev == 'medium' or sev == 'medio' %}sev-medium
+                        {% elif sev == 'low' or sev == 'bajo' %}sev-low
+                        {% elif sev == 'info' %}sev-info
+                        {% else %}sev-na{% endif %}">
+                        {{ t.nivel_de_severidad|default:"N/A" }}
+                      </span>
+                    </td>
+
+                    <td class="nowrap">
+                      {% if t.status == 'OPEN' %}
+                        <span class="state-badge is-open">Abierto</span>
+                      {% else %}
+                        <span class="state-badge is-closed">Cerrado</span>
+                      {% endif %}
+                    </td>
+
+                    <td class="nowrap">
+                      {{ t.created_by.get_full_name|default:t.created_by.username }}
+                    </td>
+
+                    {% if status == 'CLOSED' or status == 'ALL' %}
+                      <td class="nowrap">
+                        {% if t.status == 'CLOSED' %}
+                          {{ t.closed_by.get_full_name|default:t.closed_by.username|default:"—" }}
+                        {% else %}
+                          —
+                        {% endif %}
+                      </td>
+                      <td class="mono nowrap">
+                        {% if t.status == 'CLOSED' %}
+                          {{ t.closed_at|date:"d/m/Y, H:i"|default:"—" }}
+                        {% else %}
+                          —
+                        {% endif %}
+                      </td>
+                    {% endif %}
+
+                    <td class="nowrap">{{ tenant.name }}</td>
+                    <td class="mono nowrap">{{ t.opened_at|date:"d/m/Y, H:i" }}</td>
+                  </tr>
+                  {% endwith %}
+                {% empty %}
+                  <tr>
+                    <td colspan="{% if status == 'CLOSED' or status == 'ALL' %}11{% else %}9{% endif %}"
+                        class="muted" style="padding:14px;">
+                      No hay tickets para este filtro.
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="muted" style="margin-top:10px;">
+            Mostrando {{ tickets|length }} tickets
+          </div>
+
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Modal Detalle Ticket -->
+  <div id="ticketModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-ticket-backdrop></div>
+
+    <div class="modal-card ticket-modal-card" role="dialog" aria-modal="true" aria-labelledby="tkt-title">
+      <div class="modal-header">
+        <h3 id="tkt-title" class="ticket-modal-title">
+          <span class="meta-ico is-alert" aria-hidden="true"></span>
+          <span id="tkt-title-text">—</span>
+        </h3>
+        <button class="modal-close" data-ticket-close type="button" aria-label="Cerrar">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="block">
+          <h4>
+            <span class="meta-ico is-ticket" aria-hidden="true" style="margin-right:8px;"></span>
+            Información del ticket
+          </h4>
+
+          <div class="ticket-info-grid">
+            <div class="ticket-info-item">
+              <div class="ticket-info-k">
+                <span class="meta-ico is-id" aria-hidden="true"></span> Ticket ID
+              </div>
+              <div class="ticket-info-v mono" id="tkt-code">—</div>
+            </div>
+
+            <div class="ticket-info-item">
+              <div class="ticket-info-k">
+                <span class="meta-ico is-user" aria-hidden="true"></span> Asignado a
+              </div>
+              <div class="ticket-info-v" id="tkt-assigned">—</div>
+            </div>
+
+            <div class="ticket-info-item">
+              <div class="ticket-info-k">
+                <span class="meta-ico is-user" aria-hidden="true"></span> Creado por
+              </div>
+              <div class="ticket-info-v" id="tkt-created-by">—</div>
+            </div>
+
+            <div class="ticket-info-item">
+              <div class="ticket-info-k">
+                <span class="meta-ico is-duration" aria-hidden="true"></span> Fecha de creación
+              </div>
+              <div class="ticket-info-v mono" id="tkt-opened">—</div>
+            </div>
+
+            <div class="ticket-info-item">
+              <div class="ticket-info-k">
+                <span class="meta-ico is-duration" aria-hidden="true"></span> Última actualización
+              </div>
+              <div class="ticket-info-v mono" id="tkt-updated">—</div>
+            </div>
+
+            <div class="ticket-info-item">
+              <div class="ticket-info-k">
+                <span class="meta-ico is-tenant" aria-hidden="true"></span> Tenant
+              </div>
+              <div class="ticket-info-v" id="tkt-tenant">—</div>
+            </div>
+
+            <div class="ticket-info-item">
+              <div class="ticket-info-k">
+                <span class="meta-ico is-duration" aria-hidden="true"></span> Vence
+              </div>
+              <div class="ticket-info-v mono" id="tkt-due">—</div>
+            </div>
+
+            <div class="ticket-info-item">
+              <div class="ticket-info-k">
+                <span class="meta-ico is-alert" aria-hidden="true"></span> Estado
+              </div>
+              <div class="ticket-info-v" id="tkt-status-badge">—</div>
+            </div>
+
+            <div class="ticket-info-item" id="tkt-closed-by-wrap" style="display:none">
+              <div class="ticket-info-k">
+                <span class="meta-ico is-user" aria-hidden="true"></span> Cerrado por
+              </div>
+              <div class="ticket-info-v" id="tkt-closed-by">—</div>
+            </div>
+
+            <div class="ticket-info-item" id="tkt-closed-at-wrap" style="display:none">
+              <div class="ticket-info-k">
+                <span class="meta-ico is-duration" aria-hidden="true"></span> Fecha cierre
+              </div>
+              <div class="ticket-info-v mono" id="tkt-closed-at">—</div>
+            </div>
+
+            <div class="ticket-info-item span-2" id="tkt-notes-wrap" style="display:none">
+              <div class="ticket-info-k">
+                <span class="meta-ico is-notes" aria-hidden="true"></span> Observaciones
+              </div>
+              <div class="ticket-info-v" id="tkt-notes" style="white-space:pre-wrap; font-weight:600;">
+                —
+              </div>
+            </div>
+          </div>
+
+          <div class="ticket-actions-row">
+            <button type="button" class="btn primary" id="tkt-open-close-modal">
+              Cerrar ticket
+            </button>
+            <button type="button" class="btn ghost" data-ticket-close-2>Cerrar</button>
+          </div>
+        </div>
+
+        <div class="block">
+          <h4>Encabezado</h4>
+          <ul class="stacked">
+            <li><span class="muted">ID:</span> <span class="mono" id="tkt-alarm-id">—</span></li>
+            <li><span class="muted">Dispositivo:</span> <span id="tkt-device">—</span></li>
+            <li><span class="muted">Tipo:</span> <span id="tkt-type">—</span></li>
+            <li><span class="muted">Fecha/Hora:</span> <span class="mono" id="tkt-datetime">—</span></li>
+            <li><span class="muted">Severidad:</span> <span id="tkt-sev-pill">—</span></li>
+          </ul>
+        </div>
+
+        <div class="block">
+          <h4>Riesgo detectado</h4>
+          <p id="tkt-riesgo">—</p>
+        </div>
+
+        <div class="block">
+          <h4>Clasificación</h4>
+          <p id="tkt-analisis">—</p>
+        </div>
+
+        <div class="block">
+          <h4>Acciones recomendadas</h4>
+          <p id="tkt-acciones">—</p>
+        </div>
+
+        <div class="block" id="tkt-app-wrap" style="display:none">
+          <h4>Application</h4>
+          <p id="tkt-app">—</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Observaciones (cerrar ticket) -->
+  <div id="closeTicketModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-backdrop></div>
+
+    <div class="modal-card close-modal-card" role="dialog" aria-modal="true" aria-labelledby="close-title">
+      <div class="modal-header">
+        <h3 id="close-title" class="ticket-modal-title">
+          <span class="meta-ico is-notes" aria-hidden="true"></span>
+          <span>Observaciones</span>
+        </h3>
+        <button class="modal-close" data-close-x type="button" aria-label="Cerrar">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="block">
+          <h4>Antes de cerrar el ticket</h4>
+          <p class="muted" style="margin-top:-4px;">
+            Deja un comentario con lo realizado, evidencia o conclusiones. Se guardará en el ticket.
+          </p>
+
+          <form id="close-notes-form" method="post" action="">
+            {% csrf_token %}
+            <label class="muted" style="display:block; margin:10px 0 6px;">Observaciones</label>
+            <textarea id="close-notes" name="notes" class="notes-textarea"
+                      rows="5" placeholder="Ej: Se bloqueó IP, se revisó Web Management, no hay evidencia de exfiltración…"></textarea>
+
+            <div class="ticket-actions-row" style="margin-top:12px;">
+              <button type="submit" class="btn primary" id="close-confirm-btn">Guardar</button>
+              <button type="button" class="btn ghost" data-close-cancel>Cancelar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Éxito (ticket cerrado) -->
+  <div id="ticketSuccessModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-success-backdrop></div>
+
+    <div class="modal-card success-info-card" role="dialog" aria-modal="true" aria-labelledby="ticketSuccessTitle">
+      <div class="modal-header">
+        <h3 id="ticketSuccessTitle">Ticket cerrado con éxito</h3>
+      </div>
+
+      <div class="modal-body">
+        <p class="success-info-text">
+          El ticket fue actualizado y guardado correctamente.
+        </p>
+
+        <div class="success-info-actions">
+          <button type="button" class="btn primary" data-success-ok>OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS -->
+  <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/page-loader-universal.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/home_portal.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/country_filter_modal.js' %}?v={% now 'U' %}"></script>
+  <script src="{% static 'js/chat_popup_launcher.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/coach_allinone.js' %}?v={% now 'U' %}"></script>
+
+  <!-- Tickets -->
+  <script defer src="{% static 'js/soar_tickets.js' %}?v={% now 'U' %}"></script>
+
+  {% include 'partials/config_notificaciones_modal.html' %}
+  {% include 'partials/_country_filter_modal.html' %}
+  {% include 'partials/cred_modal.html' %}
+
+  <script>
+  window.__RETELL_POPUP_URL = "{% url 'retell_call_window' %}";
+  </script>
+
+  <script defer src="{% static 'js/retell_open_popup.js' %}?v={% now 'U' %}"></script>
+</body>
+</html>

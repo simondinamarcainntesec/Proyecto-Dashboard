@@ -17,6 +17,7 @@
   {# CSS específico para esta página SIEM #}
   <link rel="stylesheet" href="{% static 'css/siem_alerts.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/country_filter_modal.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/coachmark.css' %}?v={% now 'U' %}">
 </head>
 
 <body class="layout">
@@ -78,6 +79,8 @@
             href="{% url 'soar_dashboard:dashboard' %}">Dashboard</a>
           <a class="tenant-option nav-subitem {% if app_name == 'soar_incidents' %}is-active{% endif %}"
             href="{% url 'soar_incidents:list' %}">Eventos</a>
+          <a class="tenant-option nav-subitem {% if app_name == 'soar_tickets' %}is-active{% endif %}"
+            href="{% url 'soar_tickets:list' %}">Tickets</a>
         </div>
       </details>
       {% endwith %}
@@ -116,7 +119,7 @@
             Monitores
           </a>
           <a class="tenant-option nav-subitem {% if url_name == 'anomaly_status' %}is-active{% endif %}"
-                       href="{% url 'site24x7:anomaly_status' %}">Anomalías</a>
+            href="{% url 'site24x7:anomaly_status' %}">Anomalías</a>
           <a class="tenant-option nav-subitem {% if url_name == 'dashboard' %}is-active{% endif %}"
             href="{% url 'site24x7:dashboard' %}">
             Dashboard
@@ -145,7 +148,7 @@
           <a class="tenant-option nav-subitem" href="#" onclick="toggleCredModal(true)">🔑 Credenciales</a>
           <a class="tenant-option nav-subitem" href="#" onclick="toggleConfigModal(true)">🔔 Notificaciones</a>
           <a class="tenant-option nav-subitem" href="#" onclick="toggleCountryModal(true)">
-          🌎 Filtro países whitelist
+            🌎 Filtro países whitelist
           </a>
         </div>
       </details>
@@ -182,30 +185,39 @@
           {% endif %}
         </h1>
       </div>
-
+    
       <div class="top-right">
         <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
-
+    
         <!-- Botón flecha + menú desplegable de exportación -->
         <div class="export-wrapper">
-          <button
-            type="button"
-            class="btn ghost small"
-            id="siemExportToggleBtn"
-            title="Exportar alertas"
-            aria-haspopup="true"
-            aria-expanded="false"
-          >
+          <button type="button" class="btn ghost small" id="siemExportToggleBtn" title="Exportar alertas"
+            aria-haspopup="true" aria-expanded="false">
             ⬇
           </button>
-
+    
           <div class="export-menu" id="siemExportMenu" role="menu" aria-hidden="true">
             <button type="button" data-export-scope="current">
               📊 Exportar alertas actuales
             </button>
           </div>
         </div>
-
+    
+        <!-- Guía rápida -->
+        <button id="showCoachBtn" class="btn ghost" title="Mostrar guía rápida" onclick="window.startInntesecCoach()">
+          💡 Guía rápida
+        </button>
+    
+        <!-- Inntesec Agent: texto + botones -->
+        <a>Inntesec Agent:</a>
+    
+        <button class="btn ghost" type="button" onclick="window.openRetellCallWindow()">
+          📞 Llamar
+        </button>
+        <button class="btn ghost" type="button" onclick="openChatPopup()">
+          💬 Chat
+        </button>
+    
         <!-- Menú usuario -->
         <div class="user-menu" id="userMenu">
           <button type="button" id="userButton" class="user-button">
@@ -219,7 +231,7 @@
               <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
             </svg>
           </button>
-
+    
           <div class="dropdown-menu">
             <form action="{% url 'logout' %}" method="post">
               {% csrf_token %}
@@ -231,163 +243,163 @@
     </header>
 
     {% if not service_enabled %}
-      <!-- ======= SIN SERVICIO CONFIGURADO ======= -->
-      <section class="empty-state">
-        <div class="empty-card">
-          <h2>Servicio SIEM no disponible</h2>
-          <p>
-            La empresa <strong>{{ tenant.name|default:"—" }}</strong>
-            no tiene el servicio de <strong>Logs360 SIEM</strong> configurado.
-          </p>
-          <p>Por favor, contacte con un administrador.</p>
-        </div>
-      </section>
+    <!-- ======= SIN SERVICIO CONFIGURADO ======= -->
+    <section class="empty-state">
+      <div class="empty-card">
+        <h2>Servicio SIEM no disponible</h2>
+        <p>
+          La empresa <strong>{{ tenant.name|default:"—" }}</strong>
+          no tiene el servicio de <strong>Logs360 SIEM</strong> configurado.
+        </p>
+        <p>Por favor, contacte con un administrador.</p>
+      </div>
+    </section>
     {% else %}
-      {% if error %}
-        {# Error genérico cuando falla la consulta a Logs360 #}
-        <section class="empty-state">
-          <div class="empty-card">
-            <h2>Servicio SIEM no disponible</h2>
-            <p>
-              Ha ocurrido un problema al consultar las alertas de
-              <strong>Logs360 SIEM</strong>.
-            </p>
-            <p>Por favor, contacte con un administrador.</p>
+    {% if error %}
+    {# Error genérico cuando falla la consulta a Logs360 #}
+    <section class="empty-state">
+      <div class="empty-card">
+        <h2>Servicio SIEM no disponible</h2>
+        <p>
+          Ha ocurrido un problema al consultar las alertas de
+          <strong>Logs360 SIEM</strong>.
+        </p>
+        <p>Por favor, contacte con un administrador.</p>
+      </div>
+    </section>
+    {% else %}
+    <!-- Tarjeta de resumen en vez de filtros -->
+    <section class="alerts-summary">
+      <div class="alerts-summary-card">
+        <span class="alerts-summary-dot"></span>
+        <span class="alerts-summary-text">Últimas 50 alertas</span>
+      </div>
+    </section>
+
+    <!-- Tabla -->
+    <section class="wrap">
+      <div class="card">
+        <div class="card-body">
+
+          {% if page_obj|length > 0 %}
+          <div class="table-wrap">
+            <table class="tbl" id="tbl-siem-alerts">
+              <thead>
+                <tr>
+                  <th>Fecha/Hora</th>
+                  <th>Severidad</th>
+                  <th>IP Origen</th>
+                  <th>IP Destino</th>
+                  <th>País Origen</th>
+                  <th>Categorías</th>
+                  <th>Reputation</th>
+                  <th>Dispositivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for a in page_obj %}
+                {% with sev=a|get_item:"Alert Severity"|default_if_none:"" %}
+                {% with sev_lower=sev|lower %}
+                <tr class="alert-row" data-time="{{ a|get_item:'Time'|default:'' }}" data-severity="{{ sev }}"
+                  data-profile="{{ a|get_item:'Profile Name'|default:'' }}"
+                  data-srcip="{{ a|get_item:'Source IP'|default:'' }}"
+                  data-dstip="{{ a|get_item:'Destination IP'|default:'' }}"
+                  data-country-src="{{ a|get_item:'Source Country'|default:'' }}"
+                  data-country-dst="{{ a|get_item:'Destination Country'|default:'' }}"
+                  data-service="{{ a|get_item:'Service'|default:'' }}"
+                  data-app="{{ a|get_item:'Application Details'|default:'' }}"
+                  data-action="{{ a|get_item:'Action'|default:'' }}"
+                  data-logsrc="{{ a|get_item:'Log Source'|default:'' }}"
+                  data-device="{{ a|get_item:'__device_label__'|default:'' }}"
+                  data-threatcat="{{ a|get_item:'Threat Categories'|default:'' }}"
+                  data-threatrep="{{ a|get_item:'Threat Reputation'|default:'' }}"
+                  data-raw="{{ a|get_item:'__raw_json__'|default:'' }}">
+
+                  <!-- Fecha/Hora -->
+                  <td class="mono nowrap">{{ a|get_item:"Time"|default:"-" }}</td>
+
+                  <!-- Severidad con pill de colores -->
+                  <td>
+                    {% if sev %}
+                    {% if sev_lower == "critical" %}
+                    <span class="pill sev-critical">{{ sev }}</span>
+                    {% elif sev_lower == "high" or sev_lower == "trouble" %}
+                    <span class="pill sev-high">{{ sev }}</span>
+                    {% elif sev_lower == "medium" or sev_lower == "attention" %}
+                    <span class="pill sev-medium">{{ sev }}</span>
+                    {% elif sev_lower == "low" or sev_lower == "success" %}
+                    <span class="pill sev-low">{{ sev }}</span>
+                    {% elif sev_lower == "info" or sev_lower == "information" %}
+                    <span class="pill sev-info">{{ sev }}</span>
+                    {% elif sev_lower == "n/a" or sev_lower == "na" %}
+                    <span class="pill sev-na">{{ sev }}</span>
+                    {% else %}
+                    <span class="pill sev-na">{{ sev }}</span>
+                    {% endif %}
+                    {% else %}
+                    -
+                    {% endif %}
+                  </td>
+
+                  <!-- IP Origen -->
+                  <td class="mono">{{ a|get_item:"Source IP"|default:"-" }}</td>
+
+                  <!-- IP Destino -->
+                  <td class="mono">{{ a|get_item:"Destination IP"|default:"-" }}</td>
+
+                  <!-- País Origen -->
+                  <td>{{ a|get_item:"Source Country"|default:"-" }}</td>
+
+                  <!-- Threat Categories -->
+                  <td class="w-320">
+                    {{ a|get_item:"Threat Categories"|default:"-" }}
+                  </td>
+
+                  <!-- Threat Reputation (pill) -->
+                  <td class="mono threat-rep-cell" data-rep="{{ a|get_item:'Threat Reputation'|default:'' }}"></td>
+
+                  <!-- Dispositivo -->
+                  <td class="mono">
+                    {{ a|get_item:"__device_label__"|default:"-" }}
+                  </td>
+                </tr>
+                {% endwith %}
+                {% endwith %}
+                {% endfor %}
+              </tbody>
+            </table>
           </div>
-        </section>
-      {% else %}
-        <!-- Tarjeta de resumen en vez de filtros -->
-        <section class="alerts-summary">
-          <div class="alerts-summary-card">
-            <span class="alerts-summary-dot"></span>
-            <span class="alerts-summary-text">Últimas 50 alertas</span>
-          </div>
-        </section>
 
-        <!-- Tabla -->
-        <section class="wrap">
-          <div class="card">
-            <div class="card-body">
-
-            {% if page_obj|length > 0 %}
-              <div class="table-wrap">
-                <table class="tbl" id="tbl-siem-alerts">
-                  <thead>
-                    <tr>
-                      <th>Fecha/Hora</th>
-                      <th>Severidad</th>
-                      <th>IP Origen</th>
-                      <th>IP Destino</th>
-                      <th>País Origen</th>
-                      <th>Categorías</th>
-                      <th>Reputation</th>
-                      <th>Dispositivo</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for a in page_obj %}
-                      {% with sev=a|get_item:"Alert Severity"|default_if_none:"" %}
-                        {% with sev_lower=sev|lower %}
-                          <tr class="alert-row"
-                              data-time="{{ a|get_item:'Time'|default:'' }}"
-                              data-severity="{{ sev }}"
-                              data-profile="{{ a|get_item:'Profile Name'|default:'' }}"
-                              data-srcip="{{ a|get_item:'Source IP'|default:'' }}"
-                              data-dstip="{{ a|get_item:'Destination IP'|default:'' }}"
-                              data-country-src="{{ a|get_item:'Source Country'|default:'' }}"
-                              data-country-dst="{{ a|get_item:'Destination Country'|default:'' }}"
-                              data-service="{{ a|get_item:'Service'|default:'' }}"
-                              data-app="{{ a|get_item:'Application Details'|default:'' }}"
-                              data-action="{{ a|get_item:'Action'|default:'' }}"
-                              data-logsrc="{{ a|get_item:'Log Source'|default:'' }}"
-                              data-device="{{ a|get_item:'__device_label__'|default:'' }}"
-                              data-threatcat="{{ a|get_item:'Threat Categories'|default:'' }}"
-                              data-threatrep="{{ a|get_item:'Threat Reputation'|default:'' }}"
-                              data-raw="{{ a|get_item:'__raw_json__'|default:'' }}">
-
-                            <!-- Fecha/Hora -->
-                            <td class="mono nowrap">{{ a|get_item:"Time"|default:"-" }}</td>
-
-                            <!-- Severidad con pill de colores -->
-                            <td>
-                              {% if sev %}
-                                {% if sev_lower == "critical" %}
-                                  <span class="pill sev-critical">{{ sev }}</span>
-                                {% elif sev_lower == "high" or sev_lower == "trouble" %}
-                                  <span class="pill sev-high">{{ sev }}</span>
-                                {% elif sev_lower == "medium" or sev_lower == "attention" %}
-                                  <span class="pill sev-medium">{{ sev }}</span>
-                                {% elif sev_lower == "low" or sev_lower == "success" %}
-                                  <span class="pill sev-low">{{ sev }}</span>
-                                {% elif sev_lower == "info" or sev_lower == "information" %}
-                                  <span class="pill sev-info">{{ sev }}</span>
-                                {% elif sev_lower == "n/a" or sev_lower == "na" %}
-                                  <span class="pill sev-na">{{ sev }}</span>
-                                {% else %}
-                                  <span class="pill sev-na">{{ sev }}</span>
-                                {% endif %}
-                              {% else %}
-                                -
-                              {% endif %}
-                            </td>
-
-                            <!-- IP Origen -->
-                            <td class="mono">{{ a|get_item:"Source IP"|default:"-" }}</td>
-
-                            <!-- IP Destino -->
-                            <td class="mono">{{ a|get_item:"Destination IP"|default:"-" }}</td>
-
-                            <!-- País Origen -->
-                            <td>{{ a|get_item:"Source Country"|default:"-" }}</td>
-
-                            <!-- Threat Categories -->
-                            <td class="w-320">
-                              {{ a|get_item:"Threat Categories"|default:"-" }}
-                            </td>
-
-                            <!-- Threat Reputation (pill) -->
-                            <td class="mono threat-rep-cell" data-rep="{{ a|get_item:'Threat Reputation'|default:'' }}"></td>
-
-                            <!-- Dispositivo -->
-                            <td class="mono">
-                              {{ a|get_item:"__device_label__"|default:"-" }}
-                            </td>
-                          </tr>
-                        {% endwith %}
-                      {% endwith %}
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
-
-              <div class="paginate" id="paginate">
-                {% if page_obj.has_previous %}
-                  <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}">&laquo; Anterior</a>
-                {% else %}
-                  <span class="meta">&laquo; Anterior</span>
-                {% endif %}
-
-                <span class="current">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
-
-                {% if page_obj.has_next %}
-                  <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}">Siguiente &raquo;</a>
-                {% else %}
-                  <span class="meta">Siguiente &raquo;</span>
-                {% endif %}
-              </div>
+          <div class="paginate" id="paginate">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}">&laquo;
+              Anterior</a>
             {% else %}
-              <section class="empty-state">
-                <div class="empty-card">
-                  <h2>Sin alertas disponibles</h2>
-                  <p>No se encontraron alertas para el rango consultado.</p>
-                </div>
-              </section>
+            <span class="meta">&laquo; Anterior</span>
+            {% endif %}
+
+            <span class="current">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}">Siguiente
+              &raquo;</a>
+            {% else %}
+            <span class="meta">Siguiente &raquo;</span>
             {% endif %}
           </div>
-
+          {% else %}
+          <section class="empty-state">
+            <div class="empty-card">
+              <h2>Sin alertas disponibles</h2>
+              <p>No se encontraron alertas para el rango consultado.</p>
+            </div>
+          </section>
+          {% endif %}
         </div>
-      </section>
-      {% endif %}
+
+      </div>
+    </section>
+    {% endif %}
     {% endif %}
   </div>
 
@@ -449,8 +461,17 @@
   <!-- export CSV SIEM -->
   <script defer src="{% static 'js/siem_export.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/country_filter_modal.js' %}?v={% now 'U' %}"></script>
+  <script src="{% static 'js/chat_popup_launcher.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/coach_allinone.js' %}?v={% now 'U' %}"></script>
   {% include 'partials/config_notificaciones_modal.html' %}
   {% include 'partials/_country_filter_modal.html' %}
   {% include 'partials/cred_modal.html' %}
+
+  <script>
+    window.__RETELL_POPUP_URL = "{% url 'retell_call_window' %}";
+  </script>
+
+  <script defer src="{% static 'js/retell_open_popup.js' %}?v={% now 'U' %}"></script>
 </body>
+
 </html>

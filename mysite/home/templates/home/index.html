@@ -84,6 +84,8 @@
               href="{% url 'soar_dashboard:dashboard' %}">Dashboard</a>
             <a class="tenant-option nav-subitem {% if app_name == 'soar_incidents' %}is-active{% endif %}"
               href="{% url 'soar_incidents:list' %}">Eventos</a>
+            <a class="tenant-option nav-subitem {% if app_name == 'soar_tickets' %}is-active{% endif %}"
+               href="{% url 'soar_tickets:list' %}">Tickets</a>
           </div>
         </details>
         {% endwith %}
@@ -167,7 +169,7 @@
           <h1 class="top-title">
             Tenant:
             {% if request.user.tenant.name|lower == "inntesec" %}
-            <details class="tenant-dropdown">
+            <details class="tenant-dropdown" id="tenantDropdown">
               <summary class="tenant-summary">
                 {{ tenant.name }}
                 <span class="caret">▼</span>
@@ -203,11 +205,10 @@
               <button type="button" data-export-format="csv">📊 Exportar CSV</button>
             </div>
           </div>
-        
+
           <button id="showCoachBtn" class="btn ghost" title="Mostrar guía rápida" onclick="window.startInntesecCoach()">
             💡 Guía rápida
           </button>
-
 
           <a>Inntesec Agent:</a>
 
@@ -215,7 +216,7 @@
             📞 Llamar
           </button>
           <button class="btn ghost" type="button" onclick="openChatPopup()">
-            💬 Abrir chat
+            💬 Chat
           </button>
 
           <div class="user-menu" id="userMenu">
@@ -369,10 +370,10 @@
         </div>
       </section>
 
-      <!-- IP Search Modal -->
+      <!-- IP Search Modal (FIX) -->
       <div id="ipSearchModal"
-        class="modal-overlay {% if blacklist_q or whitelist_q and show_whitelist_modal %}{% else %}hidden{% endif %}"
-        aria-hidden="{% if blacklist_q or whitelist_q and show_whitelist_modal %}false{% else %}true{% endif %}">
+        class="modal-overlay {% if blacklist_q or whitelist_q %}{% else %}hidden{% endif %}"
+        aria-hidden="{% if blacklist_q or whitelist_q %}false{% else %}true{% endif %}">
         <div class="modal-card">
           <div class="modal-head">
             <h3>Resultados de búsqueda de IP</h3>
@@ -380,6 +381,7 @@
           </div>
 
           <div class="modal-body ip-modal-body">
+
             {% if blacklist_q %}
             <section class="ip-modal-section">
               <h4 class="ip-modal-title">Blacklist</h4>
@@ -429,10 +431,40 @@
             </section>
             {% endif %}
 
-            {% if whitelist_q and show_whitelist_modal %}
+            {% if whitelist_q %}
             <section class="ip-modal-section">
               <h4 class="ip-modal-title">Whitelist</h4>
               <p class="ip-search-meta">Búsqueda: <strong>{{ whitelist_q }}</strong></p>
+
+              {% if whitelist_results %}
+              <ul class="ip-results-list">
+                {% for ip in whitelist_results %}
+                <li class="ip-result-item">
+                  <div class="ip-detail-card">
+                    <div class="block ip-section-block">
+                      <h4>ENCABEZADO</h4>
+                      <ul class="stacked">
+                        <li><strong>IP:</strong> <span class="mono">{{ ip.ip }}</span></li>
+                        <li><strong>Cliente:</strong> {{ ip.cliente|default:"-" }}</li>
+                        <li><strong>ISP:</strong> {{ ip.isp|default:"-" }}</li>
+                        <li><strong>Motivo:</strong> {{ ip.motivo|default:"-" }}</li>
+                      </ul>
+                    </div>
+                    <div class="block ip-section-block">
+                      <h4>FECHAS</h4>
+                      <ul class="stacked">
+                        <li><strong>Fecha creación:</strong> {{ ip.fecha_creacion|date:"Y-m-d H:i:s"|default:"-" }}</li>
+                        <li><strong>Última actualización:</strong> {{ ip.fecha_actualizacion|date:"Y-m-d H:i:s"|default:"-" }}</li>
+                      </ul>
+                    </div>
+                  </div>
+                </li>
+                {% endfor %}
+              </ul>
+              {% else %}
+              <p class="ip-empty-text">No se encontraron coincidencias en la whitelist para este tenant.</p>
+              {% endif %}
+
               {% if whitelist_not_found_terms %}
               <p class="ip-subtitle" style="margin-top:0.75rem;">
                 IPs no encontradas en la whitelist (usa el botón de abajo para solicitar añadirlas).
@@ -442,13 +474,11 @@
                 <li class="ip-result-item"><span class="ip-pill">{{ ip }}</span></li>
                 {% endfor %}
               </ul>
-              {% else %}
-              <p class="ip-empty-text">Todas las IPs buscadas ya están en la whitelist del tenant.</p>
               {% endif %}
             </section>
             {% endif %}
 
-            {% if not blacklist_q and not whitelist_q and not show_whitelist_modal %}
+            {% if not blacklist_q and not whitelist_q %}
             <p class="ip-empty-text">No has realizado ninguna búsqueda todavía.</p>
             {% endif %}
           </div>
@@ -464,7 +494,7 @@
             </form>
             {% endif %}
 
-            {% if whitelist_q and show_whitelist_modal and whitelist_not_found_terms %}
+            {% if whitelist_q and whitelist_not_found_terms %}
             <form method="post" action="{% url 'home:whitelist_create_ticket' %}" class="ip-footer-form">
               {% csrf_token %}
               <input type="hidden" name="ip" value="{{ whitelist_not_found_terms.0 }}">
@@ -601,10 +631,11 @@
   {% include "partials/_country_filter_modal.html" %}
 
   <script>
-  window.__RETELL_POPUP_URL = "{% url 'integrations:retell_call_window' %}";
+  window.__RETELL_POPUP_URL = "{% url 'retell_call_window' %}";
   </script>
 
   <script defer src="{% static 'js/retell_open_popup.js' %}?v={% now 'U' %}"></script>
+  <script src="{% static 'js/tenant_dropdown_width.js' %}?v={% now 'U' %}"></script>
 </body>
 
 </html>

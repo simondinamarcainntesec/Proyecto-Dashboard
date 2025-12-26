@@ -36,7 +36,7 @@
 
   <script>
     // Variables que necesita el JS externo (sin exponer passkey; solo endpoint y csrf)
-    window.CHAT_API_URL = "{% url 'integrations:chat_send_message' %}";
+    window.CHAT_API_URL = "{% url 'chat_send_message' %}";
     window.CHAT_CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
   </script>
 

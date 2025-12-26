@@ -8,7 +8,7 @@
   // Solo nos interesa interceptar en el paso generator
   if (step !== 'generator') return;
 
-  // ✅ token sin spinners + solo números
+  // token sin spinners + solo números
   const token = form.querySelector('input[name="token"]');
   if (token) {
     token.setAttribute('type', 'text');
@@ -50,7 +50,7 @@
       // fetch sigue redirects -> resp.url es el destino final
       const finalUrl = resp.url || '';
 
-      // ✅ Éxito: si terminó en admin o en setup/complete, mostramos modal
+      // Éxito: si terminó en admin o en setup/complete, mostramos modal
       if (finalUrl.includes('/admin') || finalUrl.includes('/two_factor/setup/complete')) {
         openOkModal('/admin/');
         return;

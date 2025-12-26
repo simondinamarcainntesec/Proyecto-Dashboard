@@ -4,7 +4,7 @@
   --tf-card-width: 380px;  /* tarjeta completa (header + content) */
 }
 
-/* ✅ La “tarjeta” completa (incluye header) */
+/* La “tarjeta” completa (incluye header) */
 body.login #container{
   width: var(--tf-card-width);
   max-width: calc(100vw - 40px);
@@ -12,7 +12,7 @@ body.login #container{
   box-sizing: border-box;
 }
 
-/* ✅ Header que no corte el título */
+/* Header que no corte el título */
 body.login #header{
   width: 100%;
   box-sizing: border-box;
@@ -20,7 +20,7 @@ body.login #header{
   overflow: hidden;   /* evita cosas raras */
 }
 
-/* ✅ Content alineado al ancho del container */
+/* Content alineado al ancho del container */
 body.login #content{
   width: 100%;
   box-sizing: border-box;
@@ -32,7 +32,7 @@ body.login #content-main{
   width: 100%;
 }
 
-/* ✅ Filas centradas y con ancho real */
+/* Filas centradas y con ancho real */
 body.login #content-main .form-row{
   float: none;
   display: block;
@@ -42,7 +42,7 @@ body.login #content-main .form-row{
   box-sizing: border-box;
 }
 
-/* ✅ Label alineado con el inicio del input */
+/* Label alineado con el inicio del input */
 body.login #content-main .form-row label{
   float: none;
   display: block;
@@ -52,7 +52,7 @@ body.login #content-main .form-row label{
   box-sizing: border-box;
 }
 
-/* ✅ Input ocupa todo el ancho */
+/* Input ocupa todo el ancho */
 body.login #content-main .form-row input,
 body.login #content-main .form-row select{
   float: none;
@@ -62,7 +62,7 @@ body.login #content-main .form-row select{
   margin: 0;
 }
 
-/* ✅ Botón centrado y mismo ancho */
+/* Botón centrado y mismo ancho */
 body.login .submit-row{
   width: var(--tf-field-width);
   max-width: 100%;
@@ -70,7 +70,7 @@ body.login .submit-row{
   box-sizing: border-box;
 }
 
-/* ✅ Ayuda OTP mismo ancho */
+/* Ayuda OTP mismo ancho */
 body.login .otp-help{
   width: var(--tf-field-width);
   max-width: 100%;

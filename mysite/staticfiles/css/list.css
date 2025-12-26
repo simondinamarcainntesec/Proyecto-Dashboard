@@ -100,28 +100,28 @@
 
 /* crítico = rojo */
 .sev-critical{
-  background:#dc262633;            /* rojo translúcido */
-  border:1px solid #dc2626aa;      /* rojo vivo */
+  background:#dc262633;
+  border:1px solid #dc2626aa;
   color:#fff;
 }
 
 /* alto = naranja */
 .sev-high{
-  background:#f9731633;            /* naranja translúcido */
+  background:#f9731633;
   border:1px solid #f97316aa;
   color:#fff;
 }
 
 /* medio = amarillo */
 .sev-medium{
-  background:#f59e0b33;            /* amarillo translúcido */
+  background:#f59e0b33;
   border:1px solid #f59e0baa;
   color:#fff;
 }
 
 /* bajo = celeste */
 .sev-low{
-  background:#38bdf833;            /* celeste translúcido */
+  background:#38bdf833;
   border:1px solid #38bdf8aa;
   color:#fff;
 }
@@ -226,21 +226,19 @@ body.modal-open { overflow: hidden; }
   right: 0;
   min-width: 240px;
 
-  background: #020617;           /* fondo oscuro como el resto del panel */
+  background: #020617;
   border-radius: 0.75rem;
   padding: 0.4rem 0;
   box-shadow: 0 18px 45px rgba(15, 23, 42, 0.85);
 
-  display: none;                 /* clave: oculto por defecto */
+  display: none;
   z-index: 60;
 }
 
-/* Cuando JS le agrega .is-open se muestra como tarjeta flotante */
 .export-menu.is-open {
   display: block;
 }
 
-/* Estilo de las opciones */
 .export-menu button {
   width: 100%;
   border: 0;
@@ -260,7 +258,83 @@ body.modal-open { overflow: hidden; }
   background: #0f172a;
 }
 
-/* Si quieres que el icono quede alineado bonito */
-.export-menu button::first-letter {
-  /* nada especial, solo aseguramos que el emoji no se recorte */
+/* =========================
+   ✅ NUEVO: Selects de filtros (Severidad / Asignación)
+   - mismo look que chips/inputs
+   ========================= */
+
+.sel-filter{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+
+.sel-filter > span{
+  font-size:12px;
+  opacity:.85;
+  white-space:nowrap;
+  color: var(--text,#e5e7eb);
+}
+
+.filter-select{
+  height: 36px;
+  padding: 0 36px 0 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border,#1e293b);
+  background: #0f1b31;
+  color: #e5e7eb;
+
+  font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-weight: 700;
+  outline: none;
+
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e5e7eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px 16px;
+}
+
+.filter-select:focus{
+  border-color: rgba(59,130,246,.65);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.18);
+}
+
+.filter-select option{
+  background: #0f1b31;
+  color: #e5e7eb;
+}
+
+/* ==========================================
+   FIX: labels (Severidad/Asignación) + Limpiar en blanco
+   ========================================== */
+
+/* Labels de filtros (Severidad / Asignación) */
+.toolbar .sel-filter > span{
+  color: #ffffff !important;
+  opacity: 1 !important;
+  font-size: 12px;          /* mismo tamaño que tus labels */
+  font-weight: 600;
+}
+
+/* Botón/Link Limpiar: forzar look blanco como el resto */
+.toolbar #btn-clear{
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+/* Si por algún motivo Limpiar está como <a> sin clase btn, le damos el look */
+.toolbar #btn-clear:not(.btn){
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border,#1e293b);
+  text-decoration: none;
+  background: transparent;
+  font-weight: 700;
 }

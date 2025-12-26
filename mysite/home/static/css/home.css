@@ -180,63 +180,90 @@ body{
   box-shadow:0 8px 24px rgba(15,23,42,.7);
 }
 
-/* Tenant selector */
+/* ============================
+   Tenant selector (XL) — versión que funciona con el JS de ancho
+   (y aplica también a dropdowns del sidebar: Inn-Monitor / Configuración)
+   ============================ */
+
 .tenant-dropdown{
   display:inline-block;
   position:relative;
-  margin-left:.35rem;
+  margin-left:.5rem;
 }
+
 .tenant-dropdown > summary{ list-style:none }
 .tenant-dropdown > summary::-webkit-details-marker{ display:none }
+
 .tenant-summary{
   cursor:pointer;
   background:#0f1b31;
   color:#e5e7eb;
   border:1px solid #1e293b;
-  padding:6px 10px;
-  border-radius:10px;
-  font-weight:600;
+  padding:10px 14px;
+  border-radius:14px;
+  font-weight:700;
+  font-size:16px;
+  line-height:1;
   display:inline-flex;
   align-items:center;
-  gap:6px;
+  gap:10px;
   user-select:none;
 }
+
+/* El ancho lo fija el JS (inline style) SOLO para overlays. */
 .tenant-list{
-  position:absolute;
-  top:120%;
-  left:0;
-  background:#0f1d35;
-  border:1px solid #1e293b;
-  border-radius:12px;
-  box-shadow:0 6px 16px rgba(0,0,0,.4);
-  padding:6px;
-  z-index:50;
-  display:flex;
-  flex-direction:column;
-  min-width:180px;
+  overflow:hidden; /* clave: recorta hover/active para que nunca “se salga” */
 }
+
+/* evita márgenes raros dentro del dropdown */
+.tenant-list form{ margin:0; }
+
+/* botones/links del dropdown (topbar y sidebar) */
 .tenant-option{
   display:block;
   width:100%;
+  box-sizing:border-box;
+
   background:transparent;
   border:0;
+  outline:none;
+
   color:#e5e7eb;
   text-align:left;
-  padding:8px 12px;
-  border-radius:8px;
+
+  padding:12px 14px;
+  border-radius:10px;
+
   cursor:pointer;
-  font-size:14px;
+  font-size:16px;
+  line-height:1.15;
+
+  white-space:nowrap;
+  background-clip:padding-box;
+
+  /* importante: nada de bordes externos que “aumenten” ancho visual */
+  box-shadow:none;
 }
+
+/* hover interno */
 .tenant-option:hover{
   background:rgba(255,255,255,.08);
+  box-shadow:none;
 }
+
+/* activo: borde interno (nunca sobresale) */
 .tenant-option.is-active{
-  background:rgba(59,130,246,.15);
-  border:1px solid #3b82f6;
+  border:0;
+  box-shadow: inset 0 0 0 1px #3b82f6;
   color:#fff;
 }
 
-/* User menu */
+/* foco accesible interno */
+.tenant-option:focus-visible{
+  box-shadow: inset 0 0 0 2px rgba(59,130,246,.75);
+}
+
+/* ===== User menu ===== */
 .user-menu{ position:relative }
 .user-button{
   border:1px solid var(--border);

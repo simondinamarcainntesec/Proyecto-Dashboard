@@ -1,7 +1,7 @@
 // static/js/chat_popup_launcher.js
 (function () {
   const POPUP_NAME = "portalChatPopup";
-  const POPUP_URL = "/integrations/chat/"; // ajusta si usas prefix o namespace distinto
+  const POPUP_URL = "/chat/"; // ajusta si usas prefix o namespace distinto
 
   window.openChatPopup = function openChatPopup() {
     const features = [

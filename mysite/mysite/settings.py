@@ -29,8 +29,8 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY=os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-#DEBUG = False
+#DEBUG = True
+DEBUG = False
 
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.Argon2PasswordHasher',
@@ -78,6 +78,7 @@ INSTALLED_APPS = [
     'siem',
     'site24x7',
     'tenants.apps.TenantsConfig',
+    'soar_tickets',
 ]
 
 SITE_ID = 1
@@ -317,8 +318,8 @@ OAUTH2_MICROSOFT = {
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Fuerza que todo el tráfico sea HTTPS
-#SECURE_SSL_REDIRECT = True
-SECURE_SSL_REDIRECT = not DEBUG
+SECURE_SSL_REDIRECT = True
+#SECURE_SSL_REDIRECT = not DEBUG
 
 # Asegura cookies seguras
 SESSION_COOKIE_SECURE = True

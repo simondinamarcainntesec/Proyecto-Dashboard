@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="{% static 'css/config_notificaciones_modal.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/cred_modal.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/country_filter_modal.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/coachmark.css' %}?v={% now 'U' %}">
 </head>
 
 <body class="layout">
@@ -75,6 +76,8 @@
             href="{% url 'soar_dashboard:dashboard' %}">Dashboard</a>
           <a class="tenant-option nav-subitem {% if app_name == 'soar_incidents' %}is-active{% endif %}"
             href="{% url 'soar_incidents:list' %}">Eventos</a>
+          <a class="tenant-option nav-subitem {% if app_name == 'soar_tickets' %}is-active{% endif %}"
+               href="{% url 'soar_tickets:list' %}">Tickets</a>
         </div>
       </details>
       {% endwith %}
@@ -153,38 +156,36 @@
   <div class="content">
     <!-- Topbar -->
     <header class="topbar">
-      <div class="top-left">
-        <h1 class="top-title">
-          Tenant:
-          {% if request.user.tenant.name|lower == "inntesec" %}
-          <details class="tenant-dropdown">
-            <summary class="tenant-summary">
-              {{ tenant.name }}
-              <span class="caret">▼</span>
-            </summary>
-            <div class="tenant-list">
-              {% for t in all_tenants %}
-              <form method="post" action="{% url 'dashboard:switch_tenant' t.id %}">
-                {% csrf_token %}
-                <input type="hidden" name="next" value="{{ request.path }}">
-                <button type="submit" class="tenant-option {% if tenant.id == t.id %}is-active{% endif %}">
-                  {{ t.name }}
-                </button>
-              </form>
-              {% endfor %}
-            </div>
-          </details>
-          {% else %}
-          <span class="top-tenant">{{ tenant.name }}</span>
-          {% endif %}
-        </h1>
-      </div>
+        <div class="top-left">
+          <h1 class="top-title">
+            Tenant:
+            {% if request.user.tenant.name|lower == "inntesec" %}
+            <details class="tenant-dropdown">
+              <summary class="tenant-summary">
+                {{ tenant.name }}
+                <span class="caret">▼</span>
+              </summary>
+              <div class="tenant-list">
+                {% for t in all_tenants %}
+                <form method="post" action="{% url 'dashboard:switch_tenant' t.id %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ request.path }}">
+                  <button type="submit" class="tenant-option {% if tenant.id == t.id %}is-active{% endif %}">
+                    {{ t.name }}
+                  </button>
+                </form>
+                {% endfor %}
+              </div>
+            </details>
+            {% else %}
+            <span class="top-tenant">{{ tenant.name }}</span>
+            {% endif %}
+          </h1>
+        </div>
 
-      <div class="top-right">
-        <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
-
-        <!-- Menú Exportar (reutiliza dashboard_export.js) -->
-        <div class="export-wrapper">
+        <div class="top-right">
+          <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
+          <div class="export-wrapper">
           <button class="btn ghost" title="Exportar" id="btn-export-toggle">⬇︎</button>
           <div class="export-dropdown" id="export-menu">
             <button type="button" data-export-format="pdf">📄 Exportar PDF</button>
@@ -192,29 +193,36 @@
           </div>
         </div>
 
-        <!-- Usuario -->
-        <div class="user-menu" id="userMenu">
-          <button type="button" id="userButton" class="user-button">
-            <div class="user-avatar">
-              {{ request.user.username|default:"U"|slice:":1"|upper }}
-            </div>
-            <div class="user-name">
-              {{ request.user.get_full_name|default:request.user.username }}
-            </div>
-            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24">
-              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
-            </svg>
+          <button id="showCoachBtn" class="btn ghost" title="Mostrar guía rápida" onclick="window.startInntesecCoach()">
+            💡 Guía rápida
           </button>
 
-          <div class="dropdown-menu">
-            <form action="{% url 'logout' %}" method="post">
-              {% csrf_token %}
-              <button type="submit">🚪 Cerrar sesión</button>
-            </form>
+          <a>Inntesec Agent:</a>
+
+          <button class="btn ghost" type="button" onclick="window.openRetellCallWindow()">
+            📞 Llamar
+          </button>
+          <button class="btn ghost" type="button" onclick="openChatPopup()">
+            💬 Chat
+          </button>
+
+          <div class="user-menu" id="userMenu">
+            <button type="button" id="userButton" class="user-button">
+              <div class="user-avatar">{{ request.user.username|default:"U"|slice:":1"|upper }}</div>
+              <div class="user-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+              <svg class="chevron" width="12" height="12" viewBox="0 0 24 24">
+                <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+              </svg>
+            </button>
+            <div class="dropdown-menu">
+              <form action="{% url 'logout' %}" method="post">{% csrf_token %}
+                <button type="submit">🚪 Cerrar sesión</button>
+              </form>
+            </div>
           </div>
+
         </div>
-      </div>
-    </header>
+      </header>
 
     {% if not tenant.alarms_one_id %}
       {# Tenant sin servicio de alarmas contratado #}
@@ -477,9 +485,18 @@
   <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/home_portal.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/country_filter_modal.js' %}?v={% now 'U' %}"></script>
+  <script src="{% static 'js/chat_popup_launcher.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/coach_allinone.js' %}?v={% now 'U' %}"></script>
   {% include 'partials/config_notificaciones_modal.html' %}
   {% include 'partials/_country_filter_modal.html' %}
   {% include 'partials/cred_modal.html' %}
+
+  <script>
+  window.__RETELL_POPUP_URL = "{% url 'retell_call_window' %}";
+  </script>
+
+  <script defer src="{% static 'js/retell_open_popup.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/tenant_dropdown_width.js' % %}?v={ now 'U' %}"></script>
 </body>
 
 </html>

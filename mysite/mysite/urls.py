@@ -14,6 +14,8 @@ from home import views as home_views
 from two_factor.urls import urlpatterns as tf_urls
 from two_factor.admin import AdminSiteOTPRequired
 from tenants.two_factor_overrides import AdminSetupView, admin_setup_complete
+from integrations import views_retell
+from integrations import views as integrations_views
 
 # Fuerza OTP en /admin/
 admin.site.__class__ = AdminSiteOTPRequired
@@ -59,7 +61,6 @@ urlpatterns = [
 
     # Ingesta API / Integraciones
     path("inyeccion_api/", include(("inyeccion_api.urls", "inyeccion_api"), namespace="inyeccion_api")),
-    path("integrations/", include(("integrations.urls", "integrations"), namespace="integrations")),
 
     # Dashboards SOAR
     path("dashboard-soar/", include(("soar_dashboard.urls", "soar_dashboard"), namespace="soar_dashboard")),
@@ -81,4 +82,14 @@ urlpatterns = [
     path("blacklist", home_views.blacklist_txt, name="blacklist_download_root_root"),
     path("siem/", include("siem.urls", namespace="siem")),
     path("", include("site24x7.urls")),
+    path("soar/tickets/", include(("soar_tickets.urls", "soar_tickets"), namespace="soar_tickets")),
+
+    # Retell call
+    path("inntesec-agent/create-web-call/", views_retell.retell_create_web_call, name="retell_create_web_call"),
+    path("inntesec-agent/get-call/<str:call_id>/", views_retell.retell_get_call, name="retell_get_call"),
+    path("inntesec-agent/call/", integrations_views.retell_call_window, name="retell_call_window"),
+
+    # Chat
+    path("chat/", integrations_views.chat_window, name="chat_window"),
+    path("chat/api/send/", integrations_views.chat_send_message, name="chat_send_message"),
 ]

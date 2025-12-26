@@ -14,12 +14,16 @@
   <link rel="stylesheet" href="{% static 'css/config_notificaciones_modal.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/cred_modal.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/country_filter_modal.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/coachmark.css' %}?v={% now 'U' %}">
 
   <!-- NUEVO -->
   <link rel="stylesheet" href="{% static 'css/soar_assign_ticket_modal.css' %}?v={% now 'U' %}">
 </head>
 
-<body class="layout" data-soar-tenant-users-url="{% url 'soar_incidents:api_tenant_users' %}">
+<body class="layout"
+      data-soar-tenant-users-url="{% url 'soar_tickets:api_tenant_users' %}"
+      data-soar-ticket-create-url="{% url 'soar_tickets:api_ticket_create' %}">
+
   <div id="loading-overlay" role="status" aria-live="polite" aria-label="Cargando">
     <div class="loading-card">
       <div class="spinner" aria-hidden="true"></div>
@@ -78,6 +82,8 @@
             href="{% url 'soar_dashboard:dashboard' %}">Dashboard</a>
           <a class="tenant-option nav-subitem {% if app_name == 'soar_incidents' %}is-active{% endif %}"
             href="{% url 'soar_incidents:list' %}">Eventos</a>
+          <a class="tenant-option nav-subitem {% if app_name == 'soar_tickets' %}is-active{% endif %}"
+               href="{% url 'soar_tickets:list' %}">Tickets</a>
         </div>
       </details>
       {% endwith %}
@@ -181,8 +187,8 @@
         <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
 
         <div class="export-wrapper">
-          <button type="button" class="btn ghost small" id="soarExportToggleBtn"
-            title="Exportar incidentes" aria-haspopup="true" aria-expanded="false">
+          <button type="button" class="btn ghost small" id="soarExportToggleBtn" title="Exportar incidentes"
+            aria-haspopup="true" aria-expanded="false">
             ⬇
           </button>
 
@@ -191,12 +197,25 @@
               data-export-url="{% url 'soar_incidents:export_csv_current' %}">
               📊 Exportar incidentes actuales
             </button>
-            <button type="button" data-export-scope="all"
-              data-export-url="{% url 'soar_incidents:export_csv_all' %}">
+            <button type="button" data-export-scope="all" data-export-url="{% url 'soar_incidents:export_csv_all' %}">
               📁 Exportar todos los incidentes
             </button>
           </div>
         </div>
+
+        <button id="showCoachBtn" class="btn ghost" title="Mostrar guía rápida" onclick="window.startInntesecCoach()">
+          💡 Guía rápida
+        </button>
+
+        <a>Inntesec Agent:</a>
+
+        <button class="btn ghost" type="button" onclick="window.openRetellCallWindow()">
+          📞 Llamar
+        </button>
+
+        <button class="btn ghost" type="button" onclick="openChatPopup()">
+          💬 Chat
+        </button>
 
         <div class="user-menu" id="userMenu">
           <button type="button" id="userButton" class="user-button">
@@ -255,6 +274,28 @@
             <input id="inp-to" type="date" name="to" value="{{ to_date_str }}">
           </label>
 
+          <!-- ✅ NUEVO: Severidad -->
+          <div class="sel-filter">
+            <span>Severidad</span>
+            <select id="f-sev" name="sev" class="filter-select">
+              <option value="" {% if not sev_filter %}selected{% endif %}>Todas</option>
+              <option value="low" {% if sev_filter == "low" %}selected{% endif %}>Bajo</option>
+              <option value="medium" {% if sev_filter == "medium" %}selected{% endif %}>Medio</option>
+              <option value="high" {% if sev_filter == "high" %}selected{% endif %}>Alto</option>
+              <option value="critical" {% if sev_filter == "critical" %}selected{% endif %}>Crítico</option>
+            </select>
+          </div>
+
+          <!-- ✅ NUEVO: Asignación -->
+          <div class="sel-filter">
+            <span>Asignación</span>
+            <select id="f-assigned" name="assigned" class="filter-select">
+              <option value="" {% if not assigned_filter %}selected{% endif %}>Todas</option>
+              <option value="yes" {% if assigned_filter == "yes" %}selected{% endif %}>Sí</option>
+              <option value="no" {% if assigned_filter == "no" %}selected{% endif %}>No</option>
+            </select>
+          </div>
+
           <button class="btn primary" id="btn-apply" type="submit">Aplicar</button>
           <a class="btn ghost" id="btn-clear" href="?">Limpiar</a>
         </div>
@@ -269,7 +310,8 @@
             <table class="tbl" id="tbl-incidentes">
               <thead>
                 <tr>
-                  <th>ID Alarma</th>
+                  <th class="nowrap">ID Alarma</th>
+                  <th class="nowrap" data-assigned-th>Asignado</th>
                   <th>Dispositivo</th>
                   <th>Tipo de amenaza</th>
                   <th>Nivel de severidad</th>
@@ -279,8 +321,10 @@
               </thead>
               <tbody>
                 {% for it in page_obj %}
+
                 <tr class="soar-row"
                   data-id="{{ it.alarmd_id|escape }}"
+                  data-assigned="{% if it.alarmd_id|stringformat:'s' in assigned_alarm_ids %}1{% else %}0{% endif %}"
                   data-dispositivo="{{ it.dispositivo|default:''|escape }}"
                   data-tipo="{{ it.tipo_de_amenaza|default:''|escape }}"
                   data-sev="{{ it.nivel_de_severidad|default:''|escape }}"
@@ -292,7 +336,28 @@
                   data-resumen="{{ it.resumen_humano|default:''|escape }}"
                   data-riesgo="{{ it.riego_detectado|default:''|escape }}"
                   data-app="{{ it.application|default:''|escape }}">
+
                   <td class="mono nowrap">{{ it.alarmd_id }}</td>
+
+                  <td class="nowrap" data-assigned-cell>
+                    {% if it.alarmd_id|stringformat:'s' in assigned_alarm_ids %}
+                      <span class="assign-pill is-yes">
+                        <svg class="assign-ico" viewBox="0 0 24 24" aria-hidden="true">
+                          <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"></circle>
+                          <path d="M8 12l2.5 2.5L16 9" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                        </svg>
+                        Sí
+                      </span>
+                    {% else %}
+                      <span class="assign-pill is-no">
+                        <svg class="assign-ico" viewBox="0 0 24 24" aria-hidden="true">
+                          <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"></circle>
+                        </svg>
+                        No
+                      </span>
+                    {% endif %}
+                  </td>
+
                   <td class="w-240" title="{{ it.dispositivo }}">{{ it.dispositivo|default:"—" }}</td>
                   <td class="w-320" title="{{ it.tipo_de_amenaza }}">{{ it.tipo_de_amenaza|default:"—" }}</td>
                   <td class="nowrap">
@@ -313,6 +378,7 @@
                   <td class="mono nowrap">{% if t %}{{ t }}{% else %}—{% endif %}</td>
                   {% endwith %}
                 </tr>
+
                 {% endfor %}
               </tbody>
             </table>
@@ -321,15 +387,17 @@
           {% if page_obj %}
           <div class="paginate" id="paginate">
             {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}">&laquo; Anterior</a>
+              <a href="?{% if base_qs %}{{ base_qs }}&{% endif %}page={{ page_obj.previous_page_number }}">&laquo; Anterior</a>
             {% else %}
-            <span class="meta">&laquo; Anterior</span>
+              <span class="meta">&laquo; Anterior</span>
             {% endif %}
+
             <span class="current">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+
             {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}">Siguiente &raquo;</a>
+              <a href="?{% if base_qs %}{{ base_qs }}&{% endif %}page={{ page_obj.next_page_number }}">Siguiente &raquo;</a>
             {% else %}
-            <span class="meta">Siguiente &raquo;</span>
+              <span class="meta">Siguiente &raquo;</span>
             {% endif %}
           </div>
           {% endif %}
@@ -390,7 +458,6 @@
     <div class="modal-backdrop" data-assign-backdrop></div>
 
     <div class="modal-card modal-card-assign" role="dialog" aria-modal="true" aria-labelledby="assign-title">
-      <!-- Header general (título + close) -->
       <div class="assign-head">
         <div class="assign-head-row">
           <div class="assign-head-title">
@@ -400,7 +467,6 @@
           <button class="modal-close" data-assign-close type="button" aria-label="Cerrar">&times;</button>
         </div>
 
-        <!-- “Evento” con iconos (SIN “Evento detectado”) -->
         <div class="assign-head-card">
           <div class="assign-head-main">
             <span class="meta-ico is-alert" aria-hidden="true"></span>
@@ -422,12 +488,10 @@
               <span class="meta-ico is-tenant"></span>
               Tenant
             </h4>
-            <div class="assign-static" id="assign-tenant-static"
-                data-tenant-id="{{ tenant.id }}">
+            <div class="assign-static" id="assign-tenant-static" data-tenant-id="{{ tenant.id }}">
               {{ tenant.name }}
             </div>
           </div>
-
 
           <div class="block">
             <h4 class="h-ico">
@@ -487,6 +551,8 @@
   <script defer src="{% static 'js/home_portal.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/soar_incidents_export.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/country_filter_modal.js' %}?v={% now 'U' %}"></script>
+  <script src="{% static 'js/chat_popup_launcher.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/coach_allinone.js' %}?v={% now 'U' %}"></script>
 
   <!-- NUEVO -->
   <script defer src="{% static 'js/soar_assign_ticket.js' %}?v={% now 'U' %}"></script>
@@ -494,6 +560,11 @@
   {% include 'partials/config_notificaciones_modal.html' %}
   {% include 'partials/_country_filter_modal.html' %}
   {% include 'partials/cred_modal.html' %}
+
+  <script>
+    window.__RETELL_POPUP_URL = "{% url 'retell_call_window' %}";
+  </script>
+  <script defer src="{% static 'js/retell_open_popup.js' %}?v={% now 'U' %}"></script>
 </body>
 
 </html>

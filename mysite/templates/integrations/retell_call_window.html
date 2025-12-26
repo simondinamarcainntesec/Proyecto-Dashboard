@@ -53,9 +53,9 @@
   </div>
 
   <script>
-    window.__RETELL_CREATE_URL = "{% url 'integrations:retell_create_web_call' %}";
+    window.__RETELL_CREATE_URL = "{% url 'retell_create_web_call' %}";
     window.__RETELL_GETCALL_TEMPLATE =
-      "{% url 'integrations:retell_get_call' 'CALLID' %}".replace("CALLID", "{call_id}");
+      "{% url 'retell_get_call' 'CALLID' %}".replace("CALLID", "{call_id}");
     window.__RETELL_BUNDLE_URL = "{% static 'js/retell_call.bundle.js' %}?v={% now 'U' %}";
   </script>
 

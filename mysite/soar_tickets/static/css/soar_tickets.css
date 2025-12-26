@@ -1,0 +1,279 @@
+/* static/css/soar_tickets.css */
+/* PÉGALO COMPLETO */
+
+.tickets-head{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:14px;
+  margin-bottom:12px;
+}
+.tickets-title{
+  margin:0;
+  font-size:32px;
+  letter-spacing:.2px;
+}
+.tickets-sub{
+  margin:4px 0 0;
+  color:#cbd5e1;
+  opacity:.9;
+}
+
+.tickets-tabs{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.tab{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid var(--border,#1e293b);
+  background:#0f1b31;
+  color:var(--text,#e5e7eb);
+  font-weight:700;
+  text-decoration:none;
+  cursor:pointer;
+}
+.tab:hover{ background: rgba(255,255,255,.06); }
+.tab.is-active{
+  background: rgba(59,130,246,.15);
+  border-color:#3b82f6;
+  color:#fff;
+}
+.tab-sep{
+  width:1px; height:18px;
+  background: rgba(255,255,255,.10);
+  margin:0 6px;
+}
+
+.state-badge{
+  display:inline-flex;
+  align-items:center;
+  padding:2px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.2px;
+  border:1px solid transparent;
+}
+.state-badge.is-open{
+  background: rgba(34,197,94,.16);
+  border-color: rgba(34,197,94,.55);
+  color:#fff;
+}
+.state-badge.is-closed{
+  background: rgba(148,163,184,.12);
+  border-color: rgba(148,163,184,.45);
+  color:#fff;
+}
+
+/* Modal detalle */
+.ticket-modal-card{
+  max-width: min(1100px, calc(100% - 64px));
+  width: 100%;
+}
+.ticket-modal-title{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.ticket-info-grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:10px 18px;
+}
+@media (max-width: 860px){
+  .ticket-info-grid{ grid-template-columns: 1fr; }
+}
+
+.ticket-info-item{
+  padding:10px 12px;
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:12px;
+  background: rgba(255,255,255,.02);
+}
+
+/* Items a ancho completo dentro del grid */
+.ticket-info-item.span-2{
+  grid-column: 1 / -1;
+}
+
+.ticket-info-k{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:12px;
+  letter-spacing:.3px;
+  text-transform:uppercase;
+  color:#cbd5e1;
+  opacity:.95;
+  margin-bottom:6px;
+}
+.ticket-info-v{
+  color:#e5e7eb;
+  font-weight:700;
+}
+
+.ticket-actions-row{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  margin-top:12px;
+}
+
+/* Iconos */
+.meta-ico{
+  width:16px; height:16px;
+  display:inline-block;
+  opacity:.95;
+}
+
+/* existentes */
+.meta-ico.is-alert{
+  background: no-repeat center/contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23f59e0b'%3E%3Cpath d='M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z'/%3E%3C/svg%3E");
+}
+.meta-ico.is-id{
+  background: no-repeat center/contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath d='M4 4h16v16H4V4zm2 2v12h12V6H6z'/%3E%3C/svg%3E");
+}
+.meta-ico.is-user{
+  background: no-repeat center/contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2322c55e'%3E%3Cpath d='M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-4.42 0-8 2-8 4v2h16v-2c0-2-3.58-4-8-4z'/%3E%3C/svg%3E");
+}
+.meta-ico.is-tenant{
+  background: no-repeat center/contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238b5cf6'%3E%3Cpath d='M12 2 2 7v2h20V7L12 2zm8 9H4v9h16v-9z'/%3E%3C/svg%3E");
+}
+.meta-ico.is-duration{
+  background: no-repeat center/contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2360a5fa'%3E%3Cpath d='M12 1a11 11 0 1 0 11 11A11 11 0 0 0 12 1zm1 11h5v2h-7V6h2z'/%3E%3C/svg%3E");
+}
+
+/* ✅ NUEVOS: Ticket + Observaciones + Éxito */
+.meta-ico.is-ticket{
+  background: no-repeat center/contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23a78bfa'%3E%3Cpath d='M21 10V7a2 2 0 0 0-2-2H5A2 2 0 0 0 3 7v3a2 2 0 0 1 0 4v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3a2 2 0 0 1 0-4zM8 9h8v2H8V9zm0 4h6v2H8v-2z'/%3E%3C/svg%3E");
+}
+.meta-ico.is-notes{
+  background: no-repeat center/contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fbbf24'%3E%3Cpath d='M4 4h16v14H7l-3 3V4zm4 3h8v2H8V7zm0 4h8v2H8v-2z'/%3E%3C/svg%3E");
+}
+.meta-ico.is-success{
+  background: no-repeat center/contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2322c55e'%3E%3Cpath d='M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm-1 14-4-4 1.4-1.4L11 13.2l5.6-5.6L18 9l-7 7Z'/%3E%3C/svg%3E");
+}
+
+/* Modal observaciones (más chico) */
+.close-modal-card{
+  max-width: min(680px, calc(100% - 64px));
+  width: 100%;
+}
+
+.notes-textarea{
+  width: 100%;
+  background:#0f1b31;
+  color:#e5e7eb;
+  border:1px solid #1e293b;
+  border-radius:12px;
+  padding:10px 12px;
+  outline: none;
+  resize: vertical;
+  min-height: 120px;
+}
+
+.notes-textarea:focus{
+  border-color: rgba(59,130,246,.9);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.18);
+}
+
+/* stacking base */
+#ticketModal { z-index: 10000; }
+#closeTicketModal { z-index: 10010; }
+#ticketSuccessModal { z-index: 10020; }
+
+/* =========================================================
+ * Modal Ticket Success (igual al estilo "Exportación")
+ * ========================================================= */
+#ticketSuccessModal.modal:not(.hidden){
+  display: flex;               /* en vez de block */
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* Mantén backdrop con blur */
+#ticketSuccessModal .modal-backdrop{
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+}
+
+/* Card centrada y compacta */
+#ticketSuccessModal .success-info-card{
+  max-width: 640px;
+  width: calc(100% - 32px);
+  margin: 0;                   /* clave para centrar con flex */
+  padding: 26px 24px;
+  border-radius: 18px;
+  background: #0c1428;
+  border: 1px solid var(--border, #1e293b);
+  box-shadow: 0 18px 48px rgba(2,6,23,.55);
+  text-align: center;
+}
+
+/* Header centrado, sin línea */
+#ticketSuccessModal .modal-header{
+  justify-content: center;
+  border-bottom: 0;
+  margin-bottom: 8px;
+  padding-bottom: 0;
+}
+
+/* No queremos la X en este modal */
+#ticketSuccessModal .modal-close{
+  display: none;
+}
+
+/* Título grande */
+#ticketSuccessTitle{
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  color: #eaf1ff;
+  margin: 0;
+}
+
+/* Body sin scroll, centrado */
+#ticketSuccessModal .modal-body{
+  max-height: none;
+  overflow: visible;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Texto */
+#ticketSuccessModal .success-info-text{
+  margin: 6px 0 14px;
+  color: #cbd5e1;
+  font-size: 15px;
+  line-height: 1.55;
+  max-width: 520px;
+}
+
+/* Acciones centradas */
+#ticketSuccessModal .success-info-actions{
+  display: flex;
+  justify-content: center;
+}
+
+/* Botón OK igual al de Exportación */
+#ticketSuccessModal .btn.primary{
+  padding: 10px 18px;
+  border-radius: 14px;
+  min-width: 78px;
+}
