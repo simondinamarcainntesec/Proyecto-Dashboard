@@ -22,18 +22,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const rawContainer = document.getElementById("siem-raw-container");
 
-  // Aseguramos que el valor de reputation quede DENTRO de la barra
-  // para poder posicionarlo justo debajo del triángulo.
+  // Asegurar que repValueEl esté dentro de la barra (para posicionarlo)
   const repBar = modal.querySelector(".rep-widget-header .rep-bar");
   if (repBar && repValueEl && repValueEl.parentElement !== repBar) {
     repBar.appendChild(repValueEl);
   }
 
   // ==========================
-  // Helpers para Threat Rep.
+  // Helpers Threat Rep.
   // ==========================
   function getRepBand(num) {
-    if (isNaN(num)) return null;
+    if (!Number.isFinite(num)) return null;
     if (num >= 1 && num <= 20) return 1;   // rojo
     if (num >= 21 && num <= 40) return 2;  // naranjo
     if (num >= 41 && num <= 60) return 3;  // amarillo
@@ -42,18 +41,38 @@ document.addEventListener("DOMContentLoaded", function () {
     return null;
   }
 
-  function decorateThreatRepCells() {
-    const repCells = document.querySelectorAll(".threat-rep-cell");
+  // Parse robusto: "15", "15/100", "15.0", "Threat Reputation: 15"
+  function parseRep(raw) {
+    const s = String(raw || "").trim();
+    if (!s) return NaN;
+
+    const m = s.match(/\d+(\.\d+)?/);
+    if (!m) return NaN;
+
+    const n = Number(m[0]);
+    if (!Number.isFinite(n)) return NaN;
+
+    return Math.round(n);
+  }
+
+  function decorateThreatRepCells(root) {
+    const scope = root || document;
+    const repCells = scope.querySelectorAll("td.threat-rep-cell");
+
     repCells.forEach((cell) => {
-      const raw = cell.dataset.rep || "";
-      const num = parseInt(raw, 10);
-      if (isNaN(num)) {
+      const raw = cell.getAttribute("data-rep") || cell.dataset.rep || "";
+      const num = parseRep(raw);
+
+      if (!Number.isFinite(num)) {
         cell.textContent = "—";
         return;
       }
+
       const band = getRepBand(num);
+
       const span = document.createElement("span");
-      span.classList.add("pill");
+      span.className = "pill";
+
       if (band === 1) span.classList.add("rep-band-1");
       else if (band === 2) span.classList.add("rep-band-2");
       else if (band === 3) span.classList.add("rep-band-3");
@@ -62,6 +81,7 @@ document.addEventListener("DOMContentLoaded", function () {
       else span.classList.add("rep-band-na");
 
       span.textContent = String(num);
+
       cell.textContent = "";
       cell.appendChild(span);
     });
@@ -82,11 +102,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let obj = null;
 
-    // Intentamos parsear el JSON tal cual
     try {
       obj = JSON.parse(rawJson);
     } catch (e1) {
-      // Si viene con escapes raros, intentamos limpiar algunos (\u000a, etc.)
       try {
         const fixed = rawJson
           .replace(/\\u000a/gi, "\n")
@@ -115,7 +133,6 @@ document.addEventListener("DOMContentLoaded", function () {
     Object.keys(obj)
       .sort()
       .forEach((key) => {
-        // No mostrar el campo Message
         if (key === "Message") return;
 
         const tr = document.createElement("tr");
@@ -169,23 +186,19 @@ document.addEventListener("DOMContentLoaded", function () {
     if (metaService) metaService.textContent = service || "—";
     if (metaDevice) metaDevice.textContent = device || "—";
 
-    // === Threat Reputation: triángulo + número debajo del triángulo ===
-    let repNum = parseInt(repRaw, 10);
-    if (Number.isNaN(repNum)) {
-      // Sin valor válido
+    // Threat Reputation header (triángulo + número)
+    let repNum = parseRep(repRaw);
+
+    if (!Number.isFinite(repNum)) {
       if (repValueEl) {
         repValueEl.textContent = "—";
         repValueEl.style.left = "50%";
       }
-      if (repPointer) {
-        repPointer.style.display = "none";
-      }
+      if (repPointer) repPointer.style.display = "none";
     } else {
-      // clamp 0–100
       if (repNum < 0) repNum = 0;
       if (repNum > 100) repNum = 100;
 
-      // Posición lineal 0–100% sobre la barra
       const pos = repNum;
 
       if (repPointer) {
@@ -194,15 +207,17 @@ document.addEventListener("DOMContentLoaded", function () {
       }
       if (repValueEl) {
         repValueEl.textContent = String(repNum);
-        repValueEl.style.left = pos + "%"; // mismo left que el triángulo
+        repValueEl.style.left = pos + "%";
       }
     }
 
-    // Construimos tabla key/value con el JSON completo (sin Message)
     buildKeyValueTableFromJson(rawJson);
 
     modal.classList.remove("hidden");
     document.body.classList.add("modal-open");
+
+    // Re-decorar por si la tabla/página cambió o se renderizó después
+    decorateThreatRepCells(document);
   }
 
   function closeModal() {
@@ -214,19 +229,13 @@ document.addEventListener("DOMContentLoaded", function () {
     row.addEventListener("click", () => openModalFromRow(row));
   });
 
-  if (backdrop) {
-    backdrop.addEventListener("click", closeModal);
-  }
-  if (closeBtn) {
-    closeBtn.addEventListener("click", closeModal);
-  }
+  if (backdrop) backdrop.addEventListener("click", closeModal);
+  if (closeBtn) closeBtn.addEventListener("click", closeModal);
 
   document.addEventListener("keydown", (ev) => {
-    if (ev.key === "Escape") {
-      closeModal();
-    }
+    if (ev.key === "Escape") closeModal();
   });
 
-  // Decorar columna de Threat Reputation en la tabla
-  decorateThreatRepCells();
+  // Decorar Threat Reputation al cargar
+  decorateThreatRepCells(document);
 });

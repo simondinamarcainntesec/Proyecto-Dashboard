@@ -1,14 +1,41 @@
 // ===============================
 // Modal: Filtro de países whitelist (POR TENANT)
+// - FIX CSRF: usar token desde DOM (hidden/meta) y fallback cookie
+// - FIX fetch: credentials same-origin para sesión/cookies estables
 // ===============================
 
-// Helper CSRF desde cookies (Django)
+// ------------------------------------------------------------
+// CSRF helpers (robusto)
+// Recomendado: en el template incluir:
+//   <input type="hidden" id="countryCsrfToken" value="{{ csrf_token }}">
+// o en base.html:
+//   <meta name="csrf-token" content="{{ csrf_token }}">
+// ------------------------------------------------------------
+
 function getCookie(name) {
   var value = "; " + document.cookie;
   var parts = value.split("; " + name + "=");
   if (parts.length === 2) return parts.pop().split(";").shift();
   return null;
 }
+
+function getCsrfToken() {
+  // 1) Hidden token en el modal
+  var hidden = document.getElementById("countryCsrfToken");
+  if (hidden && hidden.value) return String(hidden.value).trim();
+
+  // 2) Meta tag global
+  var meta = document.querySelector('meta[name="csrf-token"]');
+  if (meta && meta.content) return String(meta.content).trim();
+
+  // 3) Fallback cookie
+  var c = getCookie("csrftoken");
+  return c ? String(c).trim() : "";
+}
+
+// ------------------------------------------------------------
+// Modal helpers
+// ------------------------------------------------------------
 
 function getModalEl() {
   return document.getElementById("countryModal");
@@ -42,10 +69,18 @@ function getSaveUrlFromModal() {
 
 // ===============================
 // Fetch helper: maneja 500/HTML y muestra detalle real
+// - credentials same-origin (importante)
 // ===============================
 function fetchJsonOrThrow(url, options) {
-  return fetch(url, options).then(function (resp) {
-    // Intentar leer el body siempre
+  var finalOptions = Object.assign(
+    {
+      credentials: "same-origin",
+      redirect: "follow"
+    },
+    options || {}
+  );
+
+  return fetch(url, finalOptions).then(function (resp) {
     return resp.text().then(function (text) {
       var data = null;
       try {
@@ -128,7 +163,6 @@ function loadCountriesAjax() {
     if (tenantId) u.searchParams.set("tenant_id", tenantId);
     url = u.toString();
   } catch (e) {
-    // si baseUrl ya es relativo raro, fallback simple
     if (tenantId) {
       url = baseUrl + (baseUrl.indexOf("?") >= 0 ? "&" : "?") + "tenant_id=" + encodeURIComponent(tenantId);
     }
@@ -146,7 +180,6 @@ function loadCountriesAjax() {
       return (data.selected_codes || []).map(function (c) { return String(c).trim().toUpperCase(); });
     })
     .catch(function (err) {
-      // Aquí verás el error real (incluye bodyText cuando es 500)
       console.error("[COUNTRY MODAL] GET falló:", err);
       if (err.bodyJson) console.error("[COUNTRY MODAL] GET bodyJson:", err.bodyJson);
       if (err.bodyText) console.error("[COUNTRY MODAL] GET bodyText (primeros 1200):", String(err.bodyText).slice(0, 1200));
@@ -166,7 +199,11 @@ function saveCountriesAjax(codes) {
 
   var saveUrl = getSaveUrlFromModal();
   var tenantId = getTenantIdFromModal();
-  var csrfToken = getCookie("csrftoken") || "";
+  var csrfToken = getCsrfToken(); // FIX: token robusto
+
+  if (!csrfToken || csrfToken.length < 10) {
+    console.warn("[COUNTRY MODAL] CSRF token vacío o sospechoso. Verifica el hidden/meta csrf_token.");
+  }
 
   var params = new URLSearchParams();
   params.append("countries", (codes || []).join(","));
@@ -174,6 +211,7 @@ function saveCountriesAjax(codes) {
 
   return fetchJsonOrThrow(saveUrl, {
     method: "POST",
+    credentials: "same-origin",
     headers: {
       "X-Requested-With": "XMLHttpRequest",
       "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",

@@ -1,7 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -10,6 +9,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{% static 'css/retell_call_window.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/retell_mic.css' %}?v={% now 'U' %}">
+
+  <!-- CSRF para requests del popup -->
+  <meta name="csrf-token" content="{{ csrf_token }}">
+
+  <!-- Patch: fuerza X-CSRFToken SOLO para /inntesec-agent/create-web-call/ -->
+  <script defer src="{% static 'js/csrf_patch.js' %}?v={% now 'U' %}"></script>
 </head>
 
 <body class="retell-win">
@@ -30,10 +35,15 @@
     <section class="retell-controls">
       <button id="retellToggleBtn" class="rbtn rbtn-primary" type="button">📞 Llamar</button>
 
-      <!-- MIC (SIEMPRE visible) -->
+      <!-- MIC (visible) -->
       <div id="callMicWrap" class="call-mic-wrap" aria-hidden="false">
-        <button id="callMicBtn" class="call-mic" type="button" aria-pressed="false"
-          aria-label="Micrófono (click para activar/desactivar)">
+        <button
+          id="retellMicBtn"
+          class="call-mic"
+          type="button"
+          aria-pressed="false"
+          aria-label="Micrófono (click para activar/desactivar)"
+        >
           <span class="call-mic__halo" aria-hidden="true"></span>
           <span class="call-mic__icon" aria-hidden="true">🎙️</span>
         </button>
@@ -62,5 +72,4 @@
   <script type="module" src="{% static 'js/retell_call_window.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/retell_mic_vad.js' %}?v={% now 'U' %}"></script>
 </body>
-
 </html>

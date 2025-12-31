@@ -368,3 +368,335 @@ def enviar_correo_ticket_asignado(ticket) -> bool:
     except Exception as e:
         logger.exception("[SOAR_TICKETS] Error enviando correo de asignación: %s", e)
         return False
+
+
+def enviar_correo_ticket_recordatorio_2dias(ticket) -> bool:
+    """
+    Recordatorio: el ticket vence en 2 días.
+    Mismo look & feel que el correo de asignación + incluye detalle completo (bloques tipo imagen 2).
+    """
+    try:
+        assigned = getattr(ticket, "assigned_to", None)
+        if not assigned or not getattr(assigned, "email", ""):
+            logger.warning(
+                "[SOAR_TICKETS] Recordatorio: ticket %s sin email de asignado, no se envía correo.",
+                getattr(ticket, "id", None),
+            )
+            return False
+
+        tenant_name = (getattr(getattr(ticket, "tenant", None), "name", "") or "").strip() or "—"
+        ticket_code = f"TICKET-{int(ticket.id):04d}" if getattr(ticket, "id", None) else "TICKET-—"
+
+        sent_dt = timezone.localtime(timezone.now(), ZONA_CL).strftime("%d/%m/%Y %H:%M:%S")
+
+        due_date = getattr(ticket, "due_date", None)
+        due_str = due_date.strftime("%d/%m/%Y") if due_date else "—"
+
+        assigned_name = _full_name(assigned)
+
+        alarm_id = (getattr(ticket, "alarm_id", "") or "").strip() or "—"
+        dispositivo = (getattr(ticket, "dispositivo", "") or "").strip() or "—"
+        tipo_amenaza = (getattr(ticket, "tipo_de_amenaza", "") or "").strip() or "—"
+        severidad = (getattr(ticket, "nivel_de_severidad", "") or "").strip() or "—"
+
+        # Para “detalle completo” (imagen 2)
+        riesgo_detectado = (
+            (getattr(ticket, "descripcion_incidente", None) or "").strip()
+            or (getattr(ticket, "riesgo_detectado", None) or "").strip()
+            or "—"
+        )
+        clasificacion = (getattr(ticket, "analisis_criticidad", "") or "").strip() or "—"
+        acciones = (getattr(ticket, "medidas_correctivas", "") or "").strip() or "—"
+        application = (getattr(ticket, "application", "") or "").strip()
+
+        # Fecha/Hora evento (opcional)
+        event_date = getattr(ticket, "event_date", None)
+        event_time = getattr(ticket, "event_time", None)
+        event_dt_str = "—"
+        try:
+            if event_date and event_time:
+                event_dt_str = f"{event_date.strftime('%d/%m/%Y')} {event_time.strftime('%H:%M:%S')}"
+            elif event_date:
+                event_dt_str = event_date.strftime("%d/%m/%Y")
+        except Exception:
+            event_dt_str = "—"
+
+        asunto = f"Recordatorio de vencimiento — {ticket_code} (vence en 2 días)"
+
+        # ===== Estilos (mismo feeling que asignación) =====
+        card_wrap_style = (
+            "border:1px solid #e6e6e6;"
+            "border-radius:10px;"
+            "padding:14px 16px;"
+            "background:#ffffff;"
+        )
+
+        soft_card_style = (
+            "background:#f1f5ff;"
+            "border-radius:10px;"
+            "padding:16px;"
+        )
+
+        section_title_style = (
+            "margin:0 0 8px;"
+            "font-size:12px;"
+            "font-weight:800;"
+            "letter-spacing:.3px;"
+            "text-transform:uppercase;"
+            "color:#0a0a0a;"
+        )
+
+        section_body_style = (
+            "margin:0;"
+            "color:#111827;"
+            "font-size:14px;"
+            "line-height:1.65;"
+        )
+
+        def section_card(title: str, body_html: str) -> str:
+            return f"""
+              <div style="{card_wrap_style} margin-top:12px;">
+                <div style="{section_title_style}">{_html(title)}</div>
+                <p style="{section_body_style}">{body_html}</p>
+              </div>
+            """
+
+        cuerpo_html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; background-color:#f4f6f8; padding:40px; color:#111827;">
+          <div style="max-width:720px; margin:auto; background:#ffffff; border-radius:12px; padding:30px; box-shadow:0 2px 10px rgba(0,0,0,0.08);">
+
+            <div style="text-align:center; margin-bottom:18px;">
+              <img src="https://ia.inntesec.com/static/img/inntesec_logo_negro.png" alt="Inntesec" style="height:46px;">
+            </div>
+
+            <h2 style="color:#0a0a0a; margin:0 0 6px; font-size:22px; font-weight:800;">
+              Recordatorio de vencimiento
+            </h2>
+
+            <p style="margin:0 0 16px; color:#374151; font-size:14px; line-height:1.6;">
+              Hola, <b>{_html(assigned_name)}</b>. Este es un recordatorio: el ticket <b>{_html(ticket_code)}</b> vence en <b>2 días</b>.
+            </p>
+
+            <!-- Tarjeta resumen -->
+            <div style="{soft_card_style} margin:18px 0;">
+              <p style="margin:0; color:#111827; font-size:14px; line-height:1.75;">
+                <b>Tenant:</b> {_html(tenant_name)}<br>
+                <b>Ticket:</b> {_html(ticket_code)}<br>
+                <b>Vence el:</b> {_html(due_str)}<br>
+                <b>Enviado:</b> {_html(sent_dt)}<br>
+              </p>
+            </div>
+
+            <h3 style="margin:18px 0 10px; color:#0a0a0a; font-size:16px; font-weight:800;">
+              Detalle del evento
+            </h3>
+
+            <div style="{card_wrap_style}">
+              <p style="margin:0; color:#111827; font-size:14px; line-height:1.75;">
+                <b>Alarma ID:</b> {_html(alarm_id)}<br>
+                <b>Dispositivo:</b> {_html(dispositivo)}<br>
+                <b>Tipo de amenaza:</b> {_html(tipo_amenaza)}<br>
+                <b>Severidad:</b> {_html(severidad)}<br>
+                <b>Fecha/Hora evento:</b> {_html(event_dt_str)}<br>
+              </p>
+            </div>
+
+            <!-- ✅ Bloques “imagen 2” -->
+            {section_card("Riesgo detectado", _html(riesgo_detectado))}
+            {section_card("Clasificación", _html(clasificacion))}
+            {section_card("Acciones recomendadas", _html(acciones))}
+            {section_card("Application", _html(application)) if application else ""}
+
+            <hr style="margin:24px 0; border:none; border-top:1px solid #e5e7eb;">
+
+            <p style="font-size:12px; color:#6b7280; text-align:center; margin:0; line-height:1.5;">
+              Este correo se envió automáticamente desde <b>Inntesec Agent IA</b>. Por favor, no respondas a este mensaje.
+            </p>
+          </div>
+        </body>
+        </html>
+        """
+
+        enviar_correo_ms(assigned.email, asunto, cuerpo_html)
+        logger.info("[SOAR_TICKETS] Correo recordatorio 2 días enviado a %s para %s", assigned.email, ticket_code)
+        return True
+
+    except Exception as e:
+        logger.exception("[SOAR_TICKETS] Error enviando correo recordatorio 2 días: %s", e)
+        return False
+
+def enviar_correo_ticket_cerrado(ticket) -> bool:
+    """
+    Correo al cerrar un ticket:
+    - mismo estilo corporativo
+    - incluye: quién cerró, cuándo, comentario inicial y comentario final
+    - incluye detalle completo del evento (riesgo/clasificación/acciones/application)
+    """
+    try:
+        assigned = getattr(ticket, "assigned_to", None)
+        if not assigned or not getattr(assigned, "email", ""):
+            logger.warning(
+                "[SOAR_TICKETS] Cierre: ticket %s sin email de asignado, no se envía correo.",
+                getattr(ticket, "id", None),
+            )
+            return False
+
+        tenant_name = (getattr(getattr(ticket, "tenant", None), "name", "") or "").strip() or "—"
+        ticket_code = f"TICKET-{int(ticket.id):04d}" if getattr(ticket, "id", None) else "TICKET-—"
+
+        created_dt = getattr(ticket, "opened_at", None) or timezone.now()
+        created_dt_str = timezone.localtime(created_dt, ZONA_CL).strftime("%d/%m/%Y %H:%M:%S")
+
+        due_date = getattr(ticket, "due_date", None)
+        due_str = due_date.strftime("%d/%m/%Y") if due_date else "—"
+
+        closed_dt = getattr(ticket, "closed_at", None) or timezone.now()
+        closed_dt_str = timezone.localtime(closed_dt, ZONA_CL).strftime("%d/%m/%Y %H:%M:%S")
+
+        created_by = _full_name(getattr(ticket, "created_by", None))
+        assigned_name = _full_name(assigned)
+        closed_by = _full_name(getattr(ticket, "closed_by", None))
+
+        # Comentarios
+        initial_notes = (getattr(ticket, "initial_notes", "") or "").strip()
+        final_notes = (getattr(ticket, "notes", "") or "").strip()
+
+        # Detalle evento
+        alarm_id = (getattr(ticket, "alarm_id", "") or "").strip() or "—"
+        dispositivo = (getattr(ticket, "dispositivo", "") or "").strip() or "—"
+        tipo_amenaza = (getattr(ticket, "tipo_de_amenaza", "") or "").strip() or "—"
+        severidad = (getattr(ticket, "nivel_de_severidad", "") or "").strip() or "—"
+
+        riesgo_detectado = (
+            (getattr(ticket, "descripcion_incidente", None) or "").strip()
+            or (getattr(ticket, "riesgo_detectado", None) or "").strip()
+            or "—"
+        )
+        clasificacion = (getattr(ticket, "analisis_criticidad", "") or "").strip() or "—"
+        acciones = (getattr(ticket, "medidas_correctivas", "") or "").strip() or "—"
+        application = (getattr(ticket, "application", "") or "").strip()
+
+        # Fecha/Hora evento (opcional)
+        event_date = getattr(ticket, "event_date", None)
+        event_time = getattr(ticket, "event_time", None)
+        event_dt_str = "—"
+        try:
+            if event_date and event_time:
+                event_dt_str = f"{event_date.strftime('%d/%m/%Y')} {event_time.strftime('%H:%M:%S')}"
+            elif event_date:
+                event_dt_str = event_date.strftime("%d/%m/%Y")
+        except Exception:
+            event_dt_str = "—"
+
+        asunto = f"Ticket cerrado — {ticket_code}"
+
+        # ===== Estilos (mismo feeling) =====
+        card_wrap_style = (
+            "border:1px solid #e6e6e6;"
+            "border-radius:10px;"
+            "padding:14px 16px;"
+            "background:#ffffff;"
+        )
+
+        soft_card_style = (
+            "background:#f1f5ff;"
+            "border-radius:10px;"
+            "padding:16px;"
+        )
+
+        section_title_style = (
+            "margin:0 0 8px;"
+            "font-size:12px;"
+            "font-weight:800;"
+            "letter-spacing:.3px;"
+            "text-transform:uppercase;"
+            "color:#0a0a0a;"
+        )
+
+        section_body_style = (
+            "margin:0;"
+            "color:#111827;"
+            "font-size:14px;"
+            "line-height:1.65;"
+        )
+
+        def section_card(title: str, body_html: str) -> str:
+            return f"""
+              <div style="{card_wrap_style} margin-top:12px;">
+                <div style="{section_title_style}">{_html(title)}</div>
+                <p style="{section_body_style}">{body_html}</p>
+              </div>
+            """
+
+        cuerpo_html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; background-color:#f4f6f8; padding:40px; color:#111827;">
+          <div style="max-width:720px; margin:auto; background:#ffffff; border-radius:12px; padding:30px; box-shadow:0 2px 10px rgba(0,0,0,0.08);">
+
+            <div style="text-align:center; margin-bottom:18px;">
+              <img src="https://ia.inntesec.com/static/img/inntesec_logo_negro.png" alt="Inntesec" style="height:46px;">
+            </div>
+
+            <h2 style="color:#0a0a0a; margin:0 0 6px; font-size:22px; font-weight:800;">
+              Ticket cerrado
+            </h2>
+
+            <p style="margin:0 0 16px; color:#374151; font-size:14px; line-height:1.6;">
+              Hola, <b>{_html(assigned_name)}</b>. Se ha cerrado el ticket <b>{_html(ticket_code)}</b>.
+            </p>
+
+            <!-- Resumen -->
+            <div style="{soft_card_style} margin:18px 0;">
+              <p style="margin:0; color:#111827; font-size:14px; line-height:1.75;">
+                <b>Ticket:</b> {_html(ticket_code)}<br>
+                <b>Tenant:</b> {_html(tenant_name)}<br>
+                <b>Fecha de creación:</b> {_html(created_dt_str)}<br>
+                <b>Fecha de término (vencimiento):</b> {_html(due_str)}<br>
+                <b>Creado por:</b> {_html(created_by)}<br>
+                <b>Cerrado por:</b> {_html(closed_by)}<br>
+                <b>Fecha de cierre:</b> {_html(closed_dt_str)}<br>
+              </p>
+            </div>
+
+            <h3 style="margin:18px 0 10px; color:#0a0a0a; font-size:16px; font-weight:800;">
+              Detalle del evento
+            </h3>
+
+            <div style="{card_wrap_style}">
+              <p style="margin:0; color:#111827; font-size:14px; line-height:1.75;">
+                <b>Alarma ID:</b> {_html(alarm_id)}<br>
+                <b>Dispositivo:</b> {_html(dispositivo)}<br>
+                <b>Tipo de amenaza:</b> {_html(tipo_amenaza)}<br>
+                <b>Severidad:</b> {_html(severidad)}<br>
+                <b>Fecha/Hora evento:</b> {_html(event_dt_str)}<br>
+              </p>
+            </div>
+
+            <!-- Bloques completos -->
+            {section_card("Riesgo detectado", _html(riesgo_detectado))}
+            {section_card("Clasificación", _html(clasificacion))}
+            {section_card("Acciones recomendadas", _html(acciones))}
+            {section_card("Application", _html(application)) if application else ""}
+
+            <!-- Comentarios -->
+            {section_card("Comentario inicial", _html(initial_notes)) if initial_notes else section_card("Comentario inicial", "—")}
+            {section_card("Comentario final (cierre)", _html(final_notes)) if final_notes else section_card("Comentario final (cierre)", "—")}
+
+            <hr style="margin:24px 0; border:none; border-top:1px solid #e5e7eb;">
+
+            <p style="font-size:12px; color:#6b7280; text-align:center; margin:0; line-height:1.5;">
+              Este correo se envió automáticamente desde <b>Inntesec Agent IA</b>. Por favor, no respondas a este mensaje.
+            </p>
+          </div>
+        </body>
+        </html>
+        """
+
+        enviar_correo_ms(assigned.email, asunto, cuerpo_html)
+        logger.info("[SOAR_TICKETS] Correo de cierre enviado a %s para %s", assigned.email, ticket_code)
+        return True
+
+    except Exception as e:
+        logger.exception("[SOAR_TICKETS] Error enviando correo de cierre: %s", e)
+        return False

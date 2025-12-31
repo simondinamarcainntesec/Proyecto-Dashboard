@@ -1,0 +1,122 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ page_title|default:"SIEM" }}</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/base.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/list.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/user_dropdown.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/config_notificaciones_modal.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/cred_modal.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/country_filter_modal.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/coachmark.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/siem_embeds.css' %}?v={% now 'U' %}">
+</head>
+
+<body class="layout is-embed" data-username="{{ request.user.username|default:'anon' }}">
+
+  <!-- Sidebar -->
+  {% include "partials/sidebar.html" %}
+
+  <div class="content">
+    <header class="topbar">
+      <div class="iframe-click-shield"></div>
+
+      <div class="top-left">
+        <h1 class="top-title">
+          Tenant:
+          {% if request.user.tenant.name|lower == "inntesec" %}
+          <details class="tenant-dropdown">
+            <summary class="tenant-summary">
+              {{ tenant.name }} <span class="caret">▼</span>
+            </summary>
+            <div class="tenant-list">
+              {% for t in all_tenants %}
+              <form method="post" action="{% url 'dashboard:switch_tenant' t.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit" class="tenant-option {% if tenant.id == t.id %}is-active{% endif %}">
+                  {{ t.name }}
+                </button>
+              </form>
+              {% endfor %}
+            </div>
+          </details>
+          {% else %}
+          <span class="top-tenant">{{ tenant.name }}</span>
+          {% endif %}
+        </h1>
+      </div>
+
+      <div class="top-right">
+        <button class="btn ghost" title="Actualizar" id="btn-refresh">⟳</button>
+
+        <button id="showCoachBtn" class="btn ghost" title="Mostrar guía rápida" onclick="window.startInntesecCoach()">
+          💡 Guía rápida
+        </button>
+
+        <a>Inntesec Agent:</a>
+        <button class="btn ghost" type="button" onclick="window.openRetellCallWindow()">📞 Llamar</button>
+        <button class="btn ghost" type="button" onclick="openChatPopup()">💬 Chat</button>
+
+        <div class="user-menu" id="userMenu">
+          <button type="button" id="userButton" class="user-button">
+            <div class="user-avatar">
+              {{ request.user.username|default:"U"|slice:":1"|upper }}
+            </div>
+            <div class="user-name">
+              {{ request.user.get_full_name|default:request.user.username }}
+            </div>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
+          </button>
+
+          <div class="dropdown-menu">
+            <form action="{% url 'logout' %}" method="post">
+              {% csrf_token %}
+              <button type="submit">🚪 Cerrar sesión</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section class="wrap">
+      {% block embed_wrap %}
+        <div class="card">
+          <div class="card-head siem-card-head">
+            <h3>{{ page_title|default:"SIEM" }}</h3>
+            <button id="theme-switcher" type="button" aria-label="Cambiar tema"></button>
+          </div>
+
+          <div class="card-body">
+            {% block embed_body %}{% endblock %}
+          </div>
+        </div>
+      {% endblock %}
+    </section>
+  </div>
+
+  <!-- JS base -->
+  <script defer src="{% static 'js/menus_dropdowns.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/page-loader-universal.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/theme-switcher.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/country_filter_modal.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/cred_modal.js' %}?v={% now 'U' %}"></script>
+  <script src="{% static 'js/chat_popup_launcher.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/coach_allinone.js' %}?v={% now 'U' %}"></script>  <script defer src="{% static 'js/iframe-loader.js' %}?v={% now 'U' %}"></script>
+  {% include 'partials/config_notificaciones_modal.html' %}
+  {% include 'partials/_country_filter_modal.html' %}
+  {% include 'partials/cred_modal.html' %}
+
+  <script>
+    window.__RETELL_POPUP_URL = "{% url 'retell_call_window' %}";
+  </script>
+  <script defer src="{% static 'js/retell_open_popup.js' %}?v={% now 'U' %}"></script>
+</body>
+</html>

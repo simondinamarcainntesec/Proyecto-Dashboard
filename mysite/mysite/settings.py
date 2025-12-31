@@ -29,8 +29,8 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY=os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-#DEBUG = True
-DEBUG = False
+DEBUG = True
+#DEBUG = False
 
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.Argon2PasswordHasher',
@@ -132,13 +132,13 @@ MIDDLEWARE = [
 #X_FRAME_OPTIONS = 'DENY'
 
 # Cookies seguras y con políticas de restricción
-#SESSION_COOKIE_SECURE = True
-#SESSION_COOKIE_HTTPONLY = True
-#SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
 
-#CSRF_COOKIE_SECURE = True
-#CSRF_COOKIE_HTTPONLY = True
-#CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = 'Lax'
 
 
 ROOT_URLCONF = 'mysite.urls'
@@ -318,8 +318,8 @@ OAUTH2_MICROSOFT = {
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Fuerza que todo el tráfico sea HTTPS
-SECURE_SSL_REDIRECT = True
-#SECURE_SSL_REDIRECT = not DEBUG
+#SECURE_SSL_REDIRECT = True
+SECURE_SSL_REDIRECT = not DEBUG
 
 # Asegura cookies seguras
 SESSION_COOKIE_SECURE = True

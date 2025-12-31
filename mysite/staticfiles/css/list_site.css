@@ -1,0 +1,402 @@
+/* PÉGALO COMPLETO
+   list.css — SOLO toolbar/tabla/filtros/paginación/export (scoped al contenido)
+   - NO define .nav / .tenant-* / .modal
+   - Evita pisar base.css (sidebar + dropdowns + modales globales)
+*/
+
+/* Scope principal: todo vive dentro del contenido */
+.content .toolbar { padding: 8px 0 14px; }
+
+.content .toolbar-row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  border:1px solid var(--border, #1e293b);
+  border-radius:14px;
+  padding:10px;
+  background:var(--card,#0f1d35);
+}
+
+.content .tb-left{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  min-width:360px;
+}
+.content .tb-spacer{ flex:1 1 auto; }
+
+.content .tb-right{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  justify-content:flex-end;
+  margin-left:auto;
+  flex-wrap:wrap;
+}
+
+.content .tb-left input[type="search"]{
+  width:min(520px, 42vw);
+  background:#0f1b31;
+  color:#e5e7eb;
+  border:1px solid #1e293b;
+  border-radius:12px;
+  padding:10px 12px;
+}
+
+/* Botones SOLO dentro del toolbar (no pisa botones globales/modales) */
+.content .toolbar .btn.primary{
+  background:var(--brand,#3b82f6);
+  color:#fff;
+  border:0;
+  padding:8px 12px;
+  border-radius:12px;
+  font-weight:700;
+}
+.content .toolbar .btn.ghost{
+  background:transparent;
+  border:1px solid var(--border,#1e293b);
+  color:var(--text,#e5e7eb);
+  padding:8px 12px;
+  border-radius:12px;
+}
+.content .toolbar .btn.ghost-sm{
+  background:transparent;
+  border:1px solid var(--border,#1e293b);
+  color:var(--text,#e5e7eb);
+  padding:8px 10px;
+  border-radius:12px;
+  font-size:12px;
+}
+
+/* Chips (siempre en contenido) */
+.content .chip-btn{
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid var(--border,#1e293b);
+  background:#0f1b31;
+  color:var(--text,#e5e7eb);
+  font-weight:600;
+  cursor:pointer;
+}
+.content .chip-btn.is-active{ background:rgba(255,255,255,.06); }
+
+/* === Date range === */
+.content .date-range{
+  position: relative;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:6px 10px;
+  border:1px solid var(--border,#1e293b);
+  border-radius:12px;
+}
+.content .date-range input[type="date"]{
+  background:transparent;
+  color:var(--text,#e5e7eb);
+  border:0;
+  outline:0;
+  color-scheme: dark;
+  padding-right: 30px;
+}
+.content .date-range input[type="date"]::-webkit-calendar-picker-indicator{
+  opacity: 0;
+  width: 0;
+  height: 0;
+  padding: 0;
+  margin: 0;
+  pointer-events: none;
+}
+.content .date-range::after{
+  content: "";
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  transform: translateY(-50%);
+  background: no-repeat center / contain;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M7 2a1 1 0 0 0-1 1v1H5a3 3 0 0 0-3 3v11a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3h-1V3a1 1 0 1 0-2 0v1H8V3a1 1 0 0 0-1-1ZM5 7h14a1 1 0 0 1 1 1v2H4V8a1 1 0 0 1 1-1Zm-1 5h16v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-6Z'/%3E%3C/svg%3E");
+}
+
+/* === Tabla === */
+.content .table-wrap{
+  overflow:auto;
+  border:1px solid var(--border,#1e293b);
+  border-radius:12px;
+}
+
+.content .tbl{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  font-size:13px;
+  table-layout:auto;
+}
+
+.content .tbl thead th{
+  position:sticky;
+  top:0;
+  z-index:1;
+  background:var(--panel,#0f1b31);
+  text-align:left;
+  font-weight:700;
+  padding:10px 12px;
+  border-bottom:1px solid var(--border,#1e293b);
+  white-space:nowrap;
+}
+
+.content .tbl tbody td{
+  padding:10px 12px;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+  vertical-align:middle;
+}
+
+.content .tbl tbody tr:nth-child(odd){ background:rgba(255,255,255,0.02); }
+.content .tbl tbody tr:hover{ background:rgba(255,255,255,0.06); }
+
+/* Utilidades SOLO para el contenido */
+.content .mono{
+  font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+}
+.content .nowrap{ white-space:nowrap; }
+.content .w-240{ max-width:240px; overflow:hidden; text-overflow:ellipsis; }
+.content .w-320{ max-width:320px; overflow:hidden; text-overflow:ellipsis; }
+
+/* Severidad pills SOLO en el contenido */
+.content .pill{
+  display:inline-block;
+  padding:2px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+  line-height:1.6;
+  letter-spacing:.2px;
+  color:#fff;
+}
+.content .sev-critical{ background:#dc262633; border:1px solid #dc2626aa; color:#fff; }
+.content .sev-high{ background:#f9731633; border:1px solid #f97316aa; color:#fff; }
+.content .sev-medium{ background:#f59e0b33; border:1px solid #f59e0baa; color:#fff; }
+.content .sev-low{ background:#38bdf833; border:1px solid #38bdf8aa; color:#fff; }
+.content .sev-info{ background:#60a5fa33; border:1px solid #60a5faaa; color:#fff; }
+.content .sev-na{ background:#6b728033; border:1px solid #6b7280aa; color:#fff; }
+
+/* Paginación SOLO contenido */
+.content .paginate{
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+  margin-top:10px;
+}
+.content .paginate a,
+.content .paginate span{
+  padding:6px 10px;
+  border:1px solid var(--border,#1e293b);
+  border-radius:10px;
+  text-decoration:none;
+  color:var(--text,#e5e7eb);
+}
+.content .paginate .current{
+  background:rgba(255,255,255,0.06);
+  font-weight:700;
+}
+
+/* =========================================================
+   Export — scoped SOLO al toolbar
+   (evita pisar export-menu/export-wrapper de base.css)
+   ========================================================= */
+.content .toolbar .export-wrapper{
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.content .toolbar .export-menu{
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 240px;
+
+  background: #020617;
+  border-radius: 0.75rem;
+  padding: 0.4rem 0;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.85);
+
+  display: none;
+  z-index: 60;
+}
+.content .toolbar .export-menu.is-open{ display:block; }
+
+.content .toolbar .export-menu button{
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #e5e7eb;
+  font-size: 0.875rem;
+  padding: 0.45rem 0.9rem;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.content .toolbar .export-menu button:hover{ background:#0f172a; }
+
+/* =========================
+   Selects de filtros (Severidad / Asignación)
+   ========================= */
+.content .sel-filter{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+.content .sel-filter > span{
+  font-size:12px;
+  opacity:.85;
+  white-space:nowrap;
+  color: var(--text,#e5e7eb);
+}
+
+.content .filter-select{
+  height: 36px;
+  padding: 0 36px 0 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border,#1e293b);
+  background: #0f1b31;
+  color: #e5e7eb;
+
+  font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-weight: 700;
+  outline: none;
+
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e5e7eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px 16px;
+}
+.content .filter-select:focus{
+  border-color: rgba(59,130,246,.65);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.18);
+}
+.content .filter-select option{
+  background: #0f1b31;
+  color: #e5e7eb;
+}
+
+/* Labels de filtros (solo toolbar) */
+.content .toolbar .sel-filter > span{
+  color: #ffffff !important;
+  opacity: 1 !important;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Botón/Link Limpiar (solo toolbar) */
+.content .toolbar #btn-clear{
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+.content .toolbar #btn-clear:not(.btn){
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border,#1e293b);
+  text-decoration: none;
+  background: transparent;
+  font-weight: 700;
+}
+
+/* Reputación como pill (misma “base pill” que severidad) */
+#siemModal .pill.rep-band-1, .siem-modal .pill.rep-band-1,
+#siemModal .pill.rep-band-2, .siem-modal .pill.rep-band-2,
+#siemModal .pill.rep-band-3, .siem-modal .pill.rep-band-3,
+#siemModal .pill.rep-band-4, .siem-modal .pill.rep-band-4,
+#siemModal .pill.rep-band-5, .siem-modal .pill.rep-band-5,
+#siemModal .pill.rep-band-na, .siem-modal .pill.rep-band-na{
+  color:#fff;
+  white-space:nowrap;
+}
+
+/* Colores */
+#siemModal .pill.rep-band-1, .siem-modal .pill.rep-band-1{ background:#dc262633; border:1px solid #dc2626aa; }
+#siemModal .pill.rep-band-2, .siem-modal .pill.rep-band-2{ background:#f9731633; border:1px solid #f97316aa; }
+#siemModal .pill.rep-band-3, .siem-modal .pill.rep-band-3{ background:#eab30833; border:1px solid #eab308aa; }
+#siemModal .pill.rep-band-4, .siem-modal .pill.rep-band-4{ background:#22c55e33; border:1px solid #22c55eaa; }
+#siemModal .pill.rep-band-5, .siem-modal .pill.rep-band-5{ background:#16a34a33; border:1px solid #16a34aaa; }
+#siemModal .pill.rep-band-na, .siem-modal .pill.rep-band-na{ background:#6b728033; border:1px solid #6b7280aa; }
+
+/* Pill base (reutilizable) */
+.pill{
+  display:inline-block;
+  padding:2px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+  line-height:1.6;
+  letter-spacing:.2px;
+  color:#fff;
+}
+
+/* Threat Reputation bandas */
+.rep-band-1{ background:#dc262633; border:1px solid #dc2626aa; }
+.rep-band-2{ background:#f9731633; border:1px solid #f97316aa; }
+.rep-band-3{ background:#eab30833; border:1px solid #eab308aa; }
+.rep-band-4{ background:#22c55e33; border:1px solid #22c55eaa; }
+.rep-band-5{ background:#16a34a33; border:1px solid #16a34aaa; }
+.rep-band-na{ background:#6b728033; border:1px solid #6b7280aa; }
+
+/* ============================
+   "Últimas 50 alertas" (SIEM)
+   ============================ */
+
+/* Si el texto es un <h3> o similar */
+.alerts-summary{
+  padding: 10px 0 14px;
+}
+
+.alerts-summary h3,
+.alerts-summary .alerts-summary-title{
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text, #e5e7eb);
+  letter-spacing: .2px;
+}
+
+/* Si usas la “píldora/tarjeta” (recomendado) */
+.alerts-summary-card{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 8px 14px;
+  border-radius: 999px;
+
+  border: 1px solid var(--border, #1e293b);
+  background: linear-gradient(180deg, rgba(15,29,53,.78) 0%, rgba(15,23,42,.62) 100%);
+  color: var(--text, #e5e7eb);
+
+  font-size: 13px;
+  font-weight: 700;
+
+  box-shadow: 0 10px 26px rgba(2,6,23,.35);
+}
+
+.alerts-summary-dot{
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--ok, #22c55e);
+  box-shadow: 0 0 0 3px rgba(34,197,94,.12);
+}
+
+.alerts-summary-text{
+  white-space: nowrap;
+}

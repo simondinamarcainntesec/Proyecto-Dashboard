@@ -6,16 +6,15 @@ from django.http import JsonResponse, HttpResponseBadRequest
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-
-from tenants.models import TenantUser  # tu AUTH_USER_MODEL es TenantUser
+from tenants.decorators import tenant_required, service_required
+from tenants.models import TenantUser  
 from .models import SoarTicket
 from .utils import get_active_tenant
 from tenants.models import Tenant
 from django.db import IntegrityError, transaction
 import logging
+from utils.ms_email import enviar_correo_ticket_asignado, enviar_correo_ticket_cerrado
 
-# ✅ ÚNICO CAMBIO: ahora se importa desde utils/ms_email.py (todo en uno)
-from utils.ms_email import enviar_correo_ticket_asignado
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +30,8 @@ def _json_body(request):
 
 
 @login_required
-@require_POST
+@tenant_required
+@service_required("alarms_one_id")
 def api_tenant_users(request):
     """
     Devuelve usuarios del tenant ACTIVO (según sesión tenant_id si es Inntesec).
@@ -65,14 +65,15 @@ def api_tenant_users(request):
 
 
 
-
-@login_required
 @require_POST
+@login_required
+@tenant_required
+@service_required("alarms_one_id")
 def api_ticket_create(request):
     """
     Crea ticket en agent.soar_ticket (estado OPEN).
     Si ya existe ticket para ese evento (alarm_id) en el tenant activo => 409 + code ALREADY_EXISTS.
-    Además envía correo al usuario asignado con los datos del ticket.
+    Además exige initial_notes y envía correo al usuario asignado.
     """
     if not _is_ajax(request):
         return HttpResponseBadRequest("Bad request")
@@ -87,10 +88,18 @@ def api_ticket_create(request):
     assigned_to_id = data.get("assigned_to")
     due_date_str = (data.get("due_date") or "").strip()
 
+    # ✅ comentario inicial obligatorio (server-side)
+    initial_notes = (data.get("initial_notes") or "").strip()
+    if not initial_notes:
+        return JsonResponse({
+            "ok": False,
+            "code": "INITIAL_NOTES_REQUIRED",
+            "error": "Debes ingresar un comentario u observación inicial para crear el ticket.",
+        }, status=400)
+
     if not alarm_id:
         return JsonResponse({"ok": False, "error": "alarm_id requerido"}, status=400)
 
-    # ✅ VALIDACIÓN: si ya existe ticket para ese evento en este tenant (OPEN o CLOSED)
     existing = (
         SoarTicket.objects
         .filter(tenant_id=tenant.id, alarm_id=alarm_id)
@@ -112,13 +121,11 @@ def api_ticket_create(request):
     if not due_date_str:
         return JsonResponse({"ok": False, "error": "due_date requerido"}, status=400)
 
-    # Parse due_date
     try:
         due_date = datetime.strptime(due_date_str, "%Y-%m-%d").date()
     except Exception:
         return JsonResponse({"ok": False, "error": "due_date inválido (YYYY-MM-DD)"}, status=400)
 
-    # Usuario asignado debe pertenecer al tenant activo
     assigned_user = (
         TenantUser.objects
         .filter(id=assigned_to_id, tenant_id=tenant.id, is_active=True)
@@ -152,37 +159,25 @@ def api_ticket_create(request):
             created_by=request.user,
             due_date=due_date,
             status=SoarTicket.STATUS_OPEN,
+
+            # ✅ obligatorio (ya validado arriba)
+            initial_notes=initial_notes,
         )
 
-        # ✅ ENVIAR CORREO (sin tocar utils)
         assigned_email = (getattr(assigned_user, "email", "") or "").strip()
 
         def _send_mail_after_commit():
-            if not assigned_email:
-                logger.warning(
-                    "[SOAR_TICKETS] Ticket %s creado, pero usuario %s no tiene email. No se envía correo.",
-                    ticket.id, assigned_user.id
-                )
-                return
+          if not assigned_email:
+              logger.warning(
+                  "[SOAR_TICKETS] Ticket %s creado, pero usuario %s no tiene email. No se envía correo.",
+                  ticket.id, assigned_user.id
+              )
+              return
+          try:
+              enviar_correo_ticket_asignado(ticket)
+          except Exception as e:
+              logger.exception("[SOAR_TICKETS] Error enviando correo ticket=%s: %s", ticket.id, e)
 
-            try:
-                logger.info(
-                    "[SOAR_TICKETS] Enviando correo asignación: ticket=%s to=%s tenant=%s",
-                    ticket.id, assigned_email, getattr(tenant, "name", "")
-                )
-
-                # ✅ ÚNICO CAMBIO: llamada directa a la nueva función consolidada
-                enviar_correo_ticket_asignado(ticket)
-
-                logger.info("[SOAR_TICKETS] Correo enviado OK: ticket=%s", ticket.id)
-
-            except Exception as e:
-                logger.exception(
-                    "[SOAR_TICKETS] Error enviando correo ticket=%s to=%s: %s",
-                    ticket.id, assigned_email, e
-                )
-
-        # Si estás en autocommit, on_commit lo ejecuta al tiro; si hay atomic, espera commit real.
         transaction.on_commit(_send_mail_after_commit)
 
     except IntegrityError:
@@ -210,6 +205,8 @@ def api_ticket_create(request):
 
 
 @login_required
+@tenant_required
+@service_required("alarms_one_id")
 def tickets_list(request):
     tenant = get_active_tenant(request)
     if not tenant:
@@ -266,12 +263,10 @@ def tickets_list(request):
     })
 
 
-
-
-
-
-@login_required
 @require_POST
+@login_required
+@tenant_required
+@service_required("alarms_one_id")
 def ticket_close(request, ticket_id):
     tenant = get_active_tenant(request)
     if not tenant:
@@ -280,33 +275,71 @@ def ticket_close(request, ticket_id):
         messages.error(request, "No hay tenant activo.")
         return redirect("soar_tickets:list")
 
-    t = SoarTicket.objects.filter(id=ticket_id, tenant_id=tenant.id).first()
-    if not t:
-        if _is_ajax(request):
-            return JsonResponse({"ok": False, "error": "Ticket no encontrado."}, status=404)
-        messages.error(request, "Ticket no encontrado.")
-        return redirect("soar_tickets:list")
-
-    if t.status != SoarTicket.STATUS_OPEN:
-        if _is_ajax(request):
-            return JsonResponse({"ok": True, "message": "El ticket ya estaba cerrado."})
-        messages.info(request, "El ticket ya estaba cerrado.")
-        return redirect("soar_tickets:list")
-
     notes = (request.POST.get("notes") or "").strip()
 
-    t.status = SoarTicket.STATUS_CLOSED
-    t.closed_at = timezone.now()
-    t.closed_by = request.user
-    t.notes = notes
-    t.save(update_fields=["status", "closed_at", "closed_by", "notes"])
+    try:
+        with transaction.atomic():
+            # ✅ LOCK SOLO al ticket (sin select_related para evitar OUTER JOIN + FOR UPDATE)
+            t = (
+                SoarTicket.objects
+                .select_for_update()
+                .filter(id=ticket_id, tenant_id=tenant.id)
+                .first()
+            )
+
+            if not t:
+                if _is_ajax(request):
+                    return JsonResponse({"ok": False, "error": "Ticket no encontrado."}, status=404)
+                messages.error(request, "Ticket no encontrado.")
+                return redirect("soar_tickets:list")
+
+            if t.status != SoarTicket.STATUS_OPEN:
+                if _is_ajax(request):
+                    return JsonResponse({"ok": True, "message": "El ticket ya estaba cerrado."})
+                messages.info(request, "El ticket ya estaba cerrado.")
+                return redirect("soar_tickets:list")
+
+            t.status = SoarTicket.STATUS_CLOSED
+            t.closed_at = timezone.now()
+            t.closed_by = request.user
+            t.notes = notes
+            t.save(update_fields=["status", "closed_at", "closed_by", "notes"])
+
+            closed_ticket_id = t.id
+
+            def _send_close_email_after_commit():
+                try:
+                    closed_t = (
+                        SoarTicket.objects
+                        .select_related("assigned_to", "created_by", "closed_by", "tenant")
+                        .get(id=closed_ticket_id)
+                    )
+
+                    assigned_email = (getattr(getattr(closed_t, "assigned_to", None), "email", "") or "").strip()
+                    if not assigned_email:
+                        logger.warning(
+                            "[SOAR_TICKETS] Ticket %s cerrado, pero asignado sin email. No se envía correo.",
+                            closed_ticket_id
+                        )
+                        return
+
+                    enviar_correo_ticket_cerrado(closed_t)
+
+                except Exception as e:
+                    logger.exception("[SOAR_TICKETS] Error enviando correo de cierre ticket=%s: %s", closed_ticket_id, e)
+
+            transaction.on_commit(_send_close_email_after_commit)
+
+    except Exception as e:
+        logger.exception("[SOAR_TICKETS] Error cerrando ticket=%s: %s", ticket_id, e)
+        if _is_ajax(request):
+            return JsonResponse({"ok": False, "error": "No se pudo cerrar el ticket."}, status=400)
+        messages.error(request, "No se pudo cerrar el ticket.")
+        return redirect("soar_tickets:list")
 
     if _is_ajax(request):
-        return JsonResponse({
-            "ok": True,
-            "message": "Ticket cerrado con éxito",
-            "ticket_id": t.id,
-        })
+        return JsonResponse({"ok": True, "message": "Ticket cerrado con éxito", "ticket_id": ticket_id})
 
     messages.success(request, "Ticket cerrado ✅")
     return redirect("soar_tickets:list")
+

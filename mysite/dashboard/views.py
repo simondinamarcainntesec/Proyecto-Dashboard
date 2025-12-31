@@ -12,7 +12,7 @@ from django.views.decorators.http import require_POST
 from urllib.parse import urlparse
 from django.http import HttpResponseRedirect
 
-from tenants.decorators import tenant_required
+from tenants.decorators import tenant_required, service_required
 from tenants.models import Tenant
 from home.models import TenantCredentials, WhitelistCountryPreference  # ← incluye pref de países
 from home.countries import ALL_COUNTRIES, COUNTRY_BY_CODE  # ← lista de países para el modal
@@ -85,7 +85,9 @@ def _parse_local_any(s: str):
 
 
 @never_cache
+@login_required
 @tenant_required
+@service_required("alarms_one_id")
 def dashboard_view(request):
     tenant = request.tenant
     now_utc = datetime.now(timezone.utc)

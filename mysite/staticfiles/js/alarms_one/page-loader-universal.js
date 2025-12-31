@@ -1,14 +1,19 @@
 // static/js/alarms_one/page-loader-universal.js
 (function () {
   let hideTimer = null;
+  let inflight = 0;
+
+  // Ventana de tiempo para considerar que un request fue gatillado por acción del usuario
+  const USER_ACTION_WINDOW_MS = 1500;
+  let lastUserActionAt = 0;
 
   const ensureOverlay = () => {
-    let ov = document.getElementById('loading-overlay');
+    let ov = document.getElementById("loading-overlay");
     if (!ov) {
-      ov = document.createElement('div');
-      ov.id = 'loading-overlay';
-      ov.setAttribute('role', 'status');
-      ov.setAttribute('aria-live', 'polite');
+      ov = document.createElement("div");
+      ov.id = "loading-overlay";
+      ov.setAttribute("role", "status");
+      ov.setAttribute("aria-live", "polite");
       ov.innerHTML = `
         <div class="loading-card">
           <div class="spinner" aria-hidden="true"></div>
@@ -19,18 +24,30 @@
     return ov;
   };
 
-  const show = (msg = 'Cargando datos…') => {
-    const ov = ensureOverlay();
-    const txt = ov.querySelector('.loading-text');
-    if (txt) txt.textContent = msg;
-    ov.classList.add('is-active');
+  const isOverlayActive = () => {
+    const ov = document.getElementById("loading-overlay");
+    return !!(ov && ov.classList.contains("is-active"));
+  };
 
-    // Safety: si algo sale mal, se apaga solo
+  const markUserAction = () => {
+    lastUserActionAt = Date.now();
+  };
+
+  const show = (msg = "Cargando datos…") => {
+    const ov = ensureOverlay();
+    const txt = ov.querySelector(".loading-text");
+    if (txt) txt.textContent = msg;
+
+    ov.classList.add("is-active");
+
+    // Safety: si algo sale mal, se apaga solo (pero respeta inflight si hay requests)
     if (hideTimer) clearTimeout(hideTimer);
     hideTimer = setTimeout(() => {
-      const current = document.getElementById('loading-overlay');
-      if (current) current.classList.remove('is-active');
-    }, 8000);
+      // si hay requests en curso, extendemos un poco
+      if (inflight > 0) return;
+      const current = document.getElementById("loading-overlay");
+      if (current) current.classList.remove("is-active");
+    }, 12000);
   };
 
   const hide = () => {
@@ -38,65 +55,154 @@
       clearTimeout(hideTimer);
       hideTimer = null;
     }
-    const ov = document.getElementById('loading-overlay');
+    const ov = document.getElementById("loading-overlay");
     if (!ov) return;
-    ov.classList.remove('is-active');
+    ov.classList.remove("is-active");
   };
 
-  // Observa la modal de IP: cuando se haga visible, apagamos el loader
+  // ===== Auto-hide basado en requests (Fetch + XHR) solo cuando vienen de una acción reciente =====
+  const shouldAttachToRequest = () => {
+    return Date.now() - lastUserActionAt <= USER_ACTION_WINDOW_MS;
+  };
+
+  const onReqStart = () => {
+    inflight += 1;
+    // Si el usuario hizo una acción reciente y aún no se ve el loader, lo levantamos
+    if (shouldAttachToRequest() && !isOverlayActive()) {
+      show("Cargando datos…");
+    }
+  };
+
+  const onReqEnd = () => {
+    inflight = Math.max(0, inflight - 1);
+    if (inflight === 0 && isOverlayActive()) {
+      hide();
+    }
+  };
+
+  const patchFetch = () => {
+    if (!window.fetch) return;
+    const originalFetch = window.fetch.bind(window);
+
+    window.fetch = function patchedFetch() {
+      // Solo contabilizamos si viene de acción reciente o si el loader ya está activo
+      const track = shouldAttachToRequest() || isOverlayActive();
+      if (track) onReqStart();
+
+      const p = originalFetch.apply(this, arguments);
+      return Promise.resolve(p)
+        .then((res) => {
+          if (track) onReqEnd();
+          return res;
+        })
+        .catch((err) => {
+          if (track) onReqEnd();
+          throw err;
+        });
+    };
+  };
+
+  const patchXHR = () => {
+    if (!window.XMLHttpRequest) return;
+
+    const XHR = window.XMLHttpRequest;
+    const originalOpen = XHR.prototype.open;
+    const originalSend = XHR.prototype.send;
+
+    XHR.prototype.open = function () {
+      this.__pl_track = false;
+      return originalOpen.apply(this, arguments);
+    };
+
+    XHR.prototype.send = function () {
+      // Solo contabilizamos si viene de acción reciente o si el loader ya está activo
+      this.__pl_track = shouldAttachToRequest() || isOverlayActive();
+
+      if (this.__pl_track) {
+        onReqStart();
+        const done = () => onReqEnd();
+        this.addEventListener("loadend", done, { once: true });
+        this.addEventListener("error", done, { once: true });
+        this.addEventListener("abort", done, { once: true });
+      }
+
+      return originalSend.apply(this, arguments);
+    };
+  };
+
+  // ===== IP Modal: cuando se haga visible, apagamos el loader =====
   const watchIpModal = () => {
-    const ipModal = document.getElementById('ipSearchModal');
+    const ipModal = document.getElementById("ipSearchModal");
     if (!ipModal) return;
 
     const checkVisible = () => {
-      const isHiddenClass = ipModal.classList.contains('hidden');
-      const ariaHidden = ipModal.getAttribute('aria-hidden');
-      // Visible cuando NO tiene "hidden" y aria-hidden es "false" o null
-      if (!isHiddenClass && ariaHidden !== 'true') {
+      const isHiddenClass = ipModal.classList.contains("hidden");
+      const ariaHidden = ipModal.getAttribute("aria-hidden");
+      if (!isHiddenClass && ariaHidden !== "true") {
         hide();
       }
     };
 
-    // Check inicial (por si ya se renderiza visible desde el backend)
     checkVisible();
 
-    // Observamos cambios de clase / aria-hidden
     const observer = new MutationObserver(checkVisible);
     observer.observe(ipModal, {
       attributes: true,
-      attributeFilter: ['class', 'aria-hidden'],
+      attributeFilter: ["class", "aria-hidden"],
     });
   };
 
   const bindHandlers = () => {
-    // Al cargar la página actual, empezamos con el overlay apagado
+    // Al cargar la página actual, overlay apagado
     hide();
 
+    // Parchar fetch/xhr para auto-hide cuando el request venga de acción reciente
+    patchFetch();
+    patchXHR();
+
     // --- BÚSQUEDA DE IP (formularios .home-ip-form) ---
-    document.addEventListener('submit', (e) => {
+    document.addEventListener("submit", (e) => {
       const form = e.target;
-      if (form && form.matches('.home-ip-form')) {
-        // Da igual si es AJAX o navegación normal, mostramos loader
-        show('Buscando IP…');
+      if (form && form.matches(".home-ip-form")) {
+        markUserAction();
+        show("Buscando IP…");
       }
     });
 
     // --- Botón Actualizar ---
-    const refreshBtn = document.getElementById('btn-refresh');
+    const refreshBtn = document.getElementById("btn-refresh");
     if (refreshBtn) {
-      refreshBtn.addEventListener('click', (e) => {
-        // Si otro script cancela el click, igual mostramos loader
-        show('Actualizando datos…');
+      refreshBtn.addEventListener("click", () => {
+        markUserAction();
+        show("Actualizando datos…");
       });
     }
 
-    // --- Navegaciones genéricas ---
-    window.addEventListener('beforeunload', () => {
-      show();
+    // --- Navegaciones genéricas (links) ---
+    // Esto evita depender de beforeunload (que no cubre SPA/HTMX/Turbo)
+    document.addEventListener("click", (e) => {
+      const a = e.target && e.target.closest ? e.target.closest("a") : null;
+      if (!a) return;
+
+      // Ignorar anchors, new-tab, downloads y links sin navegación real
+      const href = a.getAttribute("href") || "";
+      if (!href || href.startsWith("#")) return;
+      if (a.hasAttribute("download")) return;
+      if (a.target && a.target.toLowerCase() === "_blank") return;
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+
+      markUserAction();
+      show("Cargando datos…");
     });
 
-    window.addEventListener('pageshow', () => hide());
-    window.addEventListener('load', () => hide());
+    // Fallbacks para navegación tradicional
+    window.addEventListener("beforeunload", () => {
+      // Solo mostrar si realmente nos estamos yendo
+      show("Cargando datos…");
+    });
+
+    window.addEventListener("pageshow", () => hide());
+    window.addEventListener("load", () => hide());
 
     // Vigilar la modal de resultados de IP
     watchIpModal();
@@ -105,8 +211,8 @@
   // Exponer helpers por si otro JS quiere usarlos
   window.PageLoader = { show, hide };
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bindHandlers);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bindHandlers);
   } else {
     bindHandlers();
   }

@@ -11,7 +11,7 @@ from django.db.models.functions import Lower, Replace, Trim, Cast
 from django.shortcuts import render, redirect
 from django.utils.timezone import make_aware, is_aware
 
-from tenants.decorators import tenant_required
+from tenants.decorators import tenant_required, service_required
 from tenants.models import Tenant
 from .models import IaSoar
 
@@ -91,6 +91,7 @@ def _normalize_range(
 # ============================================================
 @login_required
 @tenant_required
+@service_required("alarms_one_id")
 def dashboard_soar(request):
     tenant = getattr(request, "tenant", None)
     norm_tid = _normalize_tenant_aotag(tenant) if tenant else ""

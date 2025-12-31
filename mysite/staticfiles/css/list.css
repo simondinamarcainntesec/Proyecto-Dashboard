@@ -151,21 +151,39 @@
 /* === Modal === */
 body.modal-open { overflow: hidden; }
 
-.modal { position: fixed; inset: 0; z-index: 1000; display: none; }
+/* CAMBIO: subir z-index del modal por encima de .topbar (base.css usa ~5000) */
+.modal { position: fixed; inset: 0; z-index: 7000 !important; display: none; }
 .modal:not(.hidden) { display: block; }
-.modal-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); }
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
 .modal-card {
-  position: relative; z-index: 1001; background: var(--card, #0f1d35);
-  border: 1px solid var(--border, #1e293b); border-radius: 12px;
-  max-width: 1000px; width: calc(100% - 48px);
-  margin: 5vh auto; padding: 16px; color: var(--text, #e5e7eb);
+  position: relative;
+  z-index: 7001 !important;
+  background: var(--card, #0f1d35);
+  border: 1px solid var(--border, #1e293b);
+  border-radius: 12px;
+  max-width: 1000px;
+  width: calc(100% - 48px);
+  margin: 5vh auto;
+  padding: 16px;
+  color: var(--text, #e5e7eb);
   box-shadow: 0 10px 28px rgba(2,6,23,.35);
 }
+
 .modal-header { display: flex; justify-content: space-between; align-items: center;
   padding-bottom: 8px; border-bottom: 1px solid var(--border, #1e293b); margin-bottom: 12px; }
+
 .modal-close { background: transparent; border: 1px solid var(--border, #1e293b);
   border-radius: 8px; color: var(--text, #e5e7eb); padding: 4px 8px; cursor: pointer; }
+
 .modal-close:hover { background: rgba(255, 255, 255, 0.08); }
+
 .modal-body { display: flex; flex-direction: column; gap: 12px; max-height: 65vh; overflow-y: auto; }
 
 .block { background:#0f1b31; border:1px solid #1e293b; border-radius:12px; padding:12px 14px; }

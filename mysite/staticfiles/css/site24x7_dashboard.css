@@ -125,6 +125,7 @@ body {
 
 /* =========================================================
  * Modal Export Info (mismo estilo que Anomalías)
+ * SIN degradados
  * ========================================================= */
 #exportInfoModal.modal:not(.hidden){
   display: flex;               /* en vez de block */
@@ -146,7 +147,10 @@ body {
   margin: 0;                   /* clave para centrar con flex */
   padding: 26px 24px;
   border-radius: 18px;
-  background: #0c1428;         /* mismo feeling del otro */
+
+  /* SIN degradados */
+  background: #0c1428;
+
   border: 1px solid var(--border, #1e293b);
   box-shadow: 0 18px 48px rgba(2,6,23,.55);
   text-align: center;
@@ -207,4 +211,39 @@ body {
 #exportInfoModal .brand-nowrap{
   white-space: nowrap;
   display: inline-block;
+}
+
+/* =========================================================
+   Más aire en el header "Dashboard Inn-Monitor"
+   (padding del contenedor + separación interna)
+   ========================================================= */
+
+/* Si el título vive dentro de una cabecera de card */
+.card .card-head:has(.site24x7-card-head){
+  padding: 18px 20px;                 /* aire general */
+}
+
+/* Fallback si no existe :has() o si no está dentro de .card-head */
+.site24x7-card-head{
+  padding: 12px 16px;                  /* aire alrededor del bloque */
+  margin: 10px 12px 0;                 /* separa del borde superior/izquierdo */
+  border-radius: 14px;                 /* mantiene la estética */
+}
+
+/* El título y el switch respiren mejor */
+.site24x7-card-head{
+  gap: 12px;                           /* antes 0.75rem */
+}
+
+.site24x7-card-head h3,
+.site24x7-card-head h2,
+.site24x7-card-head h1{
+  margin: 0;                           /* evita “pegote” raro */
+  padding: 2px 0;                      /* micro-aire vertical */
+}
+
+/* Botón switch un poco más cómodo */
+#theme-switcher{
+  padding: 10px 14px;                  /* antes 8px 12px */
+  border-radius: 999px;
 }

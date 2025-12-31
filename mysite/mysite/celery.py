@@ -54,6 +54,12 @@ app.conf.beat_schedule = {
         "schedule": crontab(minute="5", hour="*/1"),  # cada hora, en el minuto 5
         # Si de verdad quieres cada 65 min, conviene usar timedelta(minutes=65)
     },
+        # ✅ Recordatorio tickets 2 días antes del vencimiento
+    "soar-ticket-reminder-due-soon-diario": {
+        "task": "soar_tickets.tasks.send_due_soon_reminders",
+        "schedule": crontab(minute="0", hour="9"),  # todos los días 09:00 CL
+    },
+
 }
 
 # Configuración adicional
@@ -71,14 +77,10 @@ def debug_task(self):
 # === Ejecutar ingesta mensual al iniciar el worker ===
 @worker_ready.connect
 def at_worker_ready(sender, **kwargs):
-    """
-    Se ejecuta cuando el worker Celery está listo.
-    Lanza la tarea de ingesta mensual inmediatamente al iniciar el worker.
-    """
     try:
-        # Usamos send_task para evitar imports circulares
-        print("[CELERY STARTUP] Lanzando 'integrations.tasks.ingesta_mensual_ciclica' al iniciar worker...")
+        print("[CELERY STARTUP] Lanzando ingesta mensual y recordatorio de tickets...")
         sender.app.send_task("integrations.tasks.ingesta_mensual_ciclica")
+        #sender.app.send_task("soar_tickets.tasks.send_due_soon_reminders")
     except Exception as exc:
-        # Si quieres, cambia esto a logging
-        print(f"[CELERY STARTUP] Error al lanzar ingesta_mensual_ciclica: {exc!r}")
+        print(f"[CELERY STARTUP] Error: {exc!r}")
+

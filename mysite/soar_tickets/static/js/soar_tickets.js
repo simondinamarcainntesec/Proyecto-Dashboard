@@ -44,6 +44,10 @@
   const elClosedBy = Q('#tkt-closed-by');
   const elClosedAt = Q('#tkt-closed-at');
 
+  // ✅ initial notes (comentario inicial)
+  const wrapInitialNotes = Q('#tkt-initial-notes-wrap');
+  const elInitialNotes = Q('#tkt-initial-notes');
+
   // notes (detalle)
   const wrapNotes = Q('#tkt-notes-wrap');
   const elNotes = Q('#tkt-notes');
@@ -214,6 +218,10 @@
     const closedBy = (tr.dataset.closedBy || '').trim();
     const closedAt = (tr.dataset.closedAt || '').trim();
 
+    // ✅ comentario inicial (data-initial-notes => dataset.initialNotes)
+    const initialNotes = (tr.dataset.initialNotes || '').trim();
+
+    // observaciones/cierre
     const notes = (tr.dataset.notes || '').trim();
 
     titleText.textContent = `${sev || 'N/A'} — ${device || '—'}`;
@@ -267,6 +275,17 @@
         wrapClosedAt.style.display = 'none';
         elClosedBy.textContent = '—';
         elClosedAt.textContent = '—';
+      }
+    }
+
+    // ✅ Comentario inicial dentro del mismo grid (mostrar SIEMPRE si viene)
+    if (wrapInitialNotes && elInitialNotes) {
+      if (initialNotes) {
+        wrapInitialNotes.style.display = '';
+        elInitialNotes.textContent = initialNotes;
+      } else {
+        wrapInitialNotes.style.display = 'none';
+        elInitialNotes.textContent = '—';
       }
     }
 

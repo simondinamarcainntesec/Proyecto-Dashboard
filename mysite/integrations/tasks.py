@@ -622,7 +622,7 @@ def tarea_sync_site24x7_user_groups():
     try:
         logger.info("👤 [Site24x7] Llamando a https://www.site24x7.com/api/users ...")
 
-        token = "1000.5febf424df5d8b94712cd77f10e8a50c.daf8ae8b9f5a498afa9c2ffb61e6a1b8"
+        token = os.getenv("SITE24X7_OAUTH_TOKEN")
         if not token:
             logger.error("❌ [Site24x7] Falta SITE24X7_OAUTH_TOKEN en variables de entorno.")
             return

@@ -2,11 +2,15 @@
 import json
 import ssl
 import urllib.request
-from datetime import date, timedelta
+import time
+import logging
+from datetime import date, timedelta, datetime
 from typing import Any, List, Optional, Tuple
 
 import os
 import requests
+
+logger = logging.getLogger(__name__)
 
 # ============================================================
 # Configuración desde variables de entorno
@@ -25,16 +29,51 @@ VERIFY_SSL = os.environ.get("LOG360_VERIFY_SSL", "True").lower() == "true"
 PAGE_LIMIT = int(os.environ.get("LOG360_PAGE_LIMIT", "50"))
 MAX_ALERTS = int(os.environ.get("LOG360_MAX_ALERTS", "10000"))
 
+# Logs seguros (por defecto apagado). Si necesitas diagnosticar en dev:
+# export LOG360_DEBUG_LOGS=true
+DEBUG_LOGS = (os.environ.get("LOG360_DEBUG_LOGS", "False") or "").strip().lower() in ("1", "true", "yes", "y", "on")
+
+# ============================================================
+# Cache en memoria del token (expira antes del próximo HH:00)
+# ============================================================
+
+_TOKEN_CACHE = {
+    "token": None,          # type: Optional[str]
+    "expires_at": 0.0,      # epoch seconds
+}
+
+# margen para evitar borde HH:59:59 -> HH:00:00 (latencias)
+_TOKEN_SAFETY_SECONDS = int(os.environ.get("LOG360_TOKEN_SAFETY_SECONDS", "45"))
+
+
+def _seconds_until_next_hour_safe(safety_seconds: int = 45) -> int:
+    """
+    Retorna segundos hasta el próximo cambio de hora, restando un margen.
+    Para cubrir casos donde la rotación sea por hora UTC o por hora local,
+    usamos el mínimo TTL entre ambos.
+    """
+    # UTC
+    now_utc = datetime.utcnow()
+    next_utc = now_utc.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+    ttl_utc = int((next_utc - now_utc).total_seconds()) - int(safety_seconds)
+
+    # Local del servidor
+    now_local = datetime.now()
+    next_local = now_local.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+    ttl_local = int((next_local - now_local).total_seconds()) - int(safety_seconds)
+
+    ttl = min(ttl_utc, ttl_local)
+    return max(15, ttl)  # evita ttl <= 0 en el borde de la hora
+
+
 # ============================================================
 # Detección de tokens desde el webhook n8n
 # ============================================================
 
-# Claves posibles donde puede venir el token
 CANDIDATE_KEYS = {
     "acces_token",
     "access_token",
     "token",
-    "access_token",
     "access-token",
     "access token",
     "access_token".upper(),
@@ -48,9 +87,6 @@ CANDIDATE_KEYS.update(
         "access_token",
         "access-token",
         "access token",
-        "access_token".upper(),
-        "access_token".title(),
-        "acces_token",
         "Access_Token",
         "ACCESS_TOKEN",
     }
@@ -76,13 +112,17 @@ def collect_tokens(obj: Any) -> List[str]:
     return found
 
 
-def obtener_token_logs360() -> Tuple[Optional[str], Optional[str]]:
+def _fetch_token_from_webhook() -> Tuple[Optional[str], Optional[str]]:
     """
-    Llama al webhook n8n y devuelve el token de Logs360.
-    Si hay varios tokens, usa el segundo; si hay uno, usa ese.
+    Llama al webhook n8n y devuelve (token, error).
+    Mantiene tu lógica: si hay varios tokens usa el segundo; si hay uno usa ese.
     """
     if not WEBHOOK_URL or "TU-N8N" in WEBHOOK_URL or "XXXXXXXX" in WEBHOOK_URL:
         return None, "LOG360_WEBHOOK_URL no está configurada."
+
+    # (Opcional) si quieres exigir secreto:
+    # if not WEBHOOK_SECRET:
+    #     return None, "LOG360_WEBHOOK_SECRET no está configurada."
 
     headers = {WEBHOOK_HEADER_NAME: WEBHOOK_SECRET}
     ctx = ssl.create_default_context() if VERIFY_SSL else ssl._create_unverified_context()
@@ -98,7 +138,8 @@ def obtener_token_logs360() -> Tuple[Optional[str], Optional[str]]:
     text = body.decode("utf-8", errors="replace").strip()
 
     if status // 100 != 2:
-        return None, f"HTTP {status} al llamar webhook. Cuerpo: {text}"
+        # NO devolvemos text completo en logs; pero sí en el error interno del caller si lo necesita
+        return None, f"HTTP {status} al llamar webhook."
 
     # Intentar JSON
     try:
@@ -110,19 +151,38 @@ def obtener_token_logs360() -> Tuple[Optional[str], Optional[str]]:
         return None, "La respuesta del webhook no es JSON y está vacía."
 
     tokens = collect_tokens(data)
-
     if not tokens:
-        if text:
-            return None, "No se encontraron tokens en el JSON del webhook."
-        return None, "Respuesta vacía del webhook."
+        return None, "No se encontraron tokens en el JSON del webhook."
 
-    # Segundo token si hay 2 o más (Logs360), si no el único
-    if len(tokens) >= 2:
-        chosen = tokens[1]
-    else:
-        chosen = tokens[0]
-
+    chosen = tokens[1] if len(tokens) >= 2 else tokens[0]
     return chosen, None
+
+
+def obtener_token_logs360(force_refresh: bool = False) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Devuelve el token de Logs360 con cache en memoria que expira
+    antes del próximo cambio de hora (tu caso real HH:59:59).
+    """
+    now = time.time()
+
+    if not force_refresh:
+        cached = _TOKEN_CACHE.get("token")
+        exp = float(_TOKEN_CACHE.get("expires_at") or 0.0)
+        if cached and now < exp:
+            return cached, None
+
+    token, err = _fetch_token_from_webhook()
+    if not token:
+        return None, err or "No se pudo obtener token (desconocido)."
+
+    ttl = _seconds_until_next_hour_safe(safety_seconds=_TOKEN_SAFETY_SECONDS)
+    _TOKEN_CACHE["token"] = token
+    _TOKEN_CACHE["expires_at"] = now + ttl
+
+    if DEBUG_LOGS:
+        logger.info("[LOGS360] Token cacheado. ttl=%ss", ttl)
+
+    return token, None
 
 
 # ============================================================
@@ -146,6 +206,15 @@ def _parse_time_for_sort(alert: dict) -> str:
     return str(t)
 
 
+def _looks_like_auth_error(resp: requests.Response) -> bool:
+    """
+    Heurística simple para decidir si reintentar por token expirado.
+    """
+    if resp.status_code in (401, 403):
+        return True
+    return False
+
+
 # ============================================================
 # Consulta de alertas a Logs360
 # ============================================================
@@ -164,11 +233,6 @@ def obtener_alertas_logs360(
     - Usa siempre un rango fijo de últimos 30 días.
     - Pagina, pero corta al llegar a PAGE_LIMIT.
     """
-    # Token desde webhook
-    token, err_token = obtener_token_logs360()
-    if not token:
-        return [], f"No se pudo obtener token: {err_token or 'desconocido'}", "", "", ""
-
     # Account ID debe venir desde el tenant
     acc_id = (account_id or "").strip()
     if not acc_id:
@@ -179,16 +243,12 @@ def obtener_alertas_logs360(
     RANGE_DAYS = 30
     forced_to = today
     forced_from = today - timedelta(days=RANGE_DAYS)
-
     start_time, end_time = _build_range(forced_from, forced_to)
 
-    print("========== SIEM / Django ==========")
-    print(f"[SIEM] Account ID        : {acc_id}")
-    print(f"[SIEM] Token (inicio)    : {token[:30]}...")
-    print(f"[SIEM] Query             : {query!r}")
-    print(f"[SIEM] Rango (FORZADO)   : {forced_from} -> {forced_to}")
-    print(f"[SIEM] Rango UTC (Z)     : {start_time} -> {end_time}")
-    print("===================================")
+    # Token desde webhook (cacheado hasta el próximo HH:00)
+    token, err_token = obtener_token_logs360()
+    if not token:
+        return [], f"No se pudo obtener token: {err_token or 'desconocido'}", "", "", ""
 
     headers = {
         "Authorization": f"Zoho-oauthtoken {token}",
@@ -198,6 +258,7 @@ def obtener_alertas_logs360(
 
     todos: list = []
     current_from = 1
+    retried_with_fresh_token = False
 
     while True:
         body = {
@@ -209,7 +270,9 @@ def obtener_alertas_logs360(
             "response_type": "client",
         }
 
-        print(f"[SIEM] POST /alerts from={current_from} body= {json.dumps(body)}")
+        if DEBUG_LOGS:
+            # NO loggear token, ni body completo en prod. Solo meta mínima.
+            logger.info("[LOGS360] POST /alerts from=%s limit=%s acc_id=%s", current_from, PAGE_LIMIT, acc_id)
 
         try:
             resp = requests.post(
@@ -221,12 +284,24 @@ def obtener_alertas_logs360(
         except requests.RequestException as e:
             return todos, f"Error de red al llamar /alerts: {e}", start_time, end_time, acc_id
 
-        print(f"[SIEM] /alerts HTTP status: {resp.status_code}")
+        # Retry 1 vez si parece token expirado (tu caso HH:00)
+        if _looks_like_auth_error(resp) and not retried_with_fresh_token:
+            retried_with_fresh_token = True
+            token2, err2 = obtener_token_logs360(force_refresh=True)
+            if token2:
+                headers["Authorization"] = f"Zoho-oauthtoken {token2}"
+                if DEBUG_LOGS:
+                    logger.warning("[LOGS360] Reintentando /alerts con token refrescado (auth error %s).", resp.status_code)
+                continue
+            # si no pudimos refrescar, seguimos con el flujo normal (retornar error)
+            if DEBUG_LOGS:
+                logger.error("[LOGS360] Falló refresh de token tras auth error: %s", err2)
 
         if resp.status_code // 100 != 2:
+            # NO devolver resp.text completo (puede traer datos sensibles o enormes)
             return (
                 todos,
-                f"HTTP {resp.status_code} al llamar /alerts: {resp.text}",
+                f"HTTP {resp.status_code} al llamar /alerts.",
                 start_time,
                 end_time,
                 acc_id,
@@ -237,7 +312,7 @@ def obtener_alertas_logs360(
         except ValueError:
             return (
                 todos,
-                f"La respuesta de /alerts no es JSON: {resp.text[:1000]}",
+                "La respuesta de /alerts no es JSON.",
                 start_time,
                 end_time,
                 acc_id,
@@ -249,9 +324,14 @@ def obtener_alertas_logs360(
             title = err.get("title")
             detail = err.get("detail")
 
+            # Mensaje acotado (sin volcados grandes)
             msg = f"Error Logs360 (code {code}): {title or 'Forbidden'}"
             if detail:
-                msg += f" — {detail}"
+                # recorta por si viene muy largo
+                detail_s = str(detail)
+                if len(detail_s) > 300:
+                    detail_s = detail_s[:300] + "..."
+                msg += f" — {detail_s}"
 
             return todos, msg, start_time, end_time, acc_id
 
@@ -259,7 +339,7 @@ def obtener_alertas_logs360(
         if not isinstance(batch, list):
             return (
                 todos,
-                f"Estructura inesperada de /alerts: {json.dumps(data, ensure_ascii=False)[:1000]}",
+                "Estructura inesperada de /alerts.",
                 start_time,
                 end_time,
                 acc_id,

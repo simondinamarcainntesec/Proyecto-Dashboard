@@ -1,50 +1,58 @@
+// static/js/date_filters.js
 (function () {
   const Q = (s, r = document) => r.querySelector(s);
-  const QA = (s, r = document) => Array.from(r.querySelectorAll(s));
 
-  const form = Q('#date-filter');
-  const inpFrom = Q('#inp-from');
-  const inpTo = Q('#inp-to');
-
-  if (!form) return;
-
-  const DEBUG = false;
-  const log = (...a) => DEBUG && console.log('[DATE_FILTERS]', ...a);
-
-  function normalizeDateStr(s) {
-    const v = String(s || '').trim();
-    return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : '';
+  function showOverlayIfExists() {
+    const overlay = Q("#loading-overlay");
+    if (!overlay) return;
+    overlay.classList.add("is-active");
   }
 
-  // Cuando tocas un chip, limpia fechas ANTES del submit
-  // para que no se “cuelgue” en custom por from/to antiguos.
-  QA('.chip-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      // Solo chips de periodo (name=period value=...)
-      if (btn.name !== 'period') return;
-
-      if (inpFrom) inpFrom.value = '';
-      if (inpTo) inpTo.value = '';
-
-      // deja que el submit normal ocurra
-      log('chip submit period=', btn.value);
-    }, true);
-  });
-
-  // Si el usuario pone ambas fechas, fuerza period=50 (en URL igual vendrán from/to)
-  function hasBothDates() {
-    const from = normalizeDateStr(inpFrom?.value);
-    const to = normalizeDateStr(inpTo?.value);
-    return !!(from && to);
+  function navigateToPeriod(v) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("period", String(v));
+    url.searchParams.delete("from");
+    url.searchParams.delete("to");
+    showOverlayIfExists();
+    window.location.href = url.toString();
   }
 
-  // Enviar “Aplicar”:
-  // - si hay ambas fechas: ok, submit normal con from/to
-  // - si no: evita mandar from/to sueltos (limpia)
-  form.addEventListener('submit', () => {
-    if (!hasBothDates()) {
-      if (inpFrom && !normalizeDateStr(inpFrom.value)) inpFrom.value = '';
-      if (inpTo && !normalizeDateStr(inpTo.value)) inpTo.value = '';
-    }
-  }, true);
+  // CAPTURE + stopImmediatePropagation para ganarle a cualquier JS global que bloquee submits
+  document.addEventListener(
+    "click",
+    (e) => {
+      const btn = e.target?.closest?.('.chip-btn[name="period"]');
+      if (!btn) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+
+      navigateToPeriod(btn.value);
+    },
+    true
+  );
+
+  // Backup: si por alguna razón se dispara submit del form
+  document.addEventListener(
+    "submit",
+    (e) => {
+      const form = e.target;
+      if (!form || form.id !== "date-filter") return;
+
+      const active = form.querySelector('.chip-btn[name="period"].is-active');
+      const fallback = form.querySelector('.chip-btn[name="period"]');
+
+      const v = (active?.value || fallback?.value || "3");
+
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+
+      navigateToPeriod(v);
+    },
+    true
+  );
+
+  console.log("[date_filters] hard override loaded");
 })();

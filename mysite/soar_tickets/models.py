@@ -1,7 +1,7 @@
+# soar_tickets/models.py
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
-
 from tenants.models import Tenant
 
 
@@ -14,13 +14,9 @@ class SoarTicket(models.Model):
         (STATUS_CLOSED, "Cerrado"),
     ]
 
-    # ===== Contexto multi-tenant =====
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="soar_tickets", db_index=True)
-
-    # ===== Identificador evento / alarma =====
     alarm_id = models.TextField(db_index=True)
 
-    # ===== Snapshot del evento =====
     dispositivo = models.TextField(blank=True, default="")
     tipo_de_amenaza = models.TextField(blank=True, default="")
     nivel_de_severidad = models.TextField(blank=True, default="")
@@ -35,7 +31,6 @@ class SoarTicket(models.Model):
     riesgo_detectado = models.TextField(blank=True, default="")
     application = models.TextField(blank=True, default="")
 
-    # ===== Asignación =====
     assigned_to = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
@@ -60,26 +55,30 @@ class SoarTicket(models.Model):
         related_name="soar_closed_tickets",
     )
 
-    # ===== Estado / fechas =====
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_OPEN, db_index=True)
-    opened_at = models.DateTimeField(auto_now_add=True)      # inicio real
-    due_date = models.DateField(null=True, blank=True)       # fin planificado
-    closed_at = models.DateTimeField(null=True, blank=True)  # cierre real
-
+    opened_at = models.DateTimeField(auto_now_add=True)
+    due_date = models.DateField(null=True, blank=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+    initial_notes = models.TextField(blank=True, default="")
     notes = models.TextField(blank=True, default="")
 
+    # ✅ RECORDATORIO 2 DÍAS ANTES DEL CIERRE (1 por ticket)
+    reminder_due_soon_for = models.DateField(null=True, blank=True)        # para qué due_date ya se avisó
+    reminder_due_soon_sent_at = models.DateTimeField(null=True, blank=True)
+    reminder_due_soon_count = models.PositiveIntegerField(default=0)
+
     class Meta:
-        # 👇 IMPORTANTE: tabla en schema agent
         db_table = 'agent"."soar_ticket'
         indexes = [
             models.Index(fields=["tenant", "status"], name="idx_soar_ticket_tenant_status"),
             models.Index(fields=["tenant", "alarm_id"], name="idx_soar_ticket_tenant_alarm"),
+            # ✅ opcional: acelera la búsqueda del job
+            models.Index(fields=["status", "due_date"], name="idx_soar_ticket_status_due"),
         ]
         constraints = [
-            # 1 ticket abierto por tenant+alarm_id (evita duplicados abiertos)
             models.UniqueConstraint(
                 fields=["tenant", "alarm_id"],
-                condition=Q(status="OPEN"),  # 👈 FIX: literal en vez de STATUS_OPEN
+                condition=Q(status="OPEN"),
                 name="uniq_open_ticket_per_alarm_tenant",
             )
         ]

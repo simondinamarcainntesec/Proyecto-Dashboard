@@ -18,6 +18,8 @@
     function openMenu() {
       if (menuOpen) return;
       menu.classList.add("is-open");
+      // Blindaje: si algún CSS no tiene .is-open, igual lo mostramos.
+      menu.style.display = "block";
       toggleBtn.setAttribute("aria-expanded", "true");
       menu.setAttribute("aria-hidden", "false");
       menuOpen = true;
@@ -26,6 +28,7 @@
     function closeMenu() {
       if (!menuOpen) return;
       menu.classList.remove("is-open");
+      menu.style.display = "none";
       toggleBtn.setAttribute("aria-expanded", "false");
       menu.setAttribute("aria-hidden", "true");
       menuOpen = false;
@@ -72,8 +75,7 @@
 
     // ───────────── Helpers CSV ─────────────
     function escapeCsvField(value) {
-      const s =
-        value === null || value === undefined ? "" : String(value);
+      const s = value === null || value === undefined ? "" : String(value);
       if (/[",\n]/.test(s)) {
         return '"' + s.replace(/"/g, '""') + '"';
       }
@@ -157,7 +159,10 @@
           try {
             alertObj = JSON.parse(rawJson);
           } catch (e) {
-            console.warn("[siem_export] No se pudo parsear data-raw como JSON", e);
+            console.warn(
+              "[siem_export] No se pudo parsear data-raw como JSON",
+              e
+            );
           }
         }
 

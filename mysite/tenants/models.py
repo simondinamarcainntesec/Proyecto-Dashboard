@@ -12,9 +12,9 @@ class Tenant(models.Model):
     alarms_one_id = models.TextField(null=True, blank=True, help_text="ID de AlarmsOne")
     logs360siem_id = models.TextField(null=True, blank=True, help_text="ID de Logs360SIEM")
     site24x7_id = models.TextField(null=True, blank=True, help_text="ID de Site24x7")
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    site24x7_dashboard_url = models.URLField(blank=True, null=True, help_text="URL pública del dashboard Site24x7 (iframe)")
 
     def __str__(self):
         return self.name
@@ -93,10 +93,6 @@ class TenantUser(AbstractUser):
 class TenantDashboardEmbed(models.Model):
     """
     Guarda URLs de iframes externos asociados a un Tenant.
-
-    - tenant: FK al Tenant (empresa)
-    - tenant_name: nombre del tenant en texto plano (cacheado)
-    - iframe_url: URL completa que se usará en el <iframe>
     """
     tenant = models.OneToOneField(
         Tenant,
@@ -105,7 +101,6 @@ class TenantDashboardEmbed(models.Model):
         help_text="Empresa a la que pertenece este iframe"
     )
 
-    # Nuevo campo: con default vacío, así no rompe migraciones existentes
     tenant_name = models.CharField(
       max_length=255,
       editable=False,
@@ -117,6 +112,14 @@ class TenantDashboardEmbed(models.Model):
     iframe_url = models.URLField(
         help_text="URL pública del dashboard a embeber en un iframe"
     )
+
+    # ✅ NUEVAS COLUMNAS (urls adicionales por módulo)
+    threat_analytics = models.TextField(blank=True, null=True)
+    microsoft365 = models.TextField(blank=True, null=True)
+    
+    networks = models.TextField(blank=True, null=True)
+    eventos_diarios = models.TextField(blank=True, null=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -125,17 +128,11 @@ class TenantDashboardEmbed(models.Model):
         verbose_name_plural = "Site 24x7 Iframe"
 
     def save(self, *args, **kwargs):
-        """
-        Antes de guardar, sincroniza tenant_name con el nombre actual
-        del tenant (columna name de public.tenants_tenant).
-        """
         if self.tenant_id and getattr(self.tenant, "name", None):
             self.tenant_name = self.tenant.name
         super().save(*args, **kwargs)
 
     def __str__(self):
-        # Muestra el nombre cacheado; si por alguna razón estuviera vacío,
-        # usa el nombre actual del tenant.
         return f"{self.tenant_name or getattr(self.tenant, 'name', '')} - Dashboard"
 
 def default_severity():

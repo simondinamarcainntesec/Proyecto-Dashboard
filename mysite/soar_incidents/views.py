@@ -11,7 +11,7 @@ from django.db.models.functions import Lower, Replace, Trim, Cast
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render, redirect
 from django.views.decorators.http import require_GET, require_POST
-from tenants.decorators import tenant_required
+from tenants.decorators import tenant_required, service_required
 from tenants.models import Tenant, TenantUser
 from urllib.parse import urlparse
 from django.db import IntegrityError
@@ -192,6 +192,7 @@ def _make_incidents_csv_response(iterable, tenant, scope: str) -> HttpResponse:
 
 @login_required
 @tenant_required
+@service_required("alarms_one_id")
 def incidents_list(request):
     qs, tenant, from_q, to_q, q = _build_incidents_queryset(request)
 
@@ -376,6 +377,7 @@ def incidents_list(request):
 # ---------- export CSV: página actual ----------
 @login_required
 @tenant_required
+@service_required("alarms_one_id")
 def export_csv_current(request):
     """
     Exporta a CSV sólo los incidentes que se muestran en la página actual
@@ -392,6 +394,7 @@ def export_csv_current(request):
 # ---------- export CSV: todos los incidentes del rango ----------
 @login_required
 @tenant_required
+@service_required("alarms_one_id")
 def export_csv_all(request):
     """
     Exporta a CSV todos los incidentes del rango filtrado (todas las páginas).
@@ -466,9 +469,10 @@ def switch_tenant(request, tenant_id):
 
 
 # ---------- API JSON: incidentes por alarm_ids (para el modal del dashboard) ----------
+@require_GET
 @login_required
 @tenant_required
-@require_GET
+@service_required("alarms_one_id")
 def api_incidents_by_alarm_ids(request):
     """
     Devuelve incidentes de IncidenteSOAR pertenecientes al tenant activo,

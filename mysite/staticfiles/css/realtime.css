@@ -1,17 +1,159 @@
-/* ===== Grid y tarjetas ===== */
-.grid-main {
-  display: grid;
+/* =========================================================
+   realtime.css — Específico para Alarmas "Tiempo Real"
+   Depende de base.css (tema, layout, sidebar/topbar, btn, loader, etc.)
+   ========================================================= */
+
+
+/* =========================
+   0) Utilidades que NO están en base.css (KPIs/Footnote)
+   ========================= */
+.grid{ display:grid; gap:16px; }
+
+/* KPIs (mismo comportamiento que en dashboard histórico) */
+.grid-kpis{
+  grid-template-columns: repeat(4, minmax(200px, 1fr));
+  margin-bottom: 24px;
+}
+
+.kpi{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  padding: 16px;
+  min-height: 92px;
+}
+
+.kpi-label{
+  color: var(--muted);
+  font-weight: 800;
+  font-size: .9rem;
+}
+
+.kpi-value{
+  margin-top: 6px;
+  font-weight: 900;
+  font-size: 1.65rem;
+  letter-spacing: .2px;
+}
+
+.footnote{
+  color: #9aa7bd;
+  font-size: .85rem;
+  padding: 0 4px 10px 4px;
+}
+
+
+/* =========================
+   0.1) Botón pequeño usado en cards (.btn ghost-sm)
+   (NO está en base.css)
+   ========================= */
+.btn.ghost-sm{
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1;
+  border-color: rgba(30,41,59,.65);
+  background: transparent;
+}
+.btn.ghost-sm:hover{
+  background: rgba(148,163,184,.08);
+  border-color: rgba(96,165,250,.28);
+}
+
+
+/* =========================
+   0.2) Export dropdown (tu HTML usa .export-dropdown)
+   (base.css tiene export-menu, pero aquí necesitas export-dropdown)
+   ========================= */
+.export-wrapper{
+  position: relative; /* por seguridad si base cambia */
+  display: inline-flex;
+  align-items: center;
+}
+
+.export-dropdown{
+  position:absolute;
+  right: 0;
+  top: calc(100% + 10px);
+
+  min-width: 220px;
+  padding: 10px;
+
+  border-radius: 14px;
+  border: 1px solid var(--dropdown-border);
+  background: var(--dropdown-bg);
+  box-shadow: var(--shadow-2);
+
+  z-index: 230;
+  display: none;
+}
+
+.export-dropdown.is-open{ display:block; }
+
+.export-dropdown button{
+  width:100%;
+  text-align:left;
+
+  padding:10px 12px;
+  border-radius:12px;
+
+  border:1px solid transparent;
+  background:transparent;
+
+  color: var(--text);
+  font-weight: 500;
+}
+
+.export-dropdown button:hover{
+  background: var(--dropdown-item-hover);
+  border-color: rgba(59,130,246,.26);
+}
+
+
+/* =========================
+   1) Cards internas (ANTES venían del dashboard.css)
+   ========================= */
+.card-head{
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.card-head.between{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+}
+
+.card-body{ padding: 16px; }
+
+.card h3{
+  margin: 0;
+  font-weight: 900;
+  letter-spacing: .2px;
+}
+
+/* Charts (altura base) */
+.card.chart .card-body canvas{
+  width: 100% !important;
+  height: 300px !important;
+}
+
+
+/* =========================
+   2) Grid principal + tarjetas
+   ========================= */
+.grid-main{
+  display:grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 16px;
   grid-auto-flow: row dense;
 }
 
-/* Ocultar trend si quedara en el DOM por herencia */
-.card--trend {
-  display: none !important;
-}
+/* Por seguridad: ocultar trend si quedara en el DOM */
+.card--trend{ display:none !important; }
 
-/* Orden / columnas */
+/* Orden / columnas (tu layout actual) */
 .card--hourly { order: -1; grid-column: 3 / span 8; }
 .card--donut  { grid-column: 1 / span 6; }
 .card--actions{ grid-column: 7 / span 6; }
@@ -20,266 +162,350 @@
 .card--table  { grid-column: span 6; }
 .card--msgsev { grid-column: span 6; }
 
-/* Alturas mínimas */
+/* Alturas mínimas para charts “cuadrados” */
 .card--donut .card-body,
-.card--actions .card-body { min-height: 300px; }
+.card--actions .card-body{
+  min-height: 300px;
+}
 
-/* ===== Responsivo ===== */
-@media (max-width: 1400px) {
+
+/* =========================
+   3) Tabla “dashboard-like” (.datatable dentro de la card)
+   ========================= */
+.table .table-wrap{
+  overflow:auto;
+  max-height: 240px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  margin: 12px;
+}
+
+.datatable{
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.datatable thead th{
+  position: sticky;
+  top: 0;
+  z-index: 1;
+
+  background: rgba(11,20,40,.92);
+  color: #e2e8f0;
+
+  border-bottom: 1px solid var(--border);
+  padding: 12px 14px;
+
+  text-align: left;
+  font-weight: 900;
+  font-size: 14px;
+
+  cursor: pointer;
+}
+
+.datatable thead th.is-right{ text-align:right; }
+
+.datatable tbody td{
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.datatable tbody tr:nth-child(odd){ background: rgba(11,20,40,.70); }
+.datatable tbody tr:hover{ background: rgba(13,26,54,.75); }
+
+.datatable .is-right{ text-align:right; }
+
+/* Pills de cantidad (fallback porque base.css no define --pill-bg/--pill-text) */
+.pill{
+  display:inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+
+  background: var(--pill-bg, #eef2ff);
+  color: var(--pill-text, #3730a3);
+
+  font-weight: 900;
+  min-width: 2.4rem;
+  text-align: center;
+
+  border: 1px solid rgba(55, 48, 163, .18);
+}
+
+.cell-device{
+  font-weight: 800;
+  color: var(--text);
+}
+
+.table-footnote{
+  color: #9aa7bd;
+  font-size: .8rem;
+  padding: 0 16px 12px;
+}
+
+
+/* =========================
+   4) Responsivo (KPIs + grid-main)
+   ========================= */
+@media (max-width: 1200px){
+  .grid-kpis{ grid-template-columns: repeat(2, minmax(200px, 1fr)); }
+}
+
+@media (max-width: 1400px){
   .card--hourly { grid-column: 2 / span 10; }
   .card--donut  { grid-column: 1 / span 6; }
   .card--actions{ grid-column: 7 / span 6; }
+
   .card--level,
   .card--subtype,
   .card--table,
-  .card--msgsev { grid-column: 1 / -1; }
+  .card--msgsev{
+    grid-column: 1 / -1;
+  }
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1024px){
+  .grid-kpis{ grid-template-columns: 1fr; }
+
   .card--hourly,
   .card--donut,
-  .card--actions { grid-column: 1 / -1; }
+  .card--actions{
+    grid-column: 1 / -1;
+  }
 }
 
-/* ===== Overlay de carga ===== */
-#loading-overlay[hidden] { display: none !important; }
 
-#loading-overlay {
-  position: fixed; inset: 0;
-  background: rgba(2, 6, 23, 0.65);
+/* =========================
+   5) Modales Realtime (Alarmas + Log)
+   ========================= */
+.modal.hidden{ display:none; }
+.modal{ position: fixed; inset: 0; z-index: 60; }
+
+.modal-backdrop{
+  position:absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, .6);
   backdrop-filter: blur(2px);
-  z-index: 9999;
-  display: grid; place-items: center;
 }
 
-#loading-overlay .loading-card {
-  background: var(--panel, #0f1b31);
-  border: 1px solid var(--border, #1e293b);
-  border-radius: var(--radius, 16px);
-  padding: 20px 24px;
-  min-width: 260px;
-  box-shadow: var(--shadow, 0 10px 28px rgba(2, 6, 23, .25));
-  display: grid;
-  grid-template-columns: 32px 1fr;
-  gap: 12px; align-items: center;
+.modal-card{
+  position: relative;
+  margin: 5vh auto;
+
+  max-width: 1100px;
+  width: calc(100% - 48px);
+
+  background: var(--card);
+  color: var(--text);
+
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+
+  box-shadow: var(--shadow);
 }
 
-#loading-overlay .loading-text { color: var(--text, #e5e7eb); font-weight: 600; }
+.modal-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
 
-#loading-overlay .spinner {
-  width: 28px; height: 28px; border-radius: 50%;
-  border: 3px solid rgba(229, 231, 235, 0.3);
-  border-top-color: var(--brand, #3b82f6);
-  animation: spin .8s linear infinite;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* ===== Empty state ===== */
-.empty-state {
-  min-height: 60vh; display: flex; align-items: center; justify-content: center; padding: 1rem;
-}
-.empty-card {
-  width: min(560px, 95%); background: var(--card, #0f1d35);
-  border-radius: var(--radius, 16px); box-shadow: var(--shadow, 0 10px 28px rgba(2, 6, 23, .25));
-  padding: 2rem; color: var(--text, #e5e7eb); text-align: center;
-}
-.empty-card h2 { margin: 0 0 .5rem; }
-.empty-card p  { margin: 0 0 1.25rem; color: var(--muted, #94a3b8); }
-.btn.primary   { background: var(--brand, #3b82f6); color: #fff; }
-
-/* ===== Util ===== */
-.userbox { display: flex; align-items: center; gap: .5rem; }
-
-/* ===== Modales Realtime ===== */
-.modal.hidden { display: none; }
-.modal { position: fixed; inset: 0; z-index: 60; }
-.modal-backdrop { position: absolute; inset: 0; background: rgba(2, 6, 23, .6); backdrop-filter: blur(2px); }
-.modal-card {
-  position: relative; margin: 5vh auto; max-width: 1100px; width: calc(100% - 48px);
-  background: var(--card, #0f1d35); color: var(--text, #e5e7eb);
-  border: 1px solid var(--border, #1e293b); border-radius: var(--radius, 16px);
-  box-shadow: var(--shadow, 0 10px 28px rgba(2, 6, 23, .25));
-}
-.modal-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 16px; border-bottom: 1px solid var(--border, #1e293b);
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
 }
 
-/* El scroll vive AQUÍ (no en .table-wrap) */
-.modal-body { padding: 0 16px 12px; max-height: 75vh; overflow: auto; }
-
-/* Botón cerrar */
-.modal-close { background: transparent; color: inherit; border: 0; font-size: 24px; line-height: 1; cursor: pointer; }
-
-/* === Toolbar sticky (buscador) === */
-.modal-toolbar {
-  position: sticky; top: 0; z-index: 4;
-  background: var(--card, #0f1d35); padding: 8px 10px;
-  border-bottom: 1px solid var(--border, #1e293b);
-  --toolbar-h: 48px; min-height: var(--toolbar-h);
-  display: flex; align-items: center;
-}
-.modal-toolbar input[type="search"] {
-  background: #0f1b31; color: #e5e7eb; border: 1px solid #1e293b;
-  border-radius: 10px; padding: 8px 10px; width: 100%; max-width: 560px;
+.modal-body{
+  padding: 0 16px 12px;
+  max-height: 75vh;
+  overflow: auto;
 }
 
-/* === Tabla === */
-.table-wrap { overflow: visible; border: 1px solid var(--border, #1e293b); border-radius: 12px; }
-.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
-
-.tbl thead th {
-  text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border, #1e293b);
-  position: sticky; top: var(--toolbar-h, 48px); background: var(--panel, #0f1b31); z-index: 3;
-}
-.tbl tbody td { padding: 8px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
-.tbl tbody tr { cursor: pointer; }
-.tbl tbody tr:hover { background: #0f243f; }
-
-/* ===== Tabla modal mejorada ===== */
-#alarmsModal .tbl { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: auto; font-size: 13px; }
-#alarmsModal thead th {
-  position: sticky; top: var(--toolbar-h, 48px); z-index: 3;
-  background: var(--panel, #0f1b31); text-align: left; font-weight: 700;
-  padding: 10px 12px; border-bottom: 1px solid var(--border, #1e293b);
-}
-#alarmsModal tbody td { padding: 8px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); vertical-align: middle; }
-#alarmsModal tbody tr:nth-child(odd){ background: rgba(255, 255, 255, 0.02); }
-#alarmsModal tbody tr:hover { background: rgba(255, 255, 255, 0.06); }
-#alarmsModal tbody tr { cursor: pointer; }
-#alarmsModal .tbl-empty { text-align: center; opacity: .7; padding: 16px; }
-
-/* === FILA DE CARGA (siempre visible) === */
-#alarmsModal .loading-row td {
-  padding: 20px 12px; text-align: center; background: transparent;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-#alarmsModal .ao-loading {
-  display: flex; align-items: center; justify-content: center; gap: .6rem;
-  min-height: 120px; /* asegura altura visible aunque el modal esté scrolleado */
-}
-#alarmsModal .ao-spinner {
-  width: 22px; height: 22px; border-radius: 50%;
-  border: 3px solid rgba(255, 255, 255, .25); border-top-color: #fff;
-  animation: ao-spin .8s linear infinite;
-}
-@keyframes ao-spin { to { transform: rotate(360deg); } }
-@media (prefers-color-scheme: light) {
-  #alarmsModal .ao-spinner { border: 3px solid rgba(30, 41, 59, .25); border-top-color: #0f172a; }
-}
-
-/* ===== Tabla del LOG (modal) en blanco/negro ===== */
-#logHtml table { width: 100%; border-collapse: collapse; background: #ffffff; color: #000000; font-size: 14px; }
-#logHtml th, #logHtml td { border: 1px solid #000000; padding: 8px 10px; vertical-align: top; }
-#logHtml thead th { font-weight: 700; }
-#logHtml tr:hover td { background: #f5f5f5; }
-
-/* === Modal: scroll interno + toolbar sticky (duplicado por claridad) === */
-#alarmsModal .modal-body { max-height: min(75vh, 820px); overflow: auto; padding-top: 0; }
-#alarmsModal .modal-toolbar {
-  position: sticky; top: 0; z-index: 4; background: var(--card, #0f1d35);
-  padding: 8px 10px; border-bottom: 1px solid var(--border, #1e293b);
-  --toolbar-h: 48px; min-height: var(--toolbar-h); display: flex; align-items: center;
-}
-#alarmsModal #alarmsSearch { width: 100%; max-width: 560px; }
-#alarmsModal #alarmsTable thead th { position: sticky; top: var(--toolbar-h, 48px); background: var(--card, #0f1d35); z-index: 3; }
-
-/* Tenant selector */
-.tenant-dropdown { display: inline-block; position: relative; }
-.tenant-summary {
-  cursor: pointer; background: #0f1b31; color: #e5e7eb; border: 1px solid #1e293b;
-  padding: 6px 10px; border-radius: 10px; font-weight: 600;
-  display: inline-flex; align-items: center; gap: 6px; user-select: none;
-}
-.tenant-summary:hover { background: rgba(255, 255, 255, 0.05); }
-.tenant-dropdown[open] .caret { transform: rotate(180deg); }
-.tenant-list {
-  position: absolute; top: 120%; left: 0; background: #0f1d35; border: 1px solid #1e293b;
-  border-radius: 12px; box-shadow: 0 6px 16px rgba(0,0,0,0.4); padding: 6px; z-index: 50;
-  display: flex; flex-direction: column; min-width: 180px;
-}
-.tenant-option {
-  display: block; width: 100%; background: transparent; border: 0; color: #e5e7eb;
-  text-align: left; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 14px;
-}
-.tenant-option:hover { background: rgba(255, 255, 255, 0.08); }
-.tenant-option.is-active { background: rgba(59, 130, 246, 0.15); border: 1px solid #3b82f6; color: #fff; }
-
-/* Loader universal (duplicado para compat) */
-#loading-overlay {
-  position: fixed; inset: 0; display: grid; place-items: center;
-  background: rgba(2, 6, 23, 0.72); backdrop-filter: blur(2px);
-  z-index: 9999; opacity: 0; visibility: hidden;
-  transition: opacity .15s ease-out, visibility .15s ease-out;
-}
-#loading-overlay.is-active { opacity: 1; visibility: visible; }
-.loading-card {
-  display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-radius: 14px;
-  background: var(--surface, #0f172a); box-shadow: var(--shadow, 0 10px 28px rgba(2, 6, 23, .25));
-  color: var(--text, #e5e7eb); font-weight: 600;
-}
-.spinner {
-  width: 22px; height: 22px; border-radius: 50%;
-  border: 3px solid rgba(229, 231, 235, 0.25); border-top-color: rgba(229, 231, 235, 0.95);
-  animation: spin .8s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* Nav */
-.nav { display: flex; flex-direction: column; gap: 6px; padding: 10px; }
-.nav-item {
-  display: flex; align-items: center; gap: 6px; padding: 10px 14px; border-radius: 12px;
-  color: var(--text-muted, #cbd5e1); font-weight: 600; text-decoration: none;
-  transition: background .2s, color .2s;
+.modal-close{
+  background: transparent;
+  color: inherit;
+  border: 0;
+  font-size: 24px;
+  line-height: 1;
   cursor: pointer;
 }
-.nav-item:hover    { background: rgba(255, 255, 255, 0.06); color: #fff; }
-.nav-item.is-active{ background: #142246; color: #fff; }
 
-/* =========================================================
- * FIX: estilos de pills
- * ========================================================= */
+/* Toolbar sticky */
+.modal-toolbar{
+  position: sticky;
+  top: 0;
+  z-index: 4;
 
-/* 1) Pills de severidad SOLO dentro del modal de LOG (estilo oscuro) */
-#logModal .pill {
-  display: inline-block;
+  background: var(--card);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+
+  --toolbar-h: 48px;
+  min-height: var(--toolbar-h);
+
+  display:flex;
+  align-items:center;
+}
+
+.modal-toolbar input[type="search"]{
+  background: var(--panel);
+  color: var(--text);
+
+  border: 1px solid var(--border);
+  border-radius: 10px;
+
+  padding: 8px 10px;
+  width: 100%;
+  max-width: 560px;
+}
+
+/* Tabla modal .tbl */
+.table-wrap{
+  overflow: visible; /* scroll lo controla .modal-body */
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.tbl{
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.tbl thead th{
+  text-align:left;
+  padding: 10px 12px;
+
+  border-bottom: 1px solid var(--border);
+
+  position: sticky;
+  top: var(--toolbar-h, 48px);
+
+  background: var(--panel);
+  z-index: 3;
+}
+
+.tbl tbody td{
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.tbl tbody tr{ cursor: pointer; }
+.tbl tbody tr:hover{ background: rgba(15,36,63,.85); }
+
+/* alarmsModal — ajustes */
+#alarmsModal .modal-body{
+  max-height: min(75vh, 820px);
+  overflow: auto;
+  padding-top: 0;
+}
+
+#alarmsModal .tbl{
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: auto;
+  font-size: 13px;
+}
+
+#alarmsModal thead th{
+  position: sticky;
+  top: var(--toolbar-h, 48px);
+  z-index: 3;
+
+  background: var(--panel);
+  font-weight: 700;
+
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+#alarmsModal tbody td{
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  vertical-align: middle;
+}
+
+#alarmsModal tbody tr:nth-child(odd){ background: rgba(255,255,255,0.02); }
+#alarmsModal tbody tr:hover{ background: rgba(255,255,255,0.06); }
+
+#alarmsModal .tbl-empty{
+  text-align:center;
+  opacity: .7;
+  padding: 16px;
+}
+
+#alarmsModal .modal-card{
+  max-width: min(1400px, calc(100% - 64px));
+  width: 100%;
+}
+
+/* Fila de carga */
+#alarmsModal .loading-row td{
+  padding: 20px 12px;
+  text-align:center;
+  background: transparent;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+#alarmsModal .ao-loading{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap: .6rem;
+  min-height: 120px;
+}
+
+#alarmsModal .ao-spinner{
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid rgba(255,255,255,.25);
+  border-top-color: #fff;
+  animation: ao-spin .8s linear infinite;
+}
+
+@keyframes ao-spin{ to{ transform: rotate(360deg); } }
+
+/* logModal HTML blanco/negro + pills severidad */
+#logHtml table{
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+  color: #000000;
+  font-size: 14px;
+}
+
+#logHtml th,
+#logHtml td{
+  border: 1px solid #000000;
+  padding: 8px 10px;
+  vertical-align: top;
+}
+
+#logHtml thead th{ font-weight: 700; }
+#logHtml tr:hover td{ background: #f5f5f5; }
+
+#logModal .pill{
+  display:inline-block;
   padding: 2px 8px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
   line-height: 1.6;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-}
-#logModal .pill.sev-critical { background:#FF6B6B22; border-color:#FF6B6B55; }
-#logModal .pill.sev-high     { background:#F59E0B22; border-color:#F59E0B55; }
-#logModal .pill.sev-medium   { background:#F0E44222; border-color:#F0E44255; color:#222; }
-#logModal .pill.sev-low      { background:#10B98122; border-color:#10B98155; }
-#logModal .pill.sev-info     { background:#60A5FA22; border-color:#60A5FA55; }
-#logModal .pill.sev-na       { background:#6B728022; border-color:#6B728055; }
 
-/* 2) Pills de CANTIDAD en la tabla de dispositivos (igual al histórico) */
-#device-table .pill,
-.datatable .pill,
-.table .pill {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--pill-bg, #eef2ff) !important;
-  color: var(--pill-text, #3730a3) !important;
-  font-weight: 800;
-  min-width: 2.4rem;
-  text-align: center;
-  border: 1px solid rgba(55, 48, 163, .18);
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.18);
 }
 
-#alarmsModal .modal-card {
-  max-width: min(1400px, calc(100% - 64px)); /* más ancho + respiro lateral */
-  width: 100%;
-}
+#logModal .pill.sev-critical{ background:#FF6B6B22; border-color:#FF6B6B55; }
+#logModal .pill.sev-high    { background:#F59E0B22; border-color:#F59E0B55; }
+#logModal .pill.sev-medium  { background:#F0E44222; border-color:#F0E44255; color:#222; }
+#logModal .pill.sev-low     { background:#10B98122; border-color:#10B98155; }
+#logModal .pill.sev-info    { background:#60A5FA22; border-color:#60A5FA55; }
+#logModal .pill.sev-na      { background:#6B728022; border-color:#6B728055; }
 
-#logModal .modal-card {
-  max-width: min(1280px, calc(100% - 64px)); /* un poco menos que el de alarmas */
+#logModal .modal-card{
+  max-width: min(1280px, calc(100% - 64px));
   width: 100%;
 }

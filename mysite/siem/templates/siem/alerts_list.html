@@ -9,15 +9,15 @@
   <title>SIEM – Alertas</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v={% now 'U' %}">
-  <link rel="stylesheet" href="{% static 'css/list.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}?v={% now 'U' %}" />
+  <link rel="stylesheet" href="{% static 'css/list_siem.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/user_dropdown.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/config_notificaciones_modal.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/cred_modal.css' %}?v={% now 'U' %}">
-  {# CSS específico para esta página SIEM #}
-  <link rel="stylesheet" href="{% static 'css/siem_alerts.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/country_filter_modal.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/coachmark.css' %}?v={% now 'U' %}">
+  {# CSS específico para esta página SIEM #}
+  <link rel="stylesheet" href="{% static 'css/siem_alerts.css' %}?v={% now 'U' %}">
 </head>
 
 <body class="layout">
@@ -45,7 +45,8 @@
 
       {# ===== Alarmas ===== #}
       {% with url_name=request.resolver_match.url_name %}
-      <details class="tenant-dropdown nav-dropdown" {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}open{% endif %}>
+      <details class="tenant-dropdown nav-dropdown"
+        {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}open{% endif %}>
         <summary id="alarmsSummary"
           class="nav-item {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}is-active{% endif %}">
           <span class="nav-ico">📊</span>Alarmas
@@ -54,6 +55,7 @@
           </svg>
           <span id="coachDotAlarms" class="coachmark-dot hidden"></span>
         </summary>
+
         <div class="tenant-list nav-submenu">
           <a class="tenant-option nav-subitem {% if url_name == 'dashboard_alarmsone' %}is-active{% endif %}"
             href="{% url 'dashboard:dashboard_alarmsone' %}">Dashboard</a>
@@ -65,15 +67,17 @@
 
       {# ===== SOAR ===== #}
       {% with app_name=request.resolver_match.app_name %}
-      <details class="tenant-dropdown nav-dropdown" {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' %}open{% endif %}>
+      <details class="tenant-dropdown nav-dropdown"
+        {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' or app_name == 'soar_tickets' %}open{% endif %}>
         <summary id="soarSummary"
-          class="nav-item {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' %}is-active{% endif %}">
+          class="nav-item {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' or app_name == 'soar_tickets' %}is-active{% endif %}">
           <span class="nav-ico">🚨</span>SOAR
           <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
           </svg>
           <span id="coachDotSoar" class="coachmark-dot hidden"></span>
         </summary>
+
         <div class="tenant-list nav-submenu">
           <a class="tenant-option nav-subitem {% if app_name == 'soar_dashboard' %}is-active{% endif %}"
             href="{% url 'soar_dashboard:dashboard' %}">Dashboard</a>
@@ -85,19 +89,42 @@
       </details>
       {% endwith %}
 
-      {# ===== SIEM ===== #}
-      {% with raw_siem_id=tenant.logs360siem_id|default_if_none:"" %}
-      {% with siem_id=raw_siem_id|stringformat:"s" %}
-      {% if siem_id and siem_id != "0" and siem_id != "null" and siem_id != "NULL" and siem_id != "None" %}
-      <a class="nav-item {% if request.resolver_match.app_name == 'siem' %}is-active{% endif %}"
-        href="{% url 'siem:alerts_logs360' %}">
+      {# ===== SIEM (dropdown con ALERTAS + dashboards) ===== #}
+    {% with raw_siem_id=tenant.logs360siem_id|default_if_none:"" %}
+    {% with siem_id=raw_siem_id|stringformat:"s" %}
+    {% if siem_id and siem_id != "0" and siem_id != "null" and siem_id != "NULL" and siem_id != "None" %}
+    {% with url_name=request.resolver_match.url_name %}
+    <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.app_name == 'siem' %}open{% endif %}>
+      <summary id="siemSummary"
+               class="nav-item {% if request.resolver_match.app_name == 'siem' %}is-active{% endif %}">
         <span class="nav-ico">🧠</span>SIEM
+        <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+        </svg>
         <span id="coachDotSiem" class="coachmark-dot hidden"></span>
-      </a>
-      {% endif %}
-      {% endwith %}
-      {% endwith %}
-      {% endif %}
+      </summary>
+
+      <div class="tenant-list nav-submenu">
+        <a class="tenant-option nav-subitem {% if url_name == 'alerts_logs360' %}is-active{% endif %}"
+           href="{% url 'siem:alerts_logs360' %}">Alertas</a>
+
+        <a class="tenant-option nav-subitem {% if url_name == 'microsoft365' %}is-active{% endif %}"
+           href="{% url 'siem:microsoft365' %}">Microsoft 365</a>
+
+        <a class="tenant-option nav-subitem {% if url_name == 'networks' %}is-active{% endif %}"
+           href="{% url 'siem:networks' %}">Networks</a>
+
+        <a class="tenant-option nav-subitem {% if url_name == 'eventos_diarios' %}is-active{% endif %}"
+           href="{% url 'siem:eventos_diarios' %}">Eventos diarios</a>
+      </div>
+    </details>
+    {% endwith %}
+    {% endif %}
+    {% endwith %}
+    {% endwith %}
+
+    {% endif %}
+    {# --- fin bloque "tenant and tenant.alarms_one_id" --- #}
 
       {# ===== Site24x7 ===== #}
       {% if tenant %}
@@ -113,17 +140,14 @@
           </svg>
           <span id="coachDotInnMonitor" class="coachmark-dot hidden"></span>
         </summary>
+
         <div class="tenant-list nav-submenu">
           <a class="tenant-option nav-subitem {% if url_name == 'monitor_status' %}is-active{% endif %}"
-            href="{% url 'site24x7:monitor_status' %}">
-            Monitores
-          </a>
+            href="{% url 'site24x7:monitor_status' %}">Monitores</a>
           <a class="tenant-option nav-subitem {% if url_name == 'anomaly_status' %}is-active{% endif %}"
             href="{% url 'site24x7:anomaly_status' %}">Anomalías</a>
           <a class="tenant-option nav-subitem {% if url_name == 'dashboard' %}is-active{% endif %}"
-            href="{% url 'site24x7:dashboard' %}">
-            Dashboard
-          </a>
+            href="{% url 'site24x7:dashboard' %}">Dashboard</a>
         </div>
       </details>
       {% endwith %}
@@ -133,7 +157,8 @@
       {% endif %}
 
       {# ===== Configuración ===== #}
-      <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.url_name == 'cambiar_contrasena' %}open{% endif %}>
+      <details class="tenant-dropdown nav-dropdown"
+        {% if request.resolver_match.url_name == 'cambiar_contrasena' %}open{% endif %}>
         <summary id="settingsSummary"
           class="nav-item {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}">
           <span class="nav-ico">⚙️</span>Configuración
@@ -142,6 +167,7 @@
           </svg>
           <span id="coachDotConfig" class="coachmark-dot hidden"></span>
         </summary>
+
         <div class="tenant-list nav-submenu">
           <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}"
             href="{% url 'cambiar_contrasena' %}">🔒 Cambiar contraseña</a>
@@ -185,39 +211,39 @@
           {% endif %}
         </h1>
       </div>
-    
+
       <div class="top-right">
         <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
-    
+
         <!-- Botón flecha + menú desplegable de exportación -->
         <div class="export-wrapper">
           <button type="button" class="btn ghost small" id="siemExportToggleBtn" title="Exportar alertas"
             aria-haspopup="true" aria-expanded="false">
             ⬇
           </button>
-    
+
           <div class="export-menu" id="siemExportMenu" role="menu" aria-hidden="true">
             <button type="button" data-export-scope="current">
               📊 Exportar alertas actuales
             </button>
           </div>
         </div>
-    
+
         <!-- Guía rápida -->
         <button id="showCoachBtn" class="btn ghost" title="Mostrar guía rápida" onclick="window.startInntesecCoach()">
           💡 Guía rápida
         </button>
-    
+
         <!-- Inntesec Agent: texto + botones -->
         <a>Inntesec Agent:</a>
-    
+
         <button class="btn ghost" type="button" onclick="window.openRetellCallWindow()">
           📞 Llamar
         </button>
         <button class="btn ghost" type="button" onclick="openChatPopup()">
           💬 Chat
         </button>
-    
+
         <!-- Menú usuario -->
         <div class="user-menu" id="userMenu">
           <button type="button" id="userButton" class="user-button">
@@ -231,7 +257,7 @@
               <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
             </svg>
           </button>
-    
+
           <div class="dropdown-menu">
             <form action="{% url 'logout' %}" method="post">
               {% csrf_token %}
@@ -256,7 +282,6 @@
     </section>
     {% else %}
     {% if error %}
-    {# Error genérico cuando falla la consulta a Logs360 #}
     <section class="empty-state">
       <div class="empty-card">
         <h2>Servicio SIEM no disponible</h2>
@@ -268,6 +293,7 @@
       </div>
     </section>
     {% else %}
+
     <!-- Tarjeta de resumen en vez de filtros -->
     <section class="alerts-summary">
       <div class="alerts-summary-card">
@@ -315,50 +341,40 @@
                   data-threatrep="{{ a|get_item:'Threat Reputation'|default:'' }}"
                   data-raw="{{ a|get_item:'__raw_json__'|default:'' }}">
 
-                  <!-- Fecha/Hora -->
                   <td class="mono nowrap">{{ a|get_item:"Time"|default:"-" }}</td>
 
-                  <!-- Severidad con pill de colores -->
                   <td>
                     {% if sev %}
-                    {% if sev_lower == "critical" %}
-                    <span class="pill sev-critical">{{ sev }}</span>
-                    {% elif sev_lower == "high" or sev_lower == "trouble" %}
-                    <span class="pill sev-high">{{ sev }}</span>
-                    {% elif sev_lower == "medium" or sev_lower == "attention" %}
-                    <span class="pill sev-medium">{{ sev }}</span>
-                    {% elif sev_lower == "low" or sev_lower == "success" %}
-                    <span class="pill sev-low">{{ sev }}</span>
-                    {% elif sev_lower == "info" or sev_lower == "information" %}
-                    <span class="pill sev-info">{{ sev }}</span>
-                    {% elif sev_lower == "n/a" or sev_lower == "na" %}
-                    <span class="pill sev-na">{{ sev }}</span>
+                      {% if sev_lower == "critical" %}
+                        <span class="pill sev-critical">{{ sev }}</span>
+                      {% elif sev_lower == "high" or sev_lower == "trouble" %}
+                        <span class="pill sev-high">{{ sev }}</span>
+                      {% elif sev_lower == "medium" or sev_lower == "attention" %}
+                        <span class="pill sev-medium">{{ sev }}</span>
+                      {% elif sev_lower == "low" or sev_lower == "success" %}
+                        <span class="pill sev-low">{{ sev }}</span>
+                      {% elif sev_lower == "info" or sev_lower == "information" %}
+                        <span class="pill sev-info">{{ sev }}</span>
+                      {% elif sev_lower == "n/a" or sev_lower == "na" %}
+                        <span class="pill sev-na">{{ sev }}</span>
+                      {% else %}
+                        <span class="pill sev-na">{{ sev }}</span>
+                      {% endif %}
                     {% else %}
-                    <span class="pill sev-na">{{ sev }}</span>
-                    {% endif %}
-                    {% else %}
-                    -
+                      -
                     {% endif %}
                   </td>
 
-                  <!-- IP Origen -->
                   <td class="mono">{{ a|get_item:"Source IP"|default:"-" }}</td>
-
-                  <!-- IP Destino -->
                   <td class="mono">{{ a|get_item:"Destination IP"|default:"-" }}</td>
-
-                  <!-- País Origen -->
                   <td>{{ a|get_item:"Source Country"|default:"-" }}</td>
 
-                  <!-- Threat Categories -->
                   <td class="w-320">
                     {{ a|get_item:"Threat Categories"|default:"-" }}
                   </td>
 
-                  <!-- Threat Reputation (pill) -->
                   <td class="mono threat-rep-cell" data-rep="{{ a|get_item:'Threat Reputation'|default:'' }}"></td>
 
-                  <!-- Dispositivo -->
                   <td class="mono">
                     {{ a|get_item:"__device_label__"|default:"-" }}
                   </td>
@@ -372,8 +388,7 @@
 
           <div class="paginate" id="paginate">
             {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}">&laquo;
-              Anterior</a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}">&laquo; Anterior</a>
             {% else %}
             <span class="meta">&laquo; Anterior</span>
             {% endif %}
@@ -381,12 +396,12 @@
             <span class="current">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
 
             {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}">Siguiente
-              &raquo;</a>
+            <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}">Siguiente &raquo;</a>
             {% else %}
             <span class="meta">Siguiente &raquo;</span>
             {% endif %}
           </div>
+
           {% else %}
           <section class="empty-state">
             <div class="empty-card">
@@ -396,9 +411,9 @@
           </section>
           {% endif %}
         </div>
-
       </div>
     </section>
+
     {% endif %}
     {% endif %}
   </div>
@@ -411,7 +426,6 @@
         <div class="modal-header-main">
           <h3 id="siem-title" class="alert-title">🔔 Detalle de alerta</h3>
 
-          <!-- Threat Reputation compacto en el header -->
           <div class="rep-widget rep-widget-header">
             <div class="rep-bar">
               <div class="rep-seg rep-seg-1"></div>
@@ -420,9 +434,7 @@
               <div class="rep-seg rep-seg-4"></div>
               <div class="rep-seg rep-seg-5"></div>
 
-              <!-- Triángulo -->
               <div id="siem-rep-pointer" class="rep-pointer" style="display:none;"></div>
-              <!-- Valor bajo el triangulito -->
               <span id="siem-meta-rep-value" class="rep-value rep-value-header">—</span>
             </div>
           </div>
@@ -454,15 +466,15 @@
   </div>
 
   <!-- JS -->
-  <script defer src="{% static 'js/user_dropdown.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/menus_dropdowns.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/page-loader-universal.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/siem_alerts.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/home_portal.js' %}?v={% now 'U' %}"></script>
-  <!-- export CSV SIEM -->
   <script defer src="{% static 'js/siem_export.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/country_filter_modal.js' %}?v={% now 'U' %}"></script>
   <script src="{% static 'js/chat_popup_launcher.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/coach_allinone.js' %}?v={% now 'U' %}"></script>
+
   {% include 'partials/config_notificaciones_modal.html' %}
   {% include 'partials/_country_filter_modal.html' %}
   {% include 'partials/cred_modal.html' %}

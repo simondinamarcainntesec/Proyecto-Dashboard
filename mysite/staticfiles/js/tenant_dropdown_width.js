@@ -10,23 +10,21 @@
     const list = detailsEl.querySelector(".tenant-list");
     if (!list) return;
 
-    const items = Array.from(detailsEl.querySelectorAll(".tenant-option"));
-    if (!items.length) return;
-
     const csList = getComputedStyle(list);
     const padL = px(csList.paddingLeft);
     const padR = px(csList.paddingRight);
     const borderL = px(csList.borderLeftWidth);
     const borderR = px(csList.borderRightWidth);
 
-    // Detecta si es dropdown overlay (topbar) o submenu en flujo (sidebar)
-    const isOverlay = (csList.position === "absolute" || csList.position === "fixed");
+    const isOverlay = csList.position === "absolute" || csList.position === "fixed";
 
-    // ===== 1) Medición fiel a estilos reales =====
-    // Usamos un "measurer" con EXACTAMENTE las mismas clases del list real,
-    // para que tipografía/padding/line-height etc coincidan.
+    // Items: overlay usa tenant-option; sidebar usa nav-subitem (pero soportamos ambos)
+    const items = Array.from(detailsEl.querySelectorAll(".tenant-option, .nav-subitem"));
+    if (!items.length) return;
+
+    // Measurer fiel a estilos del contenedor
     const meas = document.createElement("div");
-    meas.className = list.className; // incluye nav-submenu si existe
+    meas.className = list.className;
     Object.assign(meas.style, {
       position: "absolute",
       left: "-99999px",
@@ -40,22 +38,32 @@
     });
     document.body.appendChild(meas);
 
+    // Medimos cada item (no solo el más largo)
+    const measuredWidths = [];
     let maxItemWidth = 0;
 
     for (const el of items) {
-      // Clonar usando el MISMO tag (<a> o <button>) para medir igual
       const clone = document.createElement(el.tagName.toLowerCase());
       clone.className = el.className;
+
+      // Texto igual al real (sin espacios extra)
       clone.textContent = (el.textContent || "").trim();
 
-      // Para anchors, evita navegaciones accidentales
+      // Evitar navegación accidental en <a>
       if (clone.tagName.toLowerCase() === "a") clone.setAttribute("href", "javascript:void(0)");
 
-      // Fuerza 1 línea para medir el ancho real del texto
-      clone.style.whiteSpace = "nowrap";
+      // Medición en 1 línea y tamaño por contenido
+      Object.assign(clone.style, {
+        whiteSpace: "nowrap",
+        width: "max-content",
+        maxWidth: "none",
+        display: "inline-flex",
+      });
+
       meas.appendChild(clone);
 
       const w = clone.getBoundingClientRect().width;
+      measuredWidths.push(w);
       if (w > maxItemWidth) maxItemWidth = w;
     }
 
@@ -63,52 +71,59 @@
 
     // ===== 2) Ancho del contenedor =====
     if (isOverlay) {
-      // En topbar: el menú debe quedar fijo al item más largo
+      // Topbar: menú al ancho del item más largo
       const desiredListWidth = Math.ceil(maxItemWidth + padL + padR + borderL + borderR);
-
-      // Seguridad viewport
       const maxAllowed = window.innerWidth - 24;
       const finalListWidth = clamp(desiredListWidth, 0, maxAllowed);
-
       list.style.width = finalListWidth + "px";
     } else {
-      // En sidebar: NO forzamos width por contenido (se rige por el sidebar)
-      // Solo garantizamos recorte y consistencia visual.
-      list.style.width = "";
+      // Sidebar: asegurar que el submenu NO se “agrande” por contenido
+      list.style.width = "100%";
+      list.style.maxWidth = "100%";
     }
 
-    // ===== 3) Hover/Active EXACTAMENTE del ancho interno =====
-    // Para overlay: usamos el width calculado
-    // Para sidebar: usamos el ancho actual renderizado del list
+    // ===== 3) Cálculo del ancho interno renderizado del contenedor =====
     const listRect = list.getBoundingClientRect();
     const listWidthRendered = Math.ceil(listRect.width);
 
-    const innerWidth = Math.max(
-      0,
-      listWidthRendered - padL - padR - borderL - borderR
-    );
+    const innerWidth = Math.max(0, listWidthRendered - padL - padR - borderL - borderR);
 
-    // Recorte del contenedor para que nada "pinte" afuera
-    list.style.overflow = "hidden";
+    // Evitar scroll horizontal por cualquier motivo
+    list.style.overflowX = "hidden";
+    // no pisar overflowY si tu CSS ya define algo
+    if (!list.style.overflowY) list.style.overflowY = "auto";
 
-    // Aplicar ancho interno fijo a cada item
-    for (const el of items) {
+    // ===== 4) Aplicar widths =====
+    items.forEach((el, idx) => {
       el.style.boxSizing = "border-box";
-      el.style.display = "block";
-      el.style.border = "0";
       el.style.outline = "none";
-      el.style.width = innerWidth + "px";
 
-      // Seleccionado: borde interno (no crece)
+      if (isOverlay) {
+        // Overlay: items a ancho interno fijo
+        el.style.display = "block";
+        el.style.width = innerWidth + "px";
+      } else {
+        // Sidebar: “pill” al ancho del texto (clamp al contenedor)
+        const desired = Math.ceil(measuredWidths[idx] || 0);
+        const finalW = clamp(desired, 0, innerWidth);
+
+        el.style.display = "inline-flex";
+        el.style.width = finalW + "px";
+        el.style.maxWidth = innerWidth + "px";
+        el.style.flex = "0 0 auto";
+        el.style.alignSelf = "flex-start";
+
+        // Seguridad para texto largo
+        el.style.whiteSpace = "nowrap";
+        el.style.overflow = "hidden";
+        el.style.textOverflow = "ellipsis";
+      }
+
+      // Mantener tu “active” sin romper el ancho
       if (el.classList.contains("is-active")) {
         el.style.boxShadow = "inset 0 0 0 1px #3b82f6";
-      } else {
-        // No toques otros box-shadows si tu CSS los necesita;
-        // pero sí evitamos que un shadow heredado rompa el ancho.
-        // Si quieres ser más estricto: descomenta:
-        // el.style.boxShadow = "none";
       }
-    }
+    });
   }
 
   function wire(detailsEl) {
@@ -116,25 +131,23 @@
 
     run();
 
-    detailsEl.addEventListener("toggle", () => {
-      // Recalcular al abrir (y también al cerrar no hace daño)
-      run();
-    });
-
+    detailsEl.addEventListener("toggle", run);
     window.addEventListener("resize", run, { passive: true });
 
-    // Fuentes listas -> cambia métricas
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(run).catch(() => {});
     }
 
-    // Si se inyectan items o cambia el DOM
     const mo = new MutationObserver(run);
     mo.observe(detailsEl, { childList: true, subtree: true });
   }
 
   function boot() {
-    document.querySelectorAll("details.tenant-dropdown").forEach(wire);
+    // ✅ SOLO topbar: no tocar acordeones del sidebar
+    document.querySelectorAll("details.tenant-dropdown").forEach((detailsEl) => {
+      if (detailsEl.closest(".sidebar")) return; // ignora sidebar
+      wire(detailsEl);
+    });
   }
 
   if (document.readyState === "loading") {

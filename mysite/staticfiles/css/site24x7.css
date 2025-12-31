@@ -1,3 +1,109 @@
+/* =========================================================
+   SITE24X7 — Estado de Monitores (dashboard section)
+   Objetivo: look & feel como “foto1” (tarjeta + KPIs + tabla)
+   + AIRE (solo spacing: padding/margins/gaps/heights)
+   NO cambia colores.
+   ========================================================= */
+
+/* ===== Variables / Tema base (mantén coherencia con tu dashboard) ===== */
+:root{
+  --bg:#0b1220;
+  --bg-soft:#0e172a;
+  --panel:#0f1b31;
+  --surface:#0f172a;
+  --card:#0f1d35;
+
+  --border:#1e293b;
+  --text:#e5e7eb;
+  --muted:#94a3b8;
+  --brand:#3b82f6;
+
+  --radius:16px;
+  --shadow:0 10px 28px rgba(2,6,23,.25);
+}
+
+/* ===== Sección contenedora (la “tarjeta” grande) ===== */
+.site24x7-panel{
+  background:
+    radial-gradient(1200px 380px at 20% 0%, rgba(59,130,246,.10), transparent 55%),
+    radial-gradient(900px 320px at 80% 0%, rgba(34,197,94,.07), transparent 60%),
+    linear-gradient(180deg, rgba(15,23,42,.78), rgba(11,18,32,.78));
+  border: 1px solid rgba(30,41,59,.75);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+
+  /* AIRE */
+  padding: 22px 22px 18px; /* antes: 16px 16px 14px */
+}
+
+.site24x7-panel .section-title{
+  /* AIRE */
+  margin: 0 0 18px; /* antes: 0 0 14px */
+  line-height: 1.15;
+
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  color: var(--text);
+}
+
+/* ===== Grid genérico de KPIs ===== */
+.grid-kpis{
+  display: grid;
+
+  /* AIRE */
+  gap: 18px; /* antes: 14px */
+
+  align-items: stretch;
+}
+
+/* ===== KPIs (card individual) ===== */
+.kpi{
+  position: relative;
+
+  /* AIRE */
+  padding: 16px 16px 14px; /* antes: 14px 14px 12px */
+  min-height: 96px;        /* da presencia (ajusta 90–110) */
+
+  border-radius: 16px;
+  border: 1px solid rgba(30,41,59,.75);
+  background:
+    radial-gradient(900px 220px at 10% 0%, rgba(255,255,255,.06), transparent 60%),
+    linear-gradient(180deg, rgba(2,6,23,.40), rgba(2,6,23,.26));
+  overflow: hidden;
+}
+
+.kpi:before{
+  content:"";
+  position:absolute;
+  inset:-1px;
+  border-radius: inherit;
+  pointer-events:none;
+  background: radial-gradient(900px 220px at 50% 0%, rgba(59,130,246,.10), transparent 60%);
+  opacity:.55;
+}
+
+.kpi .kpi-label{
+  position: relative;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(229,231,235,.78);
+}
+
+.kpi .kpi-value{
+  position: relative;
+
+  /* AIRE */
+  margin-top: 8px; /* antes: 6px */
+
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1.0;
+  letter-spacing: .2px;
+  color: var(--text);
+}
+
 /* ===== Meta de la tarjeta superior ===== */
 .meta-inline{
   font-size: 0.85rem;
@@ -21,16 +127,21 @@
 }
 
 .kpis-site24x7{
-  margin-bottom: 10px;
+  /* AIRE */
+  margin-bottom: 14px; /* antes: 10px */
 }
 
+/* ===== Layout superior dentro del KPI (label + icono derecha) ===== */
 .kpi-top{
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 4px;
+
+  /* AIRE */
+  margin-bottom: 6px; /* antes: 4px */
 }
 
+/* ===== Icono circular KPI ===== */
 .kpi-icon-site{
   width: 26px;
   height: 26px;
@@ -42,7 +153,7 @@
   font-weight: 700;
 }
 
-/* Variantes por estado */
+/* Variantes por estado (sin cambios de color) */
 .kpi-icon-up{
   background: rgba(22, 163, 74, 0.16);
   color: #4ade80;
@@ -68,14 +179,19 @@
 .meta-pill-row{
   display: flex;
   justify-content: flex-start;
-  margin: 4px 4px 10px;
+
+  /* AIRE */
+  margin: 10px 4px 16px; /* antes: 4px 4px 10px */
 }
 
 .meta-pill{
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
+
+  /* AIRE */
+  padding: 7px 12px; /* antes: 6px 12px */
+
   border-radius: 999px;
   background: #0d1a36;
   border: 1px solid var(--border, #1e293b);
@@ -97,7 +213,11 @@
   overflow: auto;
   border-radius: 12px;
   border: 1px solid var(--border, #1e293b);
-  margin-top: 4px;
+
+  /* AIRE */
+  margin-top: 6px; /* antes: 4px */
+
+  background: rgba(2,6,23,.22);
 }
 
 .tbl{
@@ -105,6 +225,7 @@
   border-collapse: separate;
   border-spacing: 0;
   font-size: 13px;
+  min-width: 760px;
 }
 
 .tbl thead th{
@@ -114,15 +235,21 @@
   background: #0b1428;
   text-align: left;
   font-weight: 700;
-  padding: 10px 12px;
+
+  /* AIRE */
+  padding: 11px 12px; /* antes: 10px 12px */
+
   border-bottom: 1px solid var(--border, #1e293b);
   white-space: nowrap;
 }
 
 .tbl tbody td{
-  padding: 10px 12px;
+  /* AIRE */
+  padding: 11px 12px; /* antes: 10px 12px */
+
   border-bottom: 1px solid rgba(255,255,255,0.06);
   vertical-align: middle;
+  color: rgba(229,231,235,.92);
 }
 
 .tbl tbody tr:nth-child(odd){
@@ -140,37 +267,118 @@
 /* ===== Pills de estado ===== */
 .pill{
   display:inline-block;
-  padding:2px 10px;
+  padding: 2px 10px;
   border-radius:999px;
   font-size:12px;
   font-weight:800;
   line-height:1.6;
   letter-spacing:.2px;
   color:#fff;
+  white-space: nowrap;
 }
 
-/* Mapear status de Site24x7 a colores tipo severidad */
-.sev-critical{      /* status 0 (down) */
-  background:#dc262633;
-  border:1px solid #dc2626aa;
+/* Pills “humanas” (sin cambios de color) */
+.pill-active{
+  background: rgba(34,197,94,.20);
+  border: 1px solid rgba(34,197,94,.65);
 }
-.sev-low{           /* status 1 (up) */
-  background:#22c55e33;
-  border:1px solid #22c55eaa;
+.pill-suspended{
+  background: rgba(148,163,184,.18);
+  border: 1px solid rgba(148,163,184,.55);
 }
-.sev-medium{        /* status 2 (trouble) */
-  background:#f59e0b33;
-  border:1px solid #f59e0baa;
+.pill-down{
+  background: rgba(220,38,38,.20);
+  border: 1px solid rgba(220,38,38,.65);
 }
-.sev-high{          /* status 3 (critical) */
-  background:#f9731633;
-  border:1px solid #f97316aa;
+.pill-trouble{
+  background: rgba(245,158,11,.20);
+  border: 1px solid rgba(245,158,11,.65);
 }
-.sev-info{          /* status 5 (suspended) */
-  background:#6b728033;
-  border:1px solid #6b7280aa;
+.pill-inactive{
+  background: rgba(107,114,128,.20);
+  border: 1px solid rgba(107,114,128,.55);
 }
-.sev-na{
-  background:#4b556333;
-  border:1px solid #4b5563aa;
+
+/* ===== Mapeo status Site24x7 -> severidad (sin cambios de color) ===== */
+.sev-critical{ background:#dc262633; border:1px solid #dc2626aa; }
+.sev-low{      background:#22c55e33; border:1px solid #22c55eaa; }
+.sev-medium{   background:#f59e0b33; border:1px solid #f59e0baa; }
+.sev-high{     background:#f9731633; border:1px solid #f97316aa; }
+.sev-info{     background:#6b728033; border:1px solid #6b7280aa; }
+.sev-na{       background:#4b556333; border:1px solid #4b5563aa; }
+
+/* ===== Pequeños ajustes visuales para “foto1” ===== */
+.tbl thead th:first-child{ border-top-left-radius: 12px; }
+.tbl thead th:last-child{ border-top-right-radius: 12px; }
+
+.table-wrap::-webkit-scrollbar{ height: 10px; width: 10px; }
+.table-wrap::-webkit-scrollbar-thumb{
+  background: rgba(148,163,184,.22);
+  border-radius: 999px;
+  border: 2px solid rgba(2,6,23,.25);
+}
+.table-wrap::-webkit-scrollbar-track{
+  background: rgba(2,6,23,.25);
+  border-radius: 999px;
+}
+/* =========================================================
+   SITE24X7 — AIRE REAL (solo spacing) | OVERRIDE FINAL
+   Scope: solo monitor_status (dashboard-export-area)
+   ========================================================= */
+
+/* Aire externo del bloque */
+#dashboard-export-area{
+  margin-top: 16px !important;
+}
+
+/* Aire dentro de la card principal */
+#dashboard-export-area > .card{
+  padding: 0 !important; /* evita paddings heredados raros */
+}
+
+/* Título: separarlo del contenido */
+#dashboard-export-area > .card > .card-head{
+  padding: 22px 22px 12px !important;
+  margin: 0 !important;
+}
+
+#dashboard-export-area > .card > .card-head h3{
+  margin: 0 !important;
+  line-height: 1.15 !important;
+}
+
+/* Body: más aire general */
+#dashboard-export-area > .card > .card-body{
+  padding: 12px 22px 22px !important;
+}
+
+/* KPIs: más separación entre tarjetas */
+#dashboard-export-area .grid-kpis.kpis-site24x7{
+  gap: 20px !important;
+  margin: 6px 0 16px !important; /* arriba/abajo del bloque de KPIs */
+}
+
+/* KPI individual: más padding y altura mínima */
+#dashboard-export-area .grid-kpis.kpis-site24x7 .card.kpi{
+  padding: 18px 18px 16px !important;
+  min-height: 104px !important;
+}
+
+/* Separación interna del KPI */
+#dashboard-export-area .grid-kpis.kpis-site24x7 .kpi-top{
+  margin-bottom: 8px !important;
+}
+
+#dashboard-export-area .grid-kpis.kpis-site24x7 .kpi-value{
+  margin-top: 10px !important;
+}
+
+/* Pill: más aire vertical */
+#dashboard-export-area .meta-pill-row{
+  margin: 12px 4px 18px !important;
+}
+
+/* Tabla: aire arriba */
+#dashboard-export-area .table-wrap{
+  margin-top: 8px !important;
 }

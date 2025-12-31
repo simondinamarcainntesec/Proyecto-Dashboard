@@ -17,13 +17,12 @@ from django.http import (
 from django.shortcuts import render
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import escape
-from django.views.decorators.http import require_GET
-
-from tenants.decorators import tenant_required
+from tenants.decorators import tenant_required, service_required
 from tenants.models import Tenant
-
+from django.views.decorators.http import require_GET
 from home.models import TenantCredentials, WhitelistCountryPreference
 from home.countries import ALL_COUNTRIES
+
 
 from .realtime_transform import build_realtime_context
 
@@ -414,6 +413,7 @@ def _filter_for_request_tenant(request, alarms: list[dict]) -> list[dict]:
 
 @login_required
 @tenant_required
+@service_required("alarms_one_id")
 def realtime_page(request):
     tenant = getattr(request, "tenant", None)
 
@@ -512,6 +512,7 @@ def realtime_page(request):
 
 @login_required
 @tenant_required
+@service_required("alarms_one_id")
 def realtime_data(request):
     """
     Endpoint JSON para refrescar datos realtime desde el frontend.
@@ -643,10 +644,10 @@ def _apply_query_filters(request, alarms):
 
 # ================== ENDPOINT: LISTA ALARMAS ==================
 
-
+@require_GET
 @login_required
 @tenant_required
-@require_GET
+@service_required("alarms_one_id")
 def realtime_alarms_by_subtype(request):
     try:
         _, _, alarms = _fetch_alarms_today_direct()
@@ -707,10 +708,10 @@ def realtime_alarms_by_subtype(request):
 
 # ================== ENDPOINT: LOG (DETALLE) ==================
 
-
+@require_GET
 @login_required
 @tenant_required
-@require_GET
+@service_required("alarms_one_id")
 def realtime_alarm_log_table(request):
     """
     Devuelve el HTML del detalle de log.

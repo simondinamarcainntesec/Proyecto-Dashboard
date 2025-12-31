@@ -59,9 +59,6 @@ urlpatterns = [
     path("dashboard/", include(("dashboard.urls", "dashboard"), namespace="dashboard")),
     path("rest/oauth2-credential/callback", views.oauth2_callback, name="oauth2_callback"),
 
-    # Ingesta API / Integraciones
-    path("inyeccion_api/", include(("inyeccion_api.urls", "inyeccion_api"), namespace="inyeccion_api")),
-
     # Dashboards SOAR
     path("dashboard-soar/", include(("soar_dashboard.urls", "soar_dashboard"), namespace="soar_dashboard")),
     path("soar/incidentes/", include(("soar_incidents.urls", "soar_incidents"), namespace="soar_incidents")),

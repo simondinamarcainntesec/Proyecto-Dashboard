@@ -140,12 +140,33 @@ class TenantUserAdmin(UserAdmin):
 @admin.register(TenantDashboardEmbed)
 class TenantDashboardEmbedAdmin(admin.ModelAdmin):
     """
-    Admin para el modelo que guarda el iframe por tenant.
-    Muestra el nombre del tenant y el tenant_name cacheado.
+    Admin para el modelo que guarda URLs de iframes por tenant.
     """
-    list_display = ("tenant", "tenant_name", "iframe_url", "created_at", "updated_at")
-    search_fields = ("tenant_name", "tenant__name", "iframe_url")
+    list_display = (
+        "tenant",
+        "tenant_name",
+        "iframe_url",
+        "threat_analytics",
+        "microsoft365",
+        "networks",
+        "eventos_diarios",
+        "created_at",
+        "updated_at",
+    )
+
+    search_fields = (
+        "tenant_name",
+        "tenant__name",
+        "iframe_url",
+        "threat_analytics",
+        "microsoft365",
+        "networks",
+        "eventos_diarios",
+    )
+
+    # Recomendación: NO filtrar por campos URL/texto; solo por tenant/fechas
     list_filter = ("tenant", "created_at", "updated_at")
+
     ordering = ("tenant_name",)
     list_select_related = ("tenant",)
 
@@ -153,7 +174,15 @@ class TenantDashboardEmbedAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ("Tenant", {"fields": ("tenant", "tenant_name")}),
-        ("Dashboard embebido", {"fields": ("iframe_url",)}),
+        ("Dashboards / Embeds", {
+            "fields": (
+                "iframe_url",
+                "threat_analytics",
+                "microsoft365",
+                "networks",
+                "eventos_diarios",
+            )
+        }),
         ("Timestamps", {
             "classes": ("collapse",),
             "fields": ("created_at", "updated_at"),

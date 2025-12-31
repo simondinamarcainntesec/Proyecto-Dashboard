@@ -1,0 +1,241 @@
+/* ============================================================
+   siem_embeds.css — SOLO templates iframe SIEM
+   - Tema claro/oscuro (misma lógica que Site24x7)
+   - Iframe invert/hue-rotate en dark
+============================================================ */
+
+/* Altura total */
+html, body { height: 100%; }
+
+/* Cabecera de la card */
+.siem-card-head{
+  display:flex;
+  align-items:center;
+  gap: 12px;
+}
+
+/* Botón cambio de tema (mismo que Site24x7) */
+#theme-switcher{
+  padding: 10px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1px solid var(--border, #1e293b);
+  background-color: transparent;
+  font-size: 1.2rem;
+  color: var(--text, #e5e7eb);
+  transition: color .3s, border-color .3s, background-color .3s;
+  margin-left: 0;
+}
+#theme-switcher:hover{
+  background-color: rgba(148, 163, 184, 0.15);
+}
+[data-theme="dark"] #theme-switcher{
+  border-color:#444;
+}
+
+/* Iframe container */
+.iframe-container{
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 220px);
+  background: #020617;
+  border-radius: 16px;
+  border: 1px solid #1e293b;
+  overflow: hidden;
+  padding: 0;
+}
+
+.iframe-container iframe{
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: #ffffff;
+  transition: filter .25s ease;
+}
+
+/* Overlay específico para cada iframe (cubre SOLO el contenedor del iframe) */
+.iframe-container .iframe-overlay{
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2,6,23,0.95); /* Más opaco para ocultar pantallas de inicialización del embed */
+  z-index: 900; /* arriba del iframe */
+  transition: opacity .25s ease, visibility .25s ease;
+}
+.iframe-container .iframe-overlay.hidden{
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.iframe-container .iframe-overlay .overlay-card{
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: rgba(0,0,0,0.45);
+  padding: 12px 18px;
+  border-radius: 12px;
+  color: #fff;
+  font-weight: 600;
+  backdrop-filter: blur(6px);
+}
+.iframe-container .iframe-overlay .spinner{
+  width: 18px;
+  height: 18px;
+  border: 3px solid rgba(255,255,255,0.2);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .9s linear infinite;
+}
+
+/* Manual load CTA */
+.iframe-container[data-autoload="manual"] .iframe-overlay .overlay-card{flex-direction:column;gap:8px}
+
+
+@keyframes spin{ to { transform: rotate(360deg); } }
+
+/* Estados del iframe mientras carga */
+.iframe-container iframe.is-loading{
+  opacity: 0;
+  pointer-events: none;
+  filter: blur(1px);
+  transition: opacity .25s ease, filter .25s ease;
+}
+/* Estado cuando la carga se alarga: dejamos al iframe visible pero ligeramente desenfocado */
+.iframe-container iframe.is-stalled{
+  opacity: 0.95;
+  pointer-events: auto;
+  filter: blur(.5px);
+  transition: opacity .25s ease, filter .25s ease;
+}
+.iframe-container iframe.is-loaded{
+  opacity: 1;
+  pointer-events: auto;
+  filter: none;
+}
+
+/* Dark-mode “fake dark” para iframes blancos */
+[data-theme="dark"] .iframe-container iframe{
+  filter: invert(0.9) hue-rotate(180deg) contrast(1.05);
+  transform: translateZ(0);
+}
+
+/* Si necesitas recortar header para alguno (opcional, igual que Site24x7) */
+.iframe-container.crop-header iframe{
+  position: relative;
+  top: -50px;
+  height: calc(100% + 50px);
+}
+
+/* Topbar + dropdown arriba del iframe */
+.topbar{ position: relative; z-index: 50; }
+.user-menu{ position: relative; z-index: 900; }
+.user-menu .dropdown-menu{ z-index: 1000 !important; }
+
+.user-menu.is-open .dropdown-menu,
+.user-menu.open .dropdown-menu,
+.user-menu.active .dropdown-menu{
+  z-index: 1000 !important;
+}
+
+/* Capa anti-iframe */
+.iframe-click-shield{
+  position:absolute;
+  top:0;
+  right:0;
+  width:280px;
+  height:120px;
+  background:transparent;
+  pointer-events:none;
+  z-index:500;
+}
+
+.hidden{ display:none !important; }
+.brand-nowrap{ white-space: nowrap; display:inline-block; }
+
+/* Más aire en el header de la card */
+.card .card-head:has(.siem-card-head){
+  padding: 18px 20px;
+}
+
+/* Fallback si no existe :has() */
+.siem-card-head{
+  padding: 12px 16px;
+  margin: 10px 12px 0;
+  border-radius: 14px;
+}
+
+.siem-card-head h1,
+.siem-card-head h2,
+.siem-card-head h3{
+  margin:0;
+  padding: 2px 0;
+}
+
+/* =========================================================
+   EMPTY STATE — sin “tarjeta grande” de fondo (foto2)
+   Activa cuando _embed_base añade .embed-empty / .card-empty
+   ========================================================= */
+
+/* 1) Apagar la tarjeta grande SOLO en empty */
+.wrap.embed-empty .card.card-empty{
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 2) Quitar “caja” del body de la card grande */
+.wrap.embed-empty .card.card-empty .card-body{
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+
+  /* deja espacio para que el empty-state se centre bien */
+  min-height: clamp(360px, 62vh, 820px);
+  display: grid;
+  place-items: center;
+}
+
+/* 3) Opcional: que el header no se vea dentro de una card grande */
+.wrap.embed-empty .card.card-empty .card-head{
+  background: transparent !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 4) Empty-state centrado, SIN panel gigante detrás */
+.wrap.embed-empty .empty-state{
+  width: 100%;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+}
+
+/* 5) La tarjeta chica (la que sí quieres ver) */
+.wrap.embed-empty .empty-state .empty-card{
+  width: min(680px, 100%);
+  padding: 28px 32px;
+  text-align: center;
+
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 18px;
+  box-shadow: 0 18px 46px rgba(2, 6, 23, 0.55);
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.wrap.embed-empty .empty-state .empty-card h2{ margin: 0 0 10px; }
+.wrap.embed-empty .empty-state .empty-card p{ margin: 0 0 10px; }
+.wrap.embed-empty .empty-state .empty-card p:last-child{ margin-bottom: 0; }
+
+/* Defensa adicional: si por alguna razón existe el overlay global, ocultarlo cuando estamos en un embed */
+body.is-embed #loading-overlay{
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}

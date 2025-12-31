@@ -1,0 +1,28 @@
+{% extends "siem/_embed_base.html" %}
+
+{% block embed_wrap %}
+  {% if not iframe_url %}
+    <section class="empty-state">
+      <div class="empty-card">
+        <h2>Dashboard no disponible</h2>
+        <p>No hay datos disponibles de <strong>Microsoft 365</strong> para esta empresa.</p>
+        <p>Por favor, contacte con un administrador.</p>
+      </div>
+    </section>
+  {% else %}
+    {{ block.super }}
+  {% endif %}
+{% endblock %}
+
+{% block embed_body %}
+  <div class="iframe-container">
+    <div class="iframe-overlay" role="status" aria-live="polite">
+      <div class="overlay-card">
+        <div class="spinner" aria-hidden="true"></div>
+        <div class="overlay-text">Cargando datos…</div>
+      </div>
+    </div>
+    <!-- placeholder: cargaremos el src real desde JS tras pre-carga -->
+    <iframe class="is-loading iframe-placeholder" src="about:blank" data-src="{{ iframe_url }}" aria-hidden="true"></iframe>
+  </div>
+{% endblock %}

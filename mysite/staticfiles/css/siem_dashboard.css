@@ -1,0 +1,91 @@
+/* ============================================================
+   Altura total del documento
+============================================================ */
+html, body { height: 100%; }
+
+/* Un poco de aire al final del contenido */
+.content .wrap{
+  padding-bottom: 28px;
+}
+
+/* ============================================================
+   Cabecera de la card
+============================================================ */
+.site24x7-card-head{
+  display:flex;
+  align-items:center;
+  gap: 12px;
+}
+
+#theme-switcher{
+  padding: 10px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1px solid var(--border, #ddd);
+  background-color: transparent;
+  font-size: 1.2rem;
+  color: var(--text, #e5e7eb);
+  transition: color 0.3s, border-color 0.3s, background-color 0.3s;
+}
+
+#theme-switcher:hover{
+  background-color: rgba(148, 163, 184, 0.15);
+}
+
+[data-theme="dark"] #theme-switcher{ border-color: #444; }
+
+/* ============================================================
+   Iframe container
+============================================================ */
+.iframe-container{
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 220px);
+  background: #020617;
+  border-radius: 16px;
+  border: 1px solid #1e293b;
+  overflow: hidden;
+  padding: 0;
+}
+
+.iframe-container iframe{
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: #ffffff;
+  transition: filter 0.25s ease;
+}
+
+[data-theme="dark"] .iframe-container iframe{
+  filter: invert(0.9) hue-rotate(180deg) contrast(1.05);
+  transform: translateZ(0);
+}
+
+/* ============================================================
+   Topbar + User Dropdown (capas)
+============================================================ */
+.topbar{ position: relative; z-index: 50; }
+
+.user-menu{ position: relative; z-index: 900; }
+.user-menu .dropdown-menu{ z-index: 1000 !important; }
+
+.user-menu.is-open .dropdown-menu,
+.user-menu.open .dropdown-menu,
+.user-menu.active .dropdown-menu{
+  z-index: 1000 !important;
+}
+
+.iframe-click-shield{
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 280px;
+  height: 120px;
+  background: transparent;
+  pointer-events: none;
+  z-index: 500;
+}
+
+.brand-nowrap{ white-space: nowrap; display: inline-block; }
+.hidden{ display: none !important; }

@@ -24646,10 +24646,10 @@ function wireRetellButtons({
     if (!toggleBtn) return;
     if (isActive) {
       toggleBtn.textContent = "\u26D4 Colgar";
-      toggleBtn.title = "Colgar (Retell)";
+      toggleBtn.title = "Colgar (Inntesec Agent)";
     } else {
       toggleBtn.textContent = "\u{1F4DE} Llamar";
-      toggleBtn.title = "Llamar (Retell)";
+      toggleBtn.title = "Llamar (Inntesec Agent)";
     }
   };
   async function createWebCallOnServer() {
@@ -24815,4 +24815,3 @@ function wireRetellButtons({
 export {
   wireRetellButtons
 };
-//# sourceMappingURL=retell_call.bundle.js.map

@@ -25,11 +25,62 @@
   const inpCustomDate = Q('#assign-custom-date');
   const dueText = Q('#assign-due-text');
 
+  // ✅ comentario inicial
+  const inpInitialNotes = Q('#assign-initial-notes');
+
   let selectedRow = null;
   let currentDueISO = "";
 
   const INFO_MODAL_ID = 'ticketCreatedModal';
 
+  // ---------------------------
+  // CSRF helpers (robusto)
+  // ---------------------------
+  function _stripQuotes(s) {
+    s = String(s || '').trim();
+    if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+      s = s.slice(1, -1).trim();
+    }
+    return s;
+  }
+
+  function _isValidCsrfToken(token) {
+    const t = _stripQuotes(token);
+    return !!t && (t.length === 32 || t.length === 64);
+  }
+
+  function getCookie(name) {
+    const m = document.cookie.match(new RegExp('(?:^|;\\s*)' + name + '=([^;]+)'));
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+
+  function getCSRFToken() {
+    // 1) cookie
+    const c = _stripQuotes(getCookie('csrftoken'));
+    if (_isValidCsrfToken(c)) return c;
+
+    // 2) hidden input en cualquier form
+    const inp = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    const v = _stripQuotes(inp?.value || '');
+    if (_isValidCsrfToken(v)) return v;
+
+    // 3) meta tags
+    const meta =
+      document.querySelector('meta[name="csrf-token"]') ||
+      document.querySelector('meta[name="csrfmiddlewaretoken"]');
+    const mv = _stripQuotes(meta?.getAttribute('content') || '');
+    if (_isValidCsrfToken(mv)) return mv;
+
+    // 4) body dataset
+    const dv = _stripQuotes(document.body?.dataset?.csrfToken || '');
+    if (_isValidCsrfToken(dv)) return dv;
+
+    return '';
+  }
+
+  // ---------------------------
+  // Modal info reutilizable (OK)
+  // ---------------------------
   function ensureInfoModal() {
     let m = Q(`#${INFO_MODAL_ID}`);
     if (m) return m;
@@ -43,13 +94,11 @@
       <div class="modal-backdrop" data-info-backdrop></div>
       <div class="modal-card created-info-card" role="dialog" aria-modal="true" aria-labelledby="ticketCreatedTitle">
         <div class="modal-header">
-          <h3 id="ticketCreatedTitle">Ticket creado</h3>
+          <h3 id="ticketCreatedTitle">Información</h3>
           <button class="modal-close" type="button" aria-label="Cerrar" data-info-x>&times;</button>
         </div>
         <div class="modal-body">
-          <p class="created-info-text">
-            Ticket creado con exito, puedes revisar el detalle en el modulo de tickets.
-          </p>
+          <p class="created-info-text"></p>
           <div class="created-info-actions">
             <button type="button" class="btn primary" data-info-ok>OK</button>
           </div>
@@ -198,6 +247,9 @@
     if (customWrap) customWrap.classList.add('hidden');
     if (inpCustomDate) inpCustomDate.value = '';
 
+    // ✅ limpiar comentario inicial
+    if (inpInitialNotes) inpInitialNotes.value = '';
+
     computeDueDate();
 
     document.body.classList.add('modal-open');
@@ -206,6 +258,8 @@
 
     const tenantId = (tenantStatic?.dataset?.tenantId || '').trim();
     loadUsersForTenant(tenantId);
+
+    validateAssignForm();
   }
 
   function closeAssignModal(keepLock = false) {
@@ -264,6 +318,8 @@
     validateAssignForm();
   }
 
+  // ✅ VALIDACIÓN: habilita botón con usuario+fecha (NO lo bloquees por comentario)
+  // El comentario se valida al apretar "Crear ticket" y ahí mostramos el modal reutilizado.
   function validateAssignForm() {
     if (!assignSubmit || !selUser || !selDuration) return;
 
@@ -272,11 +328,6 @@
     const dueOk = (dur !== 'custom') || !!(inpCustomDate?.value || '').trim();
 
     assignSubmit.disabled = !(userOk && dueOk && !!currentDueISO);
-  }
-
-  function getCSRFToken() {
-    const m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
-    return m ? decodeURIComponent(m[1]) : '';
   }
 
   async function loadUsersForTenant(tenantId) {
@@ -294,13 +345,25 @@
       return;
     }
 
+    const csrf = getCSRFToken();
+    if (!_isValidCsrfToken(csrf)) {
+      console.error("[SOAR] No hay CSRF válido. Cookie csrftoken presente?", !!getCookie('csrftoken'));
+      selUser.innerHTML = `<option value="">Error: CSRF no disponible</option>`;
+      selUser.disabled = false;
+      openInfoModal(
+        "Sesión / CSRF no disponible",
+        "No se pudo obtener el token CSRF. Recarga la página e intenta nuevamente. Si estás en HTTP con cookies secure, entra por HTTPS."
+      );
+      return;
+    }
+
     try {
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
-          'X-CSRFToken': getCSRFToken(),
+          'X-CSRFToken': csrf,
         },
         credentials: 'same-origin',
         body: JSON.stringify({ tenant_id: tenantId || null }),
@@ -331,6 +394,7 @@
       selUser.disabled = false;
       validateAssignForm();
     } catch (e) {
+      console.error(e);
       selUser.innerHTML = `<option value="">Error cargando usuarios</option>`;
       selUser.disabled = false;
       validateAssignForm();
@@ -340,7 +404,6 @@
   async function submitCreateTicket() {
     if (!selectedRow) return;
 
-    // ✅ si ya está asignado, no abrir flow
     if (isRowAssigned(selectedRow)) {
       closeAssignModal(true);
       openInfoModal('Ticket ya asignado', 'Este evento ya cuenta con un ticket asignado.');
@@ -354,27 +417,49 @@
     }
 
     const assignedTo = (selUser?.value || '').trim();
-    if (!assignedTo || !currentDueISO) return;
+    const initialNotes = (inpInitialNotes?.value || '').trim();
+
+    // ✅ AQUI va el comportamiento que pediste:
+    // si apretan "Asignar/Crear" con comentario vacío => mostrar modal reutilizado
+    if (!initialNotes) {
+      openInfoModal(
+        'Comentario inicial requerido',
+        'Debes ingresar un comentario u observación inicial para crear el ticket.'
+      );
+      setTimeout(() => inpInitialNotes?.focus?.(), 50);
+      return;
+    }
+
+    if (!assignedTo || !currentDueISO) {
+      validateAssignForm();
+      return;
+    }
+
+    const csrf = getCSRFToken();
+    if (!_isValidCsrfToken(csrf)) {
+      openInfoModal(
+        "CSRF no disponible",
+        "No se pudo obtener un token CSRF válido. Recarga la página e intenta nuevamente."
+      );
+      return;
+    }
 
     const payload = {
       alarm_id: (selectedRow.dataset.id || '').trim(),
-
       dispositivo: selectedRow.dataset.dispositivo || '',
       tipo_de_amenaza: selectedRow.dataset.tipo || '',
       nivel_de_severidad: selectedRow.dataset.sev || '',
-
       event_date: (selectedRow.dataset.date || '').trim() || null,
       event_time: (selectedRow.dataset.time || '').trim() || null,
-
       descripcion_incidente: selectedRow.dataset.descripcion || '',
       analisis_criticidad: selectedRow.dataset.analisis || '',
       medidas_correctivas: selectedRow.dataset.acciones || '',
       resumen_humano: selectedRow.dataset.resumen || '',
       riesgo_detectado: selectedRow.dataset.riesgo || '',
       application: selectedRow.dataset.app || '',
-
       assigned_to: assignedTo,
       due_date: currentDueISO,
+      initial_notes: initialNotes,
     };
 
     try {
@@ -385,7 +470,7 @@
         headers: {
           'Content-Type': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
-          'X-CSRFToken': getCSRFToken(),
+          'X-CSRFToken': csrf,
         },
         credentials: 'same-origin',
         body: JSON.stringify(payload),
@@ -400,13 +485,24 @@
         return;
       }
 
+      // ✅ si backend responde que falta comentario, mostrar MISMO modal
+      if (out && out.code === 'INITIAL_NOTES_REQUIRED') {
+        assignSubmit.disabled = false;
+        openInfoModal(
+          'Comentario inicial requerido',
+          out.error || 'Debes ingresar un comentario u observación inicial para crear el ticket.'
+        );
+        setTimeout(() => inpInitialNotes?.focus?.(), 50);
+        return;
+      }
+
       if (!res.ok || !out.ok) {
         throw new Error(out.error || `HTTP ${res.status}`);
       }
 
       markRowAssigned(selectedRow);
       closeAssignModal(true);
-      openInfoModal('Ticket creado', 'Ticket creado con exito, puedes revisar el detalle en el modulo de tickets.');
+      openInfoModal('Ticket creado', 'Ticket creado con éxito, puedes revisar el detalle en el módulo de tickets.');
     } catch (e) {
       assignSubmit.disabled = false;
       alert(`No se pudo crear el ticket: ${e.message || e}`);
@@ -435,7 +531,6 @@
   ctxAssignBtn.addEventListener('click', () => {
     hideCtxMenu();
 
-    // ✅ AQUÍ: si está asignado, mostrar mensaje directo
     if (isRowAssigned(selectedRow)) {
       openInfoModal('Ticket ya asignado', 'Este evento ya cuenta con un ticket asignado.');
       return;
@@ -458,6 +553,9 @@
   selDuration?.addEventListener('change', computeDueDate);
   inpCustomDate?.addEventListener('change', computeDueDate);
   selUser?.addEventListener('change', validateAssignForm);
+
+  // (ya no bloquea el botón, pero sirve igual)
+  inpInitialNotes?.addEventListener('input', validateAssignForm);
 
   assignSubmit?.addEventListener('click', submitCreateTicket);
 

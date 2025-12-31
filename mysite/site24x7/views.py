@@ -1,9 +1,10 @@
+# site24x7/views.py
 import json
 import os
 import ssl
 import urllib.request
 from pathlib import Path
-from typing import Any, List, Dict
+from typing import Any, List, Dict, Tuple
 from datetime import datetime, time
 
 import requests
@@ -13,7 +14,10 @@ from django.utils import timezone
 
 from tenants.decorators import tenant_required
 from tenants.models import Tenant, TenantUser, TenantDashboardEmbed
-from .services import fetch_anomaly_summary, fetch_anomaly_by_monitor
+from .services import (
+    fetch_anomaly_summary,
+    fetch_anomaly_by_monitor,
+)
 
 # Preferencias de países (POR TENANT)
 from home.models import WhitelistCountryPreference, TenantCredentials  # añadido
@@ -106,7 +110,11 @@ def _active_cred_for_tenant(tenant):
             return None
         return TenantCredentials.get_active_for_tenant(int(tenant.id))
     except Exception as e:
-        logger.exception("[SITE24X7] Error leyendo TenantCredentials tenant_id=%s: %s", getattr(tenant, "id", None), e)
+        logger.exception(
+            "[SITE24X7] Error leyendo TenantCredentials tenant_id=%s: %s",
+            getattr(tenant, "id", None),
+            e
+        )
         return None
 
 
@@ -286,7 +294,7 @@ def build_counters(monitors: List[Dict[str, Any]]) -> Dict[str, int]:
 
 
 # =========================
-# Date filter helpers
+# Date filter helpers (UI)
 # =========================
 def _parse_ymd(s: str):
     s = (s or "").strip()
@@ -297,22 +305,18 @@ def _parse_ymd(s: str):
 
 
 def _get_period_from_request(request, default=3) -> int:
-    from_s = (request.GET.get("from") or "").strip()
-    to_s = (request.GET.get("to") or "").strip()
-
-    d1 = _parse_ymd(from_s) if from_s else None
-    d2 = _parse_ymd(to_s) if to_s else None
-    if d1 and d2:
-        return 50
-
+    """
+    Lee period desde querystring.
+    - Si viene duplicado (period=5&period=3), usa el ÚLTIMO válido.
+    """
     periods = [p.strip() for p in request.GET.getlist("period") if (p or "").strip()]
 
-    for p in periods:
+    for p in reversed(periods):
         try:
             pi = int(p)
         except Exception:
             continue
-        if pi in (2, 3, 5, 50):
+        if pi in (2, 3, 5):
             return pi
 
     try:
@@ -320,54 +324,204 @@ def _get_period_from_request(request, default=3) -> int:
     except Exception:
         default_i = 3
 
-    return default_i if default_i in (2, 3, 5, 50) else 3
+    return default_i if default_i in (2, 3, 5) else 3
 
 
-def _get_custom_range_ms_from_request(request, period: int | None = None):
-    if period != 50:
-        return (None, None)
 
-    from_s = (request.GET.get("from") or "").strip()
-    to_s = (request.GET.get("to") or "").strip()
-
-    d1 = _parse_ymd(from_s)
-    d2 = _parse_ymd(to_s)
-    if not d1 or not d2:
-        return (None, None)
-
-    if d1 > d2:
-        d1, d2 = d2, d1
-
-    tz = timezone.get_current_timezone()
-    start_dt = timezone.make_aware(datetime.combine(d1, time.min), tz)
-    end_dt = timezone.make_aware(datetime.combine(d2, time.max), tz)
-
-    start_ms = int(start_dt.timestamp() * 1000)
-    end_ms = int(end_dt.timestamp() * 1000)
-    return (start_ms, end_ms)
+# =========================
+# Anomaly period resolution (FIX REAL)
+# - NO usa start_time/end_time (tu API devuelve 1107)
+# - Descubre automáticamente qué "period" real corresponde a 7/30 días para ESTE tenant
+# =========================
+# =========================
+# Anomaly period resolution (FIX DEFINITIVO)
+# - NO adivina periodos (evita swap 7<->30)
+# - Mantiene solo detección opcional de "merge hoy" (si el rango viene till yesterday)
+# =========================
+_ANOM_PERIOD_CACHE: Dict[str, dict] = {}
+_ANOM_PERIOD_CACHE_TTL_SECONDS = 1  # 5 min
 
 
-def _filter_table_by_range_ms(table, start_ms, end_ms):
-    if not start_ms or not end_ms:
-        return table
+def _score_anomaly_summary(summary: dict) -> int:
+    """
+    Puntaje simple: total de anomalías sumadas en todos los monitores.
+    """
+    try:
+        monitors = (summary or {}).get("monitors", []) or []
+    except Exception:
+        monitors = []
 
-    out = []
-    for item in (table or []):
-        ad = (item or {}).get("anomaly_data") or {}
-        t = ad.get("time")
-        try:
-            t_ms = int(str(t).strip())
-        except Exception:
+    total = 0
+    for m in monitors:
+        info = (m or {}).get("anomaly_info") or {}
+        if not isinstance(info, dict):
             continue
+        for _, sev_block in info.items():
+            if not isinstance(sev_block, dict):
+                continue
+            try:
+                total += int(sev_block.get("anomaly_count") or 0)
+            except Exception:
+                continue
+    return int(total)
 
-        if start_ms <= t_ms <= end_ms:
-            out.append(item)
 
+def _fetch_summary_safe(access_token: str, zaaid: str, period: int) -> dict:
+    try:
+        return fetch_anomaly_summary(access_token, zaaid=zaaid, period=int(period), monitor_type=None)
+    except Exception:
+        return {}
+
+
+def _resolve_anomaly_periods(access_token: str, zaaid: str) -> dict:
+    """
+    Mapeo OFICIAL (estable):
+      - HOY: period=3
+      - Últimos 7 días: period=2
+      - Últimos 30 días: period=5
+
+    Además detecta si el rango parece excluir HOY (till yesterday):
+      - merge7/merge30 = True si score_rango < score_hoy (y score_hoy > 0)
+    """
+    key = str(zaaid or "").strip()
+    if not key:
+        return {
+            "ts": 0,
+            "today": 3,
+            "p7": 2,
+            "p30": 5,
+            "merge7": False,
+            "merge30": False,
+            "score_today": 0,
+            "score_p7": 0,
+            "score_p30": 0,
+        }
+
+    now_ts = int(timezone.now().timestamp())
+    cached = _ANOM_PERIOD_CACHE.get(key)
+    if cached and (now_ts - int(cached.get("ts") or 0) <= _ANOM_PERIOD_CACHE_TTL_SECONDS):
+        return cached
+
+    # Fijo (NO adivinar)
+    today_p = 3
+    p7 = 2
+    p30 = 5
+
+    s_today = _fetch_summary_safe(access_token, key, today_p)
+    s_7 = _fetch_summary_safe(access_token, key, p7)
+    s_30 = _fetch_summary_safe(access_token, key, p30)
+
+    score_today = _score_anomaly_summary(s_today)
+    score_7 = _score_anomaly_summary(s_7)
+    score_30 = _score_anomaly_summary(s_30)
+
+    # Si el rango NO incluye hoy, su score podría quedar < score_today.
+    # (evita merge si hoy es 0)
+    merge7 = bool(score_today > 0 and score_7 < score_today)
+    merge30 = bool(score_today > 0 and score_30 < score_today)
+
+    resolved = {
+        "ts": now_ts,
+        "today": today_p,
+        "p7": p7,
+        "p30": p30,
+        "merge7": merge7,
+        "merge30": merge30,
+        "score_today": int(score_today),
+        "score_p7": int(score_7),
+        "score_p30": int(score_30),
+    }
+    _ANOM_PERIOD_CACHE[key] = resolved
+    return resolved
+
+
+
+def _merge_monitor_summaries(summary_a: dict, summary_b: dict) -> dict:
+    """
+    Une dos summaries tipo /reports/anomaly, sumando conteos por monitor_id.
+    (Usado SOLO cuando inferimos que el rango excluye hoy.)
+    """
+    out = {"monitors": []}
+
+    def add_block(dst: dict, src: dict):
+        for sev_key, sev_block in (src or {}).items():
+            if not isinstance(sev_block, dict):
+                continue
+            k = sev_key
+            if k not in dst or not isinstance(dst.get(k), dict):
+                dst[k] = dict(sev_block)
+                try:
+                    dst[k]["anomaly_count"] = int(dst[k].get("anomaly_count") or 0)
+                except Exception:
+                    dst[k]["anomaly_count"] = 0
+            else:
+                try:
+                    dst[k]["anomaly_count"] = int(dst[k].get("anomaly_count") or 0) + int(sev_block.get("anomaly_count") or 0)
+                except Exception:
+                    pass
+                if not dst[k].get("severity") and sev_block.get("severity"):
+                    dst[k]["severity"] = sev_block.get("severity")
+
+    by_id: Dict[str, dict] = {}
+
+    for src in [summary_a or {}, summary_b or {}]:
+        for m in (src.get("monitors") or []):
+            mid = str(m.get("monitor_id") or "")
+            if not mid:
+                continue
+            if mid not in by_id:
+                by_id[mid] = {
+                    "monitor_id": m.get("monitor_id"),
+                    "display_name": m.get("display_name"),
+                    "anomaly_info": {},
+                }
+            if not by_id[mid].get("display_name") and m.get("display_name"):
+                by_id[mid]["display_name"] = m.get("display_name")
+
+            add_block(by_id[mid]["anomaly_info"], m.get("anomaly_info") or {})
+
+    out["monitors"] = list(by_id.values())
     return out
 
 
-def _api_period_for_site24x7(period_ui: int) -> int:
-    return period_ui if period_ui in (2, 3, 5) else 3
+def _merge_anomaly_tables(table_a: list, table_b: list) -> list:
+    """
+    Une anomaly_table_data evitando duplicados. Ordena desc por time (ms) al final.
+    """
+    seen = set()
+    out = []
+
+    def key_for(item: dict):
+        ad = (item or {}).get("anomaly_data") or {}
+        t = str(ad.get("time") or "")
+        sev = str(ad.get("severity") or "")
+        mtype = str(ad.get("monitor_type") or "")
+        name = str(item.get("display_name") or item.get("monitor_name") or item.get("monitor_display_name") or "")
+        return f"{t}|{sev}|{mtype}|{name}"
+
+    for src in (table_a or []):
+        k = key_for(src)
+        if k in seen:
+            continue
+        seen.add(k)
+        out.append(src)
+
+    for src in (table_b or []):
+        k = key_for(src)
+        if k in seen:
+            continue
+        seen.add(k)
+        out.append(src)
+
+    def t_ms(item):
+        ad = (item or {}).get("anomaly_data") or {}
+        try:
+            return int(str(ad.get("time") or "0").strip())
+        except Exception:
+            return 0
+
+    out.sort(key=t_ms, reverse=True)
+    return out
 
 
 # =========================
@@ -536,16 +690,11 @@ def anomaly_status(request):
     cred = _active_cred_for_tenant(tenant)  # añadido
 
     period_ui = _get_period_from_request(request, default=3)
-    start_ms, end_ms = _get_custom_range_ms_from_request(request, period=period_ui)
-
-    from_s = (request.GET.get("from") or "").strip() if period_ui == 50 else ""
-    to_s = (request.GET.get("to") or "").strip() if period_ui == 50 else ""
 
     period_label_map = {
         3: "Hoy",
         2: "Últimos 7 días",
         5: "Últimos 30 días",
-        50: "Personalizado",
     }
     period_label = period_label_map.get(period_ui, "—")
 
@@ -554,8 +703,8 @@ def anomaly_status(request):
         "whitelist_countries": ALL_COUNTRIES,
         "selected_paises": selected_paises,
         "period": period_ui,
-        "from_date": from_s,
-        "to_date": to_s,
+        "from_date": "",
+        "to_date": "",
         "period_label": period_label,
         "cred": cred,  # añadido
     }
@@ -587,18 +736,37 @@ def anomaly_status(request):
             "count_confirmed": 0,
         })
 
-    api_period = _api_period_for_site24x7(period_ui)
-
     try:
         access_token = get_site24x7_token()
-        summary = fetch_anomaly_summary(
-            access_token,
-            zaaid=zaaid,
-            period=api_period,
-            monitor_type=None,
-            start_ms=start_ms,
-            end_ms=end_ms,
-        )
+
+        # Resolver periods reales por tenant
+        periods = _resolve_anomaly_periods(access_token, str(zaaid))
+        logger.info(
+        "[ANOM] zaaid=%s UI=%s -> today=%s p7=%s p30=%s merge7=%s merge30=%s scores(t=%s,7=%s,30=%s)",
+        zaaid, period_ui,
+        periods.get("today"), periods.get("p7"), periods.get("p30"),
+        periods.get("merge7"), periods.get("merge30"),
+        periods.get("score_today"), periods.get("score_p7"), periods.get("score_p30")
+    )
+
+
+        if period_ui == 3:
+            summary = fetch_anomaly_summary(access_token, zaaid=str(zaaid), period=periods["today"], monitor_type=None)
+        elif period_ui == 2:
+            summary_range = fetch_anomaly_summary(access_token, zaaid=str(zaaid), period=int(periods["p7"]), monitor_type=None)
+            if periods.get("merge7"):
+                summary_today = fetch_anomaly_summary(access_token, zaaid=str(zaaid), period=periods["today"], monitor_type=None)
+                summary = _merge_monitor_summaries(summary_range, summary_today)
+            else:
+                summary = summary_range
+        else:  # period_ui == 5
+            summary_range = fetch_anomaly_summary(access_token, zaaid=str(zaaid), period=int(periods["p30"]), monitor_type=None)
+            if periods.get("merge30"):
+                summary_today = fetch_anomaly_summary(access_token, zaaid=str(zaaid), period=periods["today"], monitor_type=None)
+                summary = _merge_monitor_summaries(summary_range, summary_today)
+            else:
+                summary = summary_range
+
     except Exception as e:
         logger.exception("[SITE24X7] Error al consultar anomalías Site24x7: %s", e)
         return render(request, "site24x7/anomaly_status.html", {
@@ -681,20 +849,44 @@ def anomaly_list(request):
         })
 
     period_ui = _get_period_from_request(request, default=3)
-    start_ms, end_ms = _get_custom_range_ms_from_request(request, period=period_ui)
-    api_period = _api_period_for_site24x7(period_ui)
 
     try:
         access_token = get_site24x7_token()
-        data = fetch_anomaly_by_monitor(
+        periods = _resolve_anomaly_periods(access_token, zaaid)
+
+        if period_ui == 3:
+            api_period = periods["today"]
+            merge_today = False
+        elif period_ui == 2:
+            api_period = int(periods["p7"])
+            merge_today = bool(periods.get("merge7"))
+        else:
+            api_period = int(periods["p30"])
+            merge_today = bool(periods.get("merge30"))
+
+        # NO enviar start_time/end_time (tu API devuelve 1107)
+        data_range = fetch_anomaly_by_monitor(
             access_token=access_token,
             zaaid=zaaid,
             monitor_id=monitor_id,
-            period=api_period,
+            period=int(api_period),
             severity="CONFIRMED,LIKELY,INFO",
-            start_ms=start_ms,
-            end_ms=end_ms,
+            start_ms=None,
+            end_ms=None,
         )
+
+        data_today = None
+        if merge_today:
+            data_today = fetch_anomaly_by_monitor(
+                access_token=access_token,
+                zaaid=zaaid,
+                monitor_id=monitor_id,
+                period=int(periods["today"]),
+                severity="CONFIRMED,LIKELY,INFO",
+                start_ms=None,
+                end_ms=None,
+            )
+
     except Exception as e:
         logger.exception("[SITE24X7] Error al consultar listado de anomalías: %s", e)
         return render(request, "site24x7/anomaly_list.html", {
@@ -703,9 +895,10 @@ def anomaly_list(request):
             "anomalies": [],
         })
 
-    table = data.get("anomaly_table_data", []) or []
-    if period_ui == 50 and start_ms and end_ms:
-        table = _filter_table_by_range_ms(table, start_ms, end_ms)
+    table = (data_range or {}).get("anomaly_table_data", []) or []
+    if data_today:
+        table_today = (data_today or {}).get("anomaly_table_data", []) or []
+        table = _merge_anomaly_tables(table, table_today)
 
     anomalies = []
     for idx, item in enumerate(table):
@@ -784,20 +977,43 @@ def anomaly_detail(request):
         })
 
     period_ui = _get_period_from_request(request, default=3)
-    start_ms, end_ms = _get_custom_range_ms_from_request(request, period=period_ui)
-    api_period = _api_period_for_site24x7(period_ui)
 
     try:
         access_token = get_site24x7_token()
-        data = fetch_anomaly_by_monitor(
+        periods = _resolve_anomaly_periods(access_token, zaaid)
+
+        if period_ui == 3:
+            api_period = periods["today"]
+            merge_today = False
+        elif period_ui == 2:
+            api_period = int(periods["p7"])
+            merge_today = bool(periods.get("merge7"))
+        else:
+            api_period = int(periods["p30"])
+            merge_today = bool(periods.get("merge30"))
+
+        data_range = fetch_anomaly_by_monitor(
             access_token=access_token,
             zaaid=zaaid,
             monitor_id=monitor_id,
-            period=api_period,
+            period=int(api_period),
             severity="CONFIRMED,LIKELY,INFO",
-            start_ms=start_ms,
-            end_ms=end_ms,
+            start_ms=None,
+            end_ms=None,
         )
+
+        data_today = None
+        if merge_today:
+            data_today = fetch_anomaly_by_monitor(
+                access_token=access_token,
+                zaaid=zaaid,
+                monitor_id=monitor_id,
+                period=int(periods["today"]),
+                severity="CONFIRMED,LIKELY,INFO",
+                start_ms=None,
+                end_ms=None,
+            )
+
     except Exception as e:
         logger.exception("[SITE24X7] Error al consultar detalle de anomalías: %s", e)
         return render(request, "site24x7/anomaly_detail.html", {
@@ -806,9 +1022,10 @@ def anomaly_detail(request):
             "rows": [],
         })
 
-    table = data.get("anomaly_table_data", []) or []
-    if period_ui == 50 and start_ms and end_ms:
-        table = _filter_table_by_range_ms(table, start_ms, end_ms)
+    table = (data_range or {}).get("anomaly_table_data", []) or []
+    if data_today:
+        table_today = (data_today or {}).get("anomaly_table_data", []) or []
+        table = _merge_anomaly_tables(table, table_today)
 
     rows = []
     for item in table:

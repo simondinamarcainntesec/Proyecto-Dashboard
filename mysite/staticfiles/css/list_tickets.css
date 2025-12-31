@@ -1,0 +1,286 @@
+/* mysite/soar_tickets/static/css/list.css */
+/* PÉGALO COMPLETO */
+/* Nota: este CSS SOLO define toolbar/tabla/filtros/paginación/export.
+   NO define .nav / .tenant-* / .modal para no pisar base.css (sidebar + modales globales). */
+
+/* === Toolbar layout === */
+.toolbar { padding: 8px 0 14px; }
+
+.toolbar-row{
+  display:flex; align-items:center; gap:12px;
+  border:1px solid var(--border, #1e293b);
+  border-radius:14px;
+  padding:10px;
+  background:var(--card,#0f1d35);
+}
+
+.tb-left{ display:flex; gap:8px; align-items:center; min-width:360px; }
+.tb-spacer{ flex:1 1 auto; } /* empuja fechas a la derecha */
+
+.tb-right{
+  display:flex; align-items:center; gap:10px;
+  justify-content:flex-end;
+  margin-left:auto;
+  flex-wrap:wrap;
+}
+
+.tb-left input[type="search"]{
+  width:min(520px, 42vw);
+  background:#0f1b31;
+  color:#e5e7eb;
+  border:1px solid #1e293b;
+  border-radius:12px;
+  padding:10px 12px;
+}
+
+/* Botones SOLO dentro del toolbar (no pisar botones globales/modales) */
+.toolbar .btn.primary{
+  background:var(--brand,#3b82f6);
+  color:#fff;
+  border:0;
+  padding:8px 12px;
+  border-radius:12px;
+  font-weight:700;
+}
+.toolbar .btn.ghost{
+  background:transparent;
+  border:1px solid var(--border,#1e293b);
+  color:var(--text,#e5e7eb);
+  padding:8px 12px;
+  border-radius:12px;
+}
+.toolbar .btn.ghost-sm{
+  background:transparent;
+  border:1px solid var(--border,#1e293b);
+  color:var(--text,#e5e7eb);
+  padding:8px 10px;
+  border-radius:12px;
+  font-size:12px;
+}
+
+/* Chips */
+.chip-btn{
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid var(--border,#1e293b);
+  background:#0f1b31;
+  color:var(--text,#e5e7eb);
+  font-weight:600;
+  cursor:pointer;
+}
+.chip-btn.is-active{ background:rgba(255,255,255,.06); }
+
+/* === Date range === */
+.date-range{
+  position: relative;
+  display:flex; align-items:center; gap:8px;
+  padding:6px 10px;
+  border:1px solid var(--border,#1e293b);
+  border-radius:12px;
+}
+.date-range input[type="date"]{
+  background:transparent;
+  color:var(--text,#e5e7eb);
+  border:0; outline:0;
+  color-scheme: dark;
+  padding-right: 30px;
+}
+.date-range input[type="date"]::-webkit-calendar-picker-indicator{
+  opacity: 0;
+  width: 0;
+  height: 0;
+  padding: 0;
+  margin: 0;
+  pointer-events: none;
+}
+.date-range::after{
+  content: "";
+  position: absolute;
+  right: 10px; top: 50%;
+  width: 18px; height: 18px;
+  transform: translateY(-50%);
+  background: no-repeat center / contain;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M7 2a1 1 0 0 0-1 1v1H5a3 3 0 0 0-3 3v11a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3h-1V3a1 1 0 1 0-2 0v1H8V3a1 1 0 0 0-1-1ZM5 7h14a1 1 0 0 1 1 1v2H4V8a1 1 0 0 1 1-1Zm-1 5h16v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-6Z'/%3E%3C/svg%3E");
+}
+
+/* === Tabla === */
+.table-wrap{
+  overflow:auto;
+  border:1px solid var(--border,#1e293b);
+  border-radius:12px;
+}
+.tbl{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  font-size:13px;
+  table-layout:auto;
+}
+.tbl thead th{
+  position:sticky;
+  top:0;
+  z-index:1;
+  background:var(--panel,#0f1b31);
+  text-align:left;
+  font-weight:700;
+  padding:10px 12px;
+  border-bottom:1px solid var(--border,#1e293b);
+  white-space:nowrap;
+}
+.tbl tbody td{
+  padding:10px 12px;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+  vertical-align:middle;
+}
+.tbl tbody tr:nth-child(odd){ background:rgba(255,255,255,0.02); }
+.tbl tbody tr:hover{ background:rgba(255,255,255,0.06); }
+
+.mono{
+  font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+}
+.nowrap{ white-space:nowrap; }
+.w-240{ max-width:240px; overflow:hidden; text-overflow:ellipsis; }
+.w-320{ max-width:320px; overflow:hidden; text-overflow:ellipsis; }
+
+/* Severidad pills (texto SIEMPRE blanco) */
+.pill{
+  display:inline-block;
+  padding:2px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+  line-height:1.6;
+  letter-spacing:.2px;
+  color:#fff;
+}
+.sev-critical{ background:#dc262633; border:1px solid #dc2626aa; color:#fff; }
+.sev-high{ background:#f9731633; border:1px solid #f97316aa; color:#fff; }
+.sev-medium{ background:#f59e0b33; border:1px solid #f59e0baa; color:#fff; }
+.sev-low{ background:#38bdf833; border:1px solid #38bdf8aa; color:#fff; }
+.sev-info{ background:#60a5fa33; border:1px solid #60a5faaa; color:#fff; }
+.sev-na{ background:#6b728033; border:1px solid #6b7280aa; color:#fff; }
+
+/* Paginación */
+.paginate{
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+  margin-top:10px;
+}
+.paginate a,.paginate span{
+  padding:6px 10px;
+  border:1px solid var(--border,#1e293b);
+  border-radius:10px;
+  text-decoration:none;
+  color:var(--text,#e5e7eb);
+}
+.paginate .current{
+  background:rgba(255,255,255,0.06);
+  font-weight:700;
+}
+
+/* ==== Menú de exportación SOAR / listas ==== */
+.export-wrapper{
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Dropdown oculto por defecto */
+.export-menu{
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 240px;
+  background: #020617;
+  border-radius: 0.75rem;
+  padding: 0.4rem 0;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.85);
+  display: none;
+  z-index: 60;
+}
+.export-menu.is-open{ display:block; }
+
+.export-menu button{
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #e5e7eb;
+  font-size: 0.875rem;
+  padding: 0.45rem 0.9rem;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.export-menu button:hover{ background:#0f172a; }
+
+/* =========================
+   Selects de filtros (Severidad / Asignación)
+   ========================= */
+.sel-filter{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+.sel-filter > span{
+  font-size:12px;
+  opacity:.85;
+  white-space:nowrap;
+  color: var(--text,#e5e7eb);
+}
+
+.filter-select{
+  height: 36px;
+  padding: 0 36px 0 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border,#1e293b);
+  background: #0f1b31;
+  color: #e5e7eb;
+  font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-weight: 700;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e5e7eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px 16px;
+}
+.filter-select:focus{
+  border-color: rgba(59,130,246,.65);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.18);
+}
+.filter-select option{
+  background: #0f1b31;
+  color: #e5e7eb;
+}
+
+/* Labels de filtros */
+.toolbar .sel-filter > span{
+  color: #ffffff !important;
+  opacity: 1 !important;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Botón/Link Limpiar */
+.toolbar #btn-clear{
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+.toolbar #btn-clear:not(.btn){
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border,#1e293b);
+  text-decoration: none;
+  background: transparent;
+  font-weight: 700;
+}

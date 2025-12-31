@@ -191,10 +191,10 @@ export function wireRetellButtons({
     if (!toggleBtn) return;
     if (isActive) {
       toggleBtn.textContent = "⛔ Colgar";
-      toggleBtn.title = "Colgar (Retell)";
+      toggleBtn.title = "Colgar (Inntesec Agent)";
     } else {
       toggleBtn.textContent = "📞 Llamar";
-      toggleBtn.title = "Llamar (Retell)";
+      toggleBtn.title = "Llamar (Inntesec Agent)";
     }
   };
 
@@ -265,7 +265,7 @@ export function wireRetellButtons({
   async function startCall() {
     if (isActive) return;
 
-    setStatus("Retell: creando llamada…");
+    setStatus("Inntesec Agent: creando llamada…");
 
     const { access_token, call_id } = await createWebCallOnServer();
     lastCallId = call_id || null;
@@ -273,7 +273,7 @@ export function wireRetellButtons({
     lastLiveText = "";
     clearPanel();
 
-    setStatus("Retell: conectando…");
+    setStatus("Inntesec Agent: conectando…");
     await retellWebClient.startCall({ accessToken: access_token });
   }
 
@@ -285,7 +285,7 @@ export function wireRetellButtons({
   retellWebClient.on("call_started", () => {
     isActive = true;
     paintToggle();
-    setStatus("Retell: llamada iniciada");
+    setStatus("Inntesec Agent: llamada iniciada");
     openPanel();
     emitEvent({ type: "call_started", call_id: lastCallId });
 
@@ -294,11 +294,11 @@ export function wireRetellButtons({
   });
 
   retellWebClient.on("agent_start_talking", () => {
-    setStatus("Retell: IA hablando…");
+    setStatus("Inntesec Agent: IA hablando…");
   });
 
   retellWebClient.on("agent_stop_talking", () => {
-    setStatus("Retell: escuchando…");
+    setStatus("Inntesec Agent: escuchando…");
   });
 
   // update incremental => NO depender del panel: dispara hook
@@ -319,7 +319,7 @@ export function wireRetellButtons({
   retellWebClient.on("call_ended", async () => {
     isActive = false;
     paintToggle();
-    setStatus("Retell: llamada finalizada");
+    setStatus("Inntesec Agent: llamada finalizada");
     stopPolling();
     emitEvent({ type: "call_ended", call_id: lastCallId });
 
@@ -342,7 +342,7 @@ export function wireRetellButtons({
   retellWebClient.on("error", (error) => {
     isActive = false;
     paintToggle();
-    setStatus("Retell: error en la llamada");
+    setStatus("Inntesec Agent: error en la llamada");
     stopPolling();
     emitEvent({ type: "call_error", call_id: lastCallId, error });
 
@@ -356,7 +356,7 @@ export function wireRetellButtons({
       e.preventDefault();
 
       if (isActive) {
-        setStatus("Retell: colgando…");
+        setStatus("Inntesec Agent: colgando…");
         stopCall();
         return;
       }
@@ -367,12 +367,12 @@ export function wireRetellButtons({
         openPanel();
 
         if (String(err?.message || err) === "NO_PHONE") {
-          setStatus("Retell: no tienes número registrado");
+          setStatus("Inntesec Agent: no tienes número registrado");
           showFinalTranscript(
             "No tienes un número de teléfono registrado. Actualízalo en tu perfil o solicita al administrador que lo ingrese."
           );
         } else {
-          setStatus("Retell: no se pudo iniciar");
+          setStatus("Inntesec Agent: no se pudo iniciar");
           showFinalTranscript(`No se pudo iniciar la llamada. ${err?.message || err}`);
         }
 

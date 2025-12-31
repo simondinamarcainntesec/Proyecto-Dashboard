@@ -129,18 +129,22 @@
   function appendCurrentDateFilters(urlObj) {
     const params = new URLSearchParams(window.location.search);
 
-    const period = params.get('period') || '3';
-    const from = params.get('from');
-    const to = params.get('to');
+    const allPeriods = params.getAll("period").filter(Boolean);
+    const period = (allPeriods.length ? allPeriods[allPeriods.length - 1] : (params.get("period") || "3"));
 
-    urlObj.searchParams.set('period', period);
+    const from = params.get("from");
+    const to = params.get("to");
 
-    if (from) urlObj.searchParams.set('from', from);
-    else urlObj.searchParams.delete('from');
+    urlObj.searchParams.delete("period");
+    urlObj.searchParams.set("period", period);
 
-    if (to) urlObj.searchParams.set('to', to);
-    else urlObj.searchParams.delete('to');
+    if (from) urlObj.searchParams.set("from", from);
+    else urlObj.searchParams.delete("from");
+
+    if (to) urlObj.searchParams.set("to", to);
+    else urlObj.searchParams.delete("to");
   }
+
 
   // ===== Loader tipo "Realtime" (fila en tabla) =====
   function renderListLoading() {

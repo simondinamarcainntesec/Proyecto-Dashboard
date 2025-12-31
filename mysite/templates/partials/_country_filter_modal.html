@@ -9,6 +9,7 @@
   data-tenant-id="{{ tenant.id }}"
 >
   <div class="modal-card">
+    <input type="hidden" id="countryCsrfToken" value="{{ csrf_token }}">
     <div id="countrySaveToast" class="save-toast hidden">
       Preferencias de países guardadas
     </div>

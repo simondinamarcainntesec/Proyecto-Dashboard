@@ -1,0 +1,120 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>500 - Error interno</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    html, body { height: 100%; }
+
+    body{
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      background:
+        radial-gradient(900px 600px at 30% 20%, rgba(13,26,54,.92), transparent 60%),
+        radial-gradient(800px 500px at 70% 75%, rgba(11,20,40,.92), transparent 60%),
+        linear-gradient(180deg, #0d1a36 0%, #0b1428 45%, #020617 100%);
+
+      color: rgba(255,255,255,.92);
+    }
+
+    .wrap{
+      width: min(520px, 92vw);
+      text-align: center;
+      padding: 28px 18px;
+    }
+
+    .logo{
+      width: 190px;
+      height: auto;
+      margin: 0 auto 16px;
+      display: block;
+      filter: drop-shadow(0 10px 25px rgba(0,0,0,.35));
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    h1{
+      margin: 0;
+      font-size: 34px;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      text-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+
+    .sub{
+      margin: 10px 0 18px;
+      font-size: 14px;
+      color: rgba(255,255,255,.75);
+      line-height: 1.4;
+    }
+
+    .btn{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      padding: 12px 18px;
+      border-radius: 14px;
+      text-decoration: none;
+
+      font-weight: 900;
+      font-size: 14px;
+
+      color: #e8eeff;
+
+      background: rgba(13,26,54,.92);
+      border: 1px solid rgba(148,163,184,.16);
+      box-shadow: 0 6px 18px rgba(17, 24, 39, .35);
+
+      transition:
+        background .15s ease,
+        transform .08s ease,
+        box-shadow .15s ease,
+        border-color .15s ease;
+    }
+
+    .btn:hover{
+      background: rgba(19,36,73,.92);
+      border-color: rgba(42,59,87,.95);
+      transform: translateY(-1px);
+      box-shadow: 0 10px 26px rgba(17, 24, 39, .45);
+    }
+
+    .btn:active{
+      background: rgba(25,48,95,.92);
+      transform: translateY(0);
+      box-shadow: none;
+    }
+
+    .btn:focus-visible{
+      outline: none;
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, .35);
+    }
+  </style>
+</head>
+
+<body>
+  <main class="wrap" role="main" aria-label="500 Error interno del servidor">
+    <img
+      class="logo"
+      src="{% static 'img/inntesec CSS negro 1.avif' %}"
+      alt="Inntesec"
+    />
+
+    <h1>500 — Error interno</h1>
+    <p class="sub">Ocurrió un problema inesperado. Intenta nuevamente en unos minutos.</p>
+
+    <a class="btn" href="/home/">Volver al home</a>
+  </main>
+</body>
+</html>

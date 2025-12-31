@@ -319,3 +319,43 @@
 
   z-index: 50 !important;
 }
+
+/* ==========================================================
+   FIX inputs hora (texto invisible) — scope: #configModal
+   ========================================================== */
+
+/* Ayuda a que los controles nativos (time) adopten tema oscuro */
+#configModal{
+  color-scheme: dark;
+}
+
+/* Inputs/select dentro del modal */
+#configModal input,
+#configModal select{
+  color: var(--text, #e5e7eb) !important;
+  background: rgba(15, 23, 42, 0.55) !important;
+  border: 1px solid var(--border, #1e293b) !important;
+  border-radius: 10px;
+  padding: 0.35rem 0.55rem;
+  outline: none;
+}
+
+/* Específico para type="time" (Chrome/WebKit) */
+#configModal input[type="time"]{
+  color: var(--text, #e5e7eb) !important;
+}
+
+/* Los dígitos/segmentos del time */
+#configModal input[type="time"]::-webkit-datetime-edit,
+#configModal input[type="time"]::-webkit-datetime-edit-text,
+#configModal input[type="time"]::-webkit-datetime-edit-hour-field,
+#configModal input[type="time"]::-webkit-datetime-edit-minute-field{
+  color: var(--text, #e5e7eb) !important;
+}
+
+/* Icono del picker (si se ve muy oscuro en fondo oscuro) */
+#configModal input[type="time"]::-webkit-calendar-picker-indicator{
+  filter: invert(1);
+  opacity: 0.85;
+  cursor: pointer;
+}

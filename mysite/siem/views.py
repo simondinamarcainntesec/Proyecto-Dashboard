@@ -1,3 +1,4 @@
+# mysite/siem/views.py
 from __future__ import annotations
 
 from datetime import datetime, date
@@ -5,21 +6,30 @@ import json
 import re
 import logging
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.shortcuts import render
-from tenants.decorators import tenant_required
-from tenants.models import Tenant
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden, HttpResponseServerError
+from django.utils.html import escape
 
+import re
+
+from tenants.decorators import tenant_required, service_required
+from tenants.models import Tenant, TenantDashboardEmbed
 from .log360_service import obtener_alertas_logs360
 
 # credenciales del portal + preferencias de países
-from home.models import TenantCredentials, WhitelistCountryPreference  # noqa
+from home.models import TenantCredentials, WhitelistCountryPreference
 from home.countries import ALL_COUNTRIES
 
 logger = logging.getLogger(__name__)
 
 
+# ======================================================
+# Helpers comunes
+# ======================================================
 def _parse_date(s: str | None) -> date | None:
     """Parsea fecha YYYY-MM-DD o devuelve None."""
     if not s:
@@ -31,6 +41,65 @@ def _parse_date(s: str | None) -> date | None:
         return datetime.strptime(s[:10], "%Y-%m-%d").date()
     except Exception:
         return None
+
+
+
+
+
+def _tenants_list_for_user(user):
+    """
+    Selector de tenants SOLO para Inntesec.
+    Retorna queryset/list ordenado por name.
+    """
+    user_tenant = getattr(user, "tenant", None)
+    if user_tenant and (user_tenant.name or "").strip().lower() == "inntesec":
+        return Tenant.objects.all().order_by("name")
+    return []
+
+
+def _active_cred_for_tenant(tenant):
+    """
+    Credencial activa del tenant (si existe).
+    """
+    try:
+        if tenant:
+            return TenantCredentials.get_active_for_tenant(int(getattr(tenant, "id", 0)))
+    except Exception:
+        logger.exception("[SIEM] Error obteniendo credenciales del tenant.")
+    return None
+
+
+def _selected_paises_for_tenant(tenant, fallback_user=None) -> list[str]:
+    """
+    Preferencias de países whitelist (POR TENANT).
+    Si tenant es None, intenta con fallback_user.tenant si se entrega.
+    """
+    try:
+        effective = tenant
+        if effective is None and fallback_user is not None:
+            effective = getattr(fallback_user, "tenant", None)
+
+        if not effective:
+            return []
+
+        pref = WhitelistCountryPreference.objects.filter(tenant=effective).first()
+        return (pref.paises or []) if pref else []
+    except Exception:
+        logger.exception("[SIEM] Error leyendo preferencias de países (tenant).")
+        return []
+
+
+def _get_embed_url(tenant, field_name: str) -> str | None:
+    """
+    Lee una URL desde public.tenants_tenantdashboardembed.<field_name> para el tenant.
+    Retorna None si no existe el embed o el campo está vacío.
+    """
+    if not tenant:
+        return None
+    embed = TenantDashboardEmbed.objects.filter(tenant=tenant).first()
+    if not embed:
+        return None
+    return (getattr(embed, field_name, None) or "").strip() or None
 
 
 def _enhance_alert_for_template(alert: dict) -> dict:
@@ -82,8 +151,12 @@ def _enhance_alert_for_template(alert: dict) -> dict:
     return enhanced
 
 
+# ======================================================
+# Views existentes
+# ======================================================
 @login_required
 @tenant_required
+@service_required("logs360siem_id")
 def alerts_logs360_view(request):
     """
     Lista de alertas Logs360.
@@ -97,21 +170,16 @@ def alerts_logs360_view(request):
     siem_id = str(raw_siem_id or "").strip()
     service_enabled = bool(siem_id) and siem_id not in ("0", "null", "NULL", "None")
 
-    # selector de tenants solo para Inntesec
-    tenants_list = []
-    user_tenant = getattr(request.user, "tenant", None)
-    if user_tenant and user_tenant.name.lower() == "inntesec":
-        tenants_list = Tenant.objects.all().order_by("name")
+    tenants_list = _tenants_list_for_user(request.user)
 
     # credenciales activas del tenant
-    cred = None
-    try:
-        if tenant:
-            cred = TenantCredentials.get_active_for_tenant(int(getattr(tenant, "id", 0)))
-    except Exception as e:
-        logger.exception("[LOGS360] Error obteniendo credenciales del tenant: %s", e)
+    cred = _active_cred_for_tenant(tenant)
 
-    q = (request.GET.get("q") or "").strip()
+    # Sanitizar q: evita payload gigante / logs enormes / abuso suave
+    q_raw = request.GET.get("q") or ""
+    q = str(q_raw).strip()
+    if len(q) > 200:
+        q = q[:200]
 
     # el service fuerza rango de fechas; aquí no usamos los inputs del form
     from_date = None
@@ -132,13 +200,17 @@ def alerts_logs360_view(request):
                 from_date=from_date,
                 to_date=to_date,
             )
-        except Exception as e:
-            logger.exception("[LOGS360] Excepción consultando Logs360: %s", e)
-            error_internal = str(e)
+        except Exception:
+            logger.exception("[LOGS360] Excepción consultando Logs360.")
+            error_internal = "exception"
 
-        # cualquier error se traduce a un mensaje genérico
+        # cualquier error se traduce a un mensaje genérico (NO filtramos detalles)
         if error_internal:
-            logger.error("[LOGS360] Error consultando Logs360: %s", error_internal)
+            logger.error(
+                "[LOGS360] Error consultando Logs360 (detalles internos ocultos). tenant_id=%s user_id=%s",
+                getattr(tenant, "id", None),
+                getattr(request.user, "id", None),
+            )
             error_public = (
                 "No fue posible recuperar las alertas de Logs360 SIEM en este momento. "
                 "Por favor, contacte con un administrador."
@@ -159,22 +231,12 @@ def alerts_logs360_view(request):
     paginator = Paginator(alerts, 50)
     page_obj = paginator.get_page(request.GET.get("page") or 1)
 
-    # ==============================
-    # Países para el modal de whitelist (POR TENANT, NO POR USER)
-    # ==============================
-    selected_paises: list[str] = []
-    try:
-        effective_tenant_for_pref = tenant or getattr(request.user, "tenant", None)
-        if effective_tenant_for_pref:
-            pref = WhitelistCountryPreference.objects.filter(
-                tenant=effective_tenant_for_pref
-            ).first()
-            selected_paises = (pref.paises or []) if pref else []
-        else:
-            selected_paises = []
-    except Exception as e:
-        logger.exception("[LOGS360] Error leyendo preferencias de países (tenant): %s", e)
-        selected_paises = []
+    # Países whitelist (POR TENANT)
+    selected_paises = _selected_paises_for_tenant(tenant, fallback_user=request.user)
+
+    # Solo mostrar error_internal si staff o DEBUG
+    can_show_internal = bool(getattr(request.user, "is_staff", False)) or bool(getattr(settings, "DEBUG", False))
+    error_internal_safe = error_internal if can_show_internal else None
 
     context = {
         "tenant": tenant,
@@ -190,8 +252,8 @@ def alerts_logs360_view(request):
 
         # error genérico para UI (None si todo ok)
         "error": error_public,
-        # error técnico opcional (por si algún día se usa en admin)
-        "error_internal": error_internal,
+        # error técnico SOLO si admin/staff o DEBUG
+        "error_internal": error_internal_safe,
 
         "q": q,
         "from_date_str": from_date_str,
@@ -206,3 +268,88 @@ def alerts_logs360_view(request):
         "selected_paises": selected_paises,
     }
     return render(request, "siem/alerts_list.html", context)
+
+
+# ======================================================
+# Nuevas vistas: 4 páginas iframe (desde tenants_tenantdashboardembed)
+# ======================================================
+@login_required
+@tenant_required
+@service_required("logs360siem_id")
+def threat_analytics(request):
+    tenant = getattr(request, "tenant", None)
+    tenants_list = _tenants_list_for_user(request.user)
+
+    context = {
+        "tenant": tenant,
+        "all_tenants": tenants_list,
+        "iframe_url": _get_embed_url(tenant, "threat_analytics"),
+        "page_title": "Threat Analytics",
+        "active_page": "threat_analytics",
+        "cred": _active_cred_for_tenant(tenant),
+        "whitelist_countries": ALL_COUNTRIES,
+        "selected_paises": _selected_paises_for_tenant(tenant, fallback_user=request.user),
+    }
+    return render(request, "siem/threat_analytics.html", context)
+
+
+@login_required
+@tenant_required
+@service_required("logs360siem_id")
+def microsoft365(request):
+    tenant = getattr(request, "tenant", None)
+    tenants_list = _tenants_list_for_user(request.user)
+
+    context = {
+        "tenant": tenant,
+        "all_tenants": tenants_list,
+        "iframe_url": _get_embed_url(tenant, "microsoft365"),
+        "page_title": "Microsoft 365",
+        "active_page": "microsoft365",
+        "cred": _active_cred_for_tenant(tenant),
+        "whitelist_countries": ALL_COUNTRIES,
+        "selected_paises": _selected_paises_for_tenant(tenant, fallback_user=request.user),
+    }
+    return render(request, "siem/microsoft365.html", context)
+
+
+@login_required
+@tenant_required
+@service_required("logs360siem_id")
+def networks(request):
+    tenant = getattr(request, "tenant", None)
+    tenants_list = _tenants_list_for_user(request.user)
+
+    context = {
+        "tenant": tenant,
+        "all_tenants": tenants_list,
+        "iframe_url": _get_embed_url(tenant, "networks"),
+        "page_title": "Networks",
+        "active_page": "networks",
+        "cred": _active_cred_for_tenant(tenant),
+        "whitelist_countries": ALL_COUNTRIES,
+        "selected_paises": _selected_paises_for_tenant(tenant, fallback_user=request.user),
+    }
+    return render(request, "siem/networks.html", context)
+
+
+@login_required
+@tenant_required
+@service_required("logs360siem_id")
+def eventos_diarios(request):
+    tenant = getattr(request, "tenant", None)
+    tenants_list = _tenants_list_for_user(request.user)
+
+    context = {
+        "tenant": tenant,
+        "all_tenants": tenants_list,
+        "iframe_url": _get_embed_url(tenant, "eventos_diarios"),
+        "page_title": "Eventos diarios",
+        "active_page": "eventos_diarios",
+        "cred": _active_cred_for_tenant(tenant),
+        "whitelist_countries": ALL_COUNTRIES,
+        "selected_paises": _selected_paises_for_tenant(tenant, fallback_user=request.user),
+    }
+    return render(request, "siem/eventos_diarios.html", context)
+
+
