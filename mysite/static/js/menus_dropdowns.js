@@ -31,9 +31,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // =========================
   // Export menu (Home / Site24x7 / etc.)
-  // Soporta:
-  //  - Home: homeExportToggleBtn / homeExportMenu
-  //  - Site24x7: btn-export-toggle / export-menu
   // =========================
   const exportToggleBtn =
     document.getElementById("homeExportToggleBtn") ||
@@ -67,12 +64,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!dd) return "";
     if (dd.dataset.navId) return dd.dataset.navId;
 
-    // Preferir id del summary si existe (estable y legible)
     const summary = dd.querySelector("summary");
     const fromSummaryId = summary && summary.id ? summary.id.trim() : "";
     const fromDetailsId = dd.id ? dd.id.trim() : "";
-
-    // Fallback estable: índice en el DOM
     const fallback = "navdd-" + navDropdowns.indexOf(dd);
 
     const id = fromSummaryId || fromDetailsId || fallback;
@@ -104,7 +98,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // =========================
   // Export open/close
-  // (compatible con CSS que usa .is-open en wrapper o en el menú)
   // =========================
   const closeExportMenu = () => {
     if (!exportWrapper) return;
@@ -112,7 +105,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (exportToggleBtn) exportToggleBtn.setAttribute("aria-expanded", "false");
     if (exportMenu) {
       exportMenu.setAttribute("aria-hidden", "true");
-      exportMenu.classList.remove("is-open"); // para CSS .export-dropdown.is-open
+      exportMenu.classList.remove("is-open");
     }
   };
 
@@ -122,14 +115,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (exportToggleBtn) exportToggleBtn.setAttribute("aria-expanded", "true");
     if (exportMenu) {
       exportMenu.setAttribute("aria-hidden", "false");
-      exportMenu.classList.add("is-open"); // para CSS .export-dropdown.is-open
+      exportMenu.classList.add("is-open");
     }
   };
 
   // =========================
-  // Sidebar accordion (sin forzar “active”)
-  // - Si abres uno: cierra los demás
-  // - Si cierras: queda cerrado
+  // Sidebar accordion (SIN animaciones)
+  // - Abre uno => cierra los demás (instantáneo)
+  // - Cierra => queda cerrado
   // - Persistencia: guarda el último abierto o ninguno
   // =========================
   function closeAllNavDropdownsInstant(except = null) {
@@ -139,132 +132,40 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // =========================
-  // Animación suave para <details> del sidebar
-  // Basado en técnica de “height animation” para evitar blink de max-height
-  // =========================
-  const ANIM_MS = 220;
-  const EASING = "cubic-bezier(.2,.8,.2,1)";
-
-  function animateOpen(dd) {
-    if (!dd) return;
-    if (dd.dataset.animating === "1") return;
-
-    const summary = dd.querySelector("summary");
-    const content = dd.querySelector(".tenant-list"); // en tu sidebar el contenido está aquí
-    if (!summary || !content) {
-      // sin estructura estándar => abrir sin animación
-      dd.setAttribute("open", "");
-      return;
-    }
-
-    dd.dataset.animating = "1";
-
-    // Cerrar otros antes (instantáneo) para no animar en cascada y evitar parpadeo
-    closeAllNavDropdownsInstant(dd);
-
-    // Medir altura cerrada
-    const startHeight = summary.offsetHeight;
-
-    // Abrir para medir la altura final
-    dd.setAttribute("open", "");
-    const endHeight = summary.offsetHeight + content.offsetHeight;
-
-    // Preparar animación
-    dd.style.overflow = "hidden";
-    dd.style.height = startHeight + "px";
-
-    // Forzar reflow
-    dd.offsetHeight;
-
-    const anim = dd.animate(
-      [{ height: startHeight + "px" }, { height: endHeight + "px" }],
-      { duration: ANIM_MS, easing: EASING }
-    );
-
-    anim.onfinish = () => {
-      dd.style.height = "";
-      dd.style.overflow = "";
-      dd.dataset.animating = "0";
-
-      // Persistir: este quedó abierto
-      setStoredOpenId(getNavDropdownId(dd));
-    };
-
-    anim.oncancel = () => {
-      dd.style.height = "";
-      dd.style.overflow = "";
-      dd.dataset.animating = "0";
-    };
-  }
-
-  function animateClose(dd) {
-    if (!dd) return;
-    if (dd.dataset.animating === "1") return;
-
-    const summary = dd.querySelector("summary");
-    const content = dd.querySelector(".tenant-list");
-    if (!summary || !content) {
-      dd.removeAttribute("open");
-      return;
-    }
-
-    dd.dataset.animating = "1";
-
-    const startHeight = summary.offsetHeight + content.offsetHeight;
-    const endHeight = summary.offsetHeight;
-
-    dd.style.overflow = "hidden";
-    dd.style.height = startHeight + "px";
-
-    dd.offsetHeight;
-
-    const anim = dd.animate(
-      [{ height: startHeight + "px" }, { height: endHeight + "px" }],
-      { duration: ANIM_MS, easing: EASING }
-    );
-
-    anim.onfinish = () => {
-      dd.removeAttribute("open");
-      dd.style.height = "";
-      dd.style.overflow = "";
-      dd.dataset.animating = "0";
-
-      // Persistir: ninguno abierto (si el usuario cerró el que estaba)
-      const stored = getStoredOpenId();
-      const myId = getNavDropdownId(dd);
-      if (stored === myId) setStoredOpenId(""); // explícitamente “ninguno”
-    };
-
-    anim.oncancel = () => {
-      dd.style.height = "";
-      dd.style.overflow = "";
-      dd.dataset.animating = "0";
-    };
-  }
-
-  // Interceptar click del summary SOLO en nav-dropdowns para controlar animación + accordion + persistencia
+  // Interceptar click del summary SOLO en nav-dropdowns (sin animación)
   navDropdowns.forEach((dd) => {
     const summary = dd.querySelector("summary");
     if (!summary) return;
 
     summary.addEventListener("click", (e) => {
-      // Evitar el toggle nativo (así no hay doble toggle + blink)
+      // Evitar toggle nativo para mantener control tipo acordeón
       e.preventDefault();
       e.stopPropagation();
 
       const isOpen = dd.hasAttribute("open");
+
       if (isOpen) {
-        animateClose(dd);
+        // Cerrar
+        dd.removeAttribute("open");
+
+        // Persistir: si este era el guardado, marcar “ninguno”
+        const stored = getStoredOpenId();
+        const myId = getNavDropdownId(dd);
+        if (stored === myId) setStoredOpenId("");
       } else {
-        animateOpen(dd);
+        // Abrir y cerrar otros
+        closeAllNavDropdownsInstant(dd);
+        dd.setAttribute("open", "");
+
+        // Persistir: este quedó abierto
+        setStoredOpenId(getNavDropdownId(dd));
       }
     });
   });
 
   // =========================
   // Restaurar estado guardado (si existe)
-  // - null: no hay preferencia => respeta lo que venga del backend
+  // - null: no hay preferencia => respeta backend
   // - "": el usuario dejó todo cerrado => cerrar todos
   // - "id": abrir ese y cerrar el resto
   // =========================
@@ -283,14 +184,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const target = findNavDropdownById(stored);
     if (!target) {
-      // Si el id ya no existe, dejar todo cerrado para evitar sorpresas
+      // Si el id ya no existe, dejar todo cerrado
       closeAllNavDropdownsInstant(null);
       return;
     }
 
-    // Abrir el guardado y cerrar el resto (instantáneo, sin animación al cargar)
+    // Abrir el guardado y cerrar el resto (instantáneo)
     closeAllNavDropdownsInstant(target);
-    target.setAttribute("open", "");
   })();
 
   // =========================

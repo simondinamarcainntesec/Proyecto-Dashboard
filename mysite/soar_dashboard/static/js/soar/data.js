@@ -3,7 +3,6 @@ let EVENTS = [];
 export async function preloadEvents() {
   const el = document.getElementById("soar-events");
   if (!el) {
-    console.warn("[data] No se encontró #soar-events en el DOM.");
     EVENTS = [];
     return;
   }
@@ -11,9 +10,9 @@ export async function preloadEvents() {
     const raw = JSON.parse(el.textContent || "[]") || [];
 
     // Instrumentación previa
-    console.log("[data] rows crudos recibidos:", Array.isArray(raw) ? raw.length : 0);
+   
     const sampleRaw = (raw || []).slice(0, 3);
-    console.log("[data] sample raw[0..2]:", sampleRaw);
+   
 
     EVENTS = raw.map((r) => ({
       alarm_id:        safeStr(r.alarm_id),     // ← clave para el modal
@@ -35,10 +34,8 @@ export async function preloadEvents() {
     const total = EVENTS.length;
     const withAlarm = EVENTS.filter(e => e.alarm_id).length;
     const withoutAlarm = total - withAlarm;
-    console.log(`[data] eventos mapeados: total=${total} | con alarm_id=${withAlarm} | sin alarm_id=${withoutAlarm}`);
-    console.log("[data] sample EVENTS[0..2]:", EVENTS.slice(0, 3));
+
   } catch (e) {
-    console.error("[data] JSON inválido en #soar-events:", e);
     EVENTS = [];
   }
 }

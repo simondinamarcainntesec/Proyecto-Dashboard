@@ -279,7 +279,6 @@ def ticket_close(request, ticket_id):
 
     try:
         with transaction.atomic():
-            # ✅ LOCK SOLO al ticket (sin select_related para evitar OUTER JOIN + FOR UPDATE)
             t = (
                 SoarTicket.objects
                 .select_for_update()
@@ -315,18 +314,32 @@ def ticket_close(request, ticket_id):
                         .get(id=closed_ticket_id)
                     )
 
-                    assigned_email = (getattr(getattr(closed_t, "assigned_to", None), "email", "") or "").strip()
-                    if not assigned_email:
+                    assigned_user = getattr(closed_t, "assigned_to", None)
+                    creator_user = getattr(closed_t, "created_by", None)
+
+                    assigned_email = (getattr(assigned_user, "email", "") or "").strip()
+                    creator_email = (getattr(creator_user, "email", "") or "").strip()
+
+                    # 1) correo al asignado (saluda al asignado)
+                    if assigned_email:
+                        enviar_correo_ticket_cerrado(closed_t, recipient=assigned_user)
+                    else:
                         logger.warning(
-                            "[SOAR_TICKETS] Ticket %s cerrado, pero asignado sin email. No se envía correo.",
+                            "[SOAR_TICKETS] Ticket %s cerrado, asignado sin email. No se envía correo al asignado.",
                             closed_ticket_id
                         )
-                        return
 
-                    enviar_correo_ticket_cerrado(closed_t)
+                    # 2) correo al creador (saluda al creador) si es distinto email
+                    if creator_email and creator_email.lower() != (assigned_email or "").lower():
+                        enviar_correo_ticket_cerrado(closed_t, to_email=creator_email, recipient=creator_user)
+                    elif not creator_email:
+                        logger.warning(
+                            "[SOAR_TICKETS] Ticket %s cerrado, creador sin email. No se envía correo al creador.",
+                            closed_ticket_id
+                        )
 
                 except Exception as e:
-                    logger.exception("[SOAR_TICKETS] Error enviando correo de cierre ticket=%s: %s", closed_ticket_id, e)
+                    logger.exception("[SOAR_TICKETS] Error enviando correos de cierre ticket=%s: %s", closed_ticket_id, e)
 
             transaction.on_commit(_send_close_email_after_commit)
 
@@ -342,4 +355,3 @@ def ticket_close(request, ticket_id):
 
     messages.success(request, "Ticket cerrado ✅")
     return redirect("soar_tickets:list")
-

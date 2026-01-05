@@ -1,5 +1,6 @@
 /* =========================================================
    base.css — Tema + Layout + Componentes compartidos
+   + ✅ Empty-state unificado (misma posición, sidebar visible)
    ========================================================= */
 
 /* =========================
@@ -106,32 +107,24 @@ button{ cursor:pointer }
 /* =========================
    5) Sidebar
    ========================= */
-.layout{
-  display: grid;
-  grid-template-columns: var(--sidebar-w) 1fr;
-  min-height: 100vh;
-}
-
 .sidebar{
   background: linear-gradient(180deg, #0e1930 0%, #0a1224 100%);
   border-right: 1px solid var(--border);
   padding: 16px 12px;
 
-  /* CAMBIO CLAVE */
-  position: relative;   /* (o static) */
+  position: relative;
   top: auto;
-  height: auto;         /* deja que el grid la estire */
+  height: auto;
 
-  /* para que el nav interno pueda scrollear si quieres */
   display: flex;
   flex-direction: column;
-  align-self: stretch;  /* asegura que llene la altura del grid */
+  align-self: stretch;
 }
 
 /* Brand */
-.brand { display: flex; gap: 10px; align-items: center; padding: 8px 6px 18px 6px }
-.brand-sub { font-size: .75rem; color: #9aa7bd }
-.brand-name { font-weight: 800 }
+.brand{ display:flex; gap:10px; align-items:center; padding: 8px 6px 18px 6px }
+.brand-sub{ font-size:.75rem; color:#9aa7bd }
+.brand-name{ font-weight:800 }
 
 /* Nav con scroll interno */
 .sidebar .nav{
@@ -139,8 +132,6 @@ button{ cursor:pointer }
   min-height:0;
   padding:14px 4px 10px 4px;
   overflow:auto;
-
-  /* clave: nunca scroll horizontal */
   overflow-x:hidden;
 }
 
@@ -151,16 +142,16 @@ button{ cursor:pointer }
   align-items:center;
   gap:10px;
 
-  padding:0 14px; /* aumentado para mayor consistencia visual */
+  padding:0 14px;
   border-radius:14px;
 
   border:1px solid transparent;
   background:transparent;
 
   color:rgba(229,231,235,.92);
-  font-weight:900; /* mayor peso para que el texto tenga más presencia */
-  font-size: 15px; /* tamaño explícito para consistencia entre páginas */
-  letter-spacing: 0.2px; /* ligero tracking para mejor legibilidad */
+  font-weight:900;
+  font-size:15px;
+  letter-spacing:.2px;
 
   transition: background .12s ease, border-color .12s ease, transform .12s ease;
   user-select:none;
@@ -203,16 +194,13 @@ button{ cursor:pointer }
 }
 .sidebar details.tenant-dropdown[open] .chevron{ transform: rotate(180deg) }
 
-/* Submenú acordeón en flujo (sidebar)
-   CAMBIO: quitar fondo general del dropdown (solo pills por opción)
-   + FIX: dejar aire a la derecha para que el pill no pegue al borde
-*/
+/* Submenú acordeón en flujo (sidebar) */
 .sidebar details.nav-dropdown .tenant-list.nav-submenu{
   position:static;
   margin:8px 0 10px 0;
 
   padding:0;
-  padding-right:10px;        /* margen visual derecho */
+  padding-right:10px;
   box-sizing:border-box;
 
   border:0;
@@ -227,24 +215,19 @@ button{ cursor:pointer }
   align-items:flex-start;
 }
 
-/* FIX: subitems más a la izquierda para que no se corten los nombres
-   + FIX: margen derecho del pill
-*/
+/* Subitems (pills) */
 .sidebar .nav-subitem{
   height:38px;
-
   display:inline-flex;
   width:fit-content;
 
-  /* respeta indent izq (18) + margen der (10) */
   max-width: calc(100% - 28px);
 
   align-items:center;
 
   padding:0 3px;
   margin-left:18px;
-
-  margin-right:10px;         /* aire a la derecha del pill */
+  margin-right:10px;
 
   border-radius:12px;
 
@@ -273,16 +256,17 @@ button{ cursor:pointer }
 }
 
 /* =========================
-   6) Content + Topbar (alineado a tu CSS “referencia”)
+   6) Content + Topbar
    ========================= */
-
-/* Content */
 .content{
   display:flex;
   flex-direction:column;
   gap:16px;
   padding:16px;
   min-width:0;
+
+  /* importante: permite centrar empty-state bajo la topbar */
+  min-height: 100vh;
 }
 
 /* Topbar */
@@ -297,11 +281,9 @@ button{ cursor:pointer }
   padding: 12px 14px;
   box-shadow: var(--shadow);
 
-  position: static;
-  top: auto;
-  z-index: auto;
-
-  overflow: visible;
+  position: relative !important;
+  z-index: 5000 !important;
+  overflow: visible !important;
 }
 
 /* Lados */
@@ -309,8 +291,9 @@ button{ cursor:pointer }
 .top-right{
   display:flex;
   align-items:center;
-  gap:8px;
+  gap:10px;
   min-width:0;
+  flex-wrap: nowrap;
 }
 
 /* Título */
@@ -318,7 +301,6 @@ button{ cursor:pointer }
   margin:0;
   font-size: 1rem;
   font-weight: 800;
-  letter-spacing: 0;
   color: var(--text);
   display:flex;
   align-items:center;
@@ -336,36 +318,22 @@ button{ cursor:pointer }
 }
 
 /* =========================
-   TOPBAR — botones/pills como en tu screenshot
-   (compactos, con borde sutil y alto fijo)
+   TOPBAR — pills
    ========================= */
+.topbar{ padding: 10px 12px; border-radius: 16px; min-height: 52px; }
 
-/* Contenedor topbar (solo si quieres que se vea igual de “compacto”) */
-.topbar{
-  padding: 10px 12px;
-  border-radius: 16px;
-  min-height: 52px;
-}
-
-/* Alinear mejor el bloque derecho */
-.topbar .top-right{
-  gap: 10px;
-  flex-wrap: nowrap;
-}
-
-/* ===== Pills (botones) del topbar ===== */
 .topbar .btn{
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
 
-  height: 34px;              /* porte del screenshot */
-  padding: 0 12px;           /* compacto */
+  height: 34px;
+  padding: 0 12px;
   border-radius: 12px;
 
   border: 1px solid rgba(30,41,59,.85);
-  background: rgba(11,20,40,.85);   /* similar a #0b1428 */
+  background: rgba(11,20,40,.85);
   color: #e5e7eb;
 
   font-size: 13px;
@@ -374,33 +342,23 @@ button{ cursor:pointer }
   white-space: nowrap;
 
   box-shadow: none;
-  transform: none;
   transition: transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
 }
-
 .topbar .btn:hover{
   transform: translateY(-1px);
   box-shadow: 0 6px 18px rgba(2,6,23,.35);
-  background: rgba(14,26,51,.95);   /* similar a #0e1a33 */
+  background: rgba(14,26,51,.95);
   border-color: rgba(59,130,246,.22);
 }
+.topbar .btn:active{ transform: translateY(0); box-shadow:none; }
 
-.topbar .btn:active{
-  transform: translateY(0);
-  box-shadow: none;
-}
-
-.topbar .btn.ghost{
-  background: transparent;
-}
-
+.topbar .btn.ghost{ background: transparent; }
 .topbar .btn.primary{
   background: var(--brand);
   border-color: var(--brand);
   color: #fff;
 }
 
-/* Íconos dentro del botón (para que no agranden el alto) */
 .topbar .btn svg,
 .topbar .btn img,
 .topbar .btn .nav-ico{
@@ -408,9 +366,6 @@ button{ cursor:pointer }
   height: 16px;
 }
 
-/* ===== Botones “solo ícono” (los circulares del screenshot) =====
-   (funciona si esos botones tienen .btn + .icon-only / .icon-btn / .square)
-*/
 .topbar .btn.icon-only,
 .topbar .btn.icon-btn,
 .topbar .btn.square{
@@ -419,7 +374,7 @@ button{ cursor:pointer }
   border-radius: 12px;
 }
 
-/* ===== Hacer que tenant summary y user button calcen con los pills ===== */
+/* Tenant summary y user button como pills */
 .topbar .tenant-dropdown > summary,
 .topbar .user-button{
   display:inline-flex;
@@ -439,18 +394,10 @@ button{ cursor:pointer }
   line-height: 1;
   white-space: nowrap;
 }
-
 .topbar .tenant-dropdown > summary:hover,
 .topbar .user-button:hover{
   background: rgba(14,26,51,.95);
   border-color: rgba(59,130,246,.22);
-}
-
-/* Avatar del usuario a un porte consistente */
-.topbar .user-avatar{
-  width: 22px;
-  height: 22px;
-  border-radius: 10px;
 }
 
 /* =========================
@@ -503,12 +450,6 @@ button{ cursor:pointer }
   gap:8px;
 }
 
-.topbar .btn{
-  padding:8px 10px;
-  border-radius:10px;
-  gap:8px;
-}
-
 /* Inputs */
 .input, .select, .textarea{
   width:100%;
@@ -526,7 +467,7 @@ button{ cursor:pointer }
 }
 
 /* =========================
-   9) Dropdown Tenant (TOPBAR) - <details>
+   9) Dropdown Tenant (TOPBAR)
    ========================= */
 .tenant-dropdown{
   position:relative;
@@ -553,11 +494,6 @@ button{ cursor:pointer }
 }
 .tenant-dropdown > summary::-webkit-details-marker{ display:none }
 .tenant-dropdown > summary::marker{ content:"" }
-
-.topbar .tenant-dropdown > summary{
-  padding:8px 10px;
-  border-radius:10px;
-}
 
 .tenant-dropdown .caret{
   font-size:12px;
@@ -621,7 +557,9 @@ button{ cursor:pointer }
   position:relative;
   display:inline-flex;
   align-items:center;
+  z-index: 6000 !important;
 }
+
 .export-menu{
   position:absolute;
   top: calc(100% + 10px);
@@ -635,7 +573,7 @@ button{ cursor:pointer }
   background: var(--dropdown-bg);
   box-shadow: var(--shadow-2);
 
-  z-index:220;
+  z-index:6500;
   display:none;
 }
 #homeExportToggleBtn[aria-expanded="true"] + #homeExportMenu{ display:block; }
@@ -657,90 +595,54 @@ button{ cursor:pointer }
   border-color:rgba(59,130,246,.26);
 }
 
-.user-menu{
-  position:relative;
-  display:inline-flex;
-  align-items:center;
-}
-
-.user-button{
-  display:inline-flex;
-  align-items:center;
-  gap:10px;
-
-  padding:10px 12px;
-  border-radius:12px;
-
-  border:1px solid rgba(30,41,59,.85);
-  background:rgba(15,23,42,.55);
-  color:var(--text);
-
-  font-weight:400;
-}
-.user-button:hover{
-  background:rgba(15,23,42,.80);
-  border-color:rgba(96,165,250,.35);
-}
-
-.topbar .user-button{
-  padding:8px 10px;
-  border-radius:10px;
-}
-
-.user-avatar{
-  width:22px;
-  height:22px;
-  border-radius:8px;
-  display:grid;
-  place-items:center;
-  background:rgba(59,130,246,.20);
-  border:1px solid rgba(59,130,246,.35);
-  font-size:12px;
-  font-weight:500;
-}
-
-.user-name{
-  max-width: 180px;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
-.user-menu .dropdown-menu{
-  position:absolute;
+/* Alias export-dropdown (wrapper is-open) */
+.export-wrapper .export-dropdown{
+  position: absolute;
   top: calc(100% + 10px);
   right: 0;
 
   min-width: 220px;
-  padding:10px;
+  padding: 10px;
 
   border-radius: 14px;
-  border:1px solid var(--dropdown-border);
+  border: 1px solid var(--dropdown-border);
   background: var(--dropdown-bg);
   box-shadow: var(--shadow-2);
 
-  z-index:220;
-  display:none;
+  z-index: 6500;
+  display: none;
 }
-.user-menu.dropdown-open .dropdown-menu{ display:block; }
+.export-wrapper.is-open .export-dropdown{ display:block; }
 
-.user-menu .dropdown-menu form{ margin:0; }
-.user-menu .dropdown-menu button{
-  width:100%;
-  text-align:left;
+.export-wrapper .export-dropdown button{
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 12px;
 
-  padding:10px 12px;
-  border-radius:12px;
+  border: 1px solid transparent;
+  background: transparent;
 
-  border:1px solid transparent;
-  background:transparent;
-
-  color:var(--text);
-  font-weight:400;
+  color: var(--text);
+  font-weight: 400;
 }
-.user-menu .dropdown-menu button:hover{
-  background:var(--dropdown-item-hover);
-  border-color:rgba(59,130,246,.26);
+.export-wrapper .export-dropdown button:hover{
+  background: var(--dropdown-item-hover);
+  border-color: rgba(59,130,246,.26);
+}
+
+.user-menu{
+  position:relative !important;
+  display:inline-flex;
+  align-items:center;
+  z-index: 6000 !important;
+}
+
+.user-menu .dropdown-menu{
+  z-index: 6500 !important;
+}
+.user-menu.dropdown-open .dropdown-menu{
+  display:block !important;
 }
 
 /* =========================
@@ -761,13 +663,6 @@ button{ cursor:pointer }
   }
 
   .content{ padding: 14px; }
-
-  .topbar{
-    position:relative;
-    top:auto;
-    margin-bottom:14px;
-    border-radius: var(--radius);
-  }
 
   .tenant-dropdown .tenant-list{
     left:auto;
@@ -803,13 +698,11 @@ button{ cursor:pointer }
 
   transition: opacity .15s ease-out, visibility .15s ease-out;
 }
-
 #loading-overlay.is-active{
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
 }
-
 #loading-overlay .loading-card{
   display: flex;
   align-items: center;
@@ -825,7 +718,6 @@ button{ cursor:pointer }
   color: var(--text, #e5e7eb);
   font-weight: 600;
 }
-
 #loading-overlay .spinner{
   width: 22px;
   height: 22px;
@@ -836,183 +728,47 @@ button{ cursor:pointer }
 
   animation: spin .8s linear infinite;
 }
+@keyframes spin{ to{ transform: rotate(360deg); } }
 
-@keyframes spin{
-  to{ transform: rotate(360deg); }
-}
-
-/* =========================================================
-   FIX: Sidebar rounding hardening (SOLO sidebar)
-   ========================================================= */
-
-/* Nav items (summary + links) */
-.sidebar .nav-item{
-  border-radius:14px !important;
-}
-
-/* Submenu container */
-.sidebar details.nav-dropdown .tenant-list.nav-submenu{
-  border-radius:14px !important; /* por si algún CSS le mete fondo */
-}
-
-/* Subitems (pills) */
+/* =========================
+   FIX: Sidebar rounding hardening
+   ========================= */
+.sidebar .nav-item{ border-radius:14px !important; }
+.sidebar details.nav-dropdown .tenant-list.nav-submenu{ border-radius:14px !important; }
 .sidebar .nav-submenu .nav-subitem,
 .sidebar a.tenant-option.nav-subitem{
   border-radius:12px !important;
-}
-
-/* Si algún CSS posterior te pone width:100% y se ve “bloque cuadrado” */
-.sidebar .nav-submenu .nav-subitem,
-.sidebar a.tenant-option.nav-subitem{
   overflow:hidden;
 }
 
-/* =========================================================
-   Export dropdown — alias para templates que usan .export-dropdown
-   (equivalente a .export-menu del base)
-   ========================================================= */
-
-.export-wrapper{
-  position: relative;
-  display: inline-flex;
-  align-items: center;
+/* Sidebar submenu: optimización para animación por JS */
+.sidebar details.nav-dropdown .tenant-list.nav-submenu{
+  will-change: height, opacity, transform;
+  contain: layout paint;
 }
-
-/* tu template usa .export-dropdown */
-.export-wrapper .export-dropdown{
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
-
-  min-width: 220px;
-  padding: 10px;
-
-  border-radius: 14px;
-  border: 1px solid var(--dropdown-border);
-  background: var(--dropdown-bg);
-  box-shadow: var(--shadow-2);
-
-  z-index: 220;
-
-  /* cerrado por defecto (JS agrega .is-open al WRAPPER) */
-  display: none;
-}
-
-/* FIX: tu JS alterna la clase EN EL WRAPPER */
-.export-wrapper.is-open .export-dropdown{
-  display: block;
-}
-
-.export-wrapper .export-dropdown button{
-  width: 100%;
-  text-align: left;
-  padding: 10px 12px;
-  border-radius: 12px;
-
-  border: 1px solid transparent;
-  background: transparent;
-
-  color: var(--text);
-  font-weight: 400;
-}
-
-.export-wrapper .export-dropdown button:hover{
-  background: var(--dropdown-item-hover);
-  border-color: rgba(59,130,246,.26);
-}
-
-/* Centrar empty-state en la página */
-.empty-state{
-  min-height: 100vh;              /* ocupa toda la altura visible */
-  display: flex;
-  align-items: center;            /* centra vertical */
-  justify-content: center;        /* centra horizontal */
-  padding: 24px;                  /* aire en mobile */
-}
-
-/* La tarjeta */
-.empty-state .empty-card{
-  width: min(560px, 100%);
-  text-align: center;
-}
-
-/* ================================
-   Empty-state: card visible + centrado
-   ================================ */
-
-/* Centrado dentro del main (bajo topbar) */
-body.layout .content{
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-body.layout .content > .empty-state{
-  flex: 1 1 auto;
-  display: grid;
-  place-items: center;
-  padding: 28px;
-}
-
-/* La tarjeta (lo que hoy “no se ve”) */
-body.layout .content > .empty-state .empty-card{
-  width: min(640px, 100%);
-  padding: 28px 32px;
-  text-align: center;
-
-  /* “card look” */
-  background: rgba(15, 23, 42, 0.55);
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 18px;
-  box-shadow: 0 18px 46px rgba(2, 6, 23, 0.55);
-
-  /* opcional pero deja muy bien en tu tema */
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
-/* Ajustes tipográficos suaves */
-body.layout .content > .empty-state .empty-card h2{
-  margin: 0 0 10px;
-}
-
-body.layout .content > .empty-state .empty-card p{
-  margin: 0 0 10px;
-  color: rgba(229, 231, 235, 0.9);
+@media (prefers-reduced-motion: reduce){
+  .sidebar details.nav-dropdown .tenant-list.nav-submenu{ will-change:auto; }
 }
 
 /* =========================================================
-   EMPTY STATE (global reusable)
-   - Centrado y tarjeta visible
-   - Funciona si está directo en .content o dentro de .card-body
+   ✅ EMPTY STATE (GLOBAL UNIFICADO, SIDEBAR VISIBLE)
+   Objetivo:
+   - Siempre centrado en el área de contenido (columna derecha)
+   - Debajo de la topbar si existe
+   - Sin afectar layout de sidebar
+   - Funciona en:
+     A) Empty-state como hijo directo de .content
+     B) Empty-state dentro de .card-body y siendo el único hijo
    ========================================================= */
 
-/* 1) Comportamiento base: centrar contenido */
+/* Wrapper base */
 .empty-state{
   display: grid;
   place-items: center;
   padding: 28px;
 }
 
-/* 2) Caso A: empty-state como bloque principal bajo el topbar */
-body.layout .content{
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-/* si empty-state es hijo directo de .content (debajo del header/topbar) */
-body.layout .content > .empty-state{
-  flex: 1 1 auto;
-}
-
-/* 3) Caso B: empty-state anidado en una card (Site24x7: dentro de .card-body)
-      Se aplica solo si ES el único contenido del card-body */
-body.layout .card .card-body > .empty-state:only-child{
-  min-height: clamp(280px, 55vh, 720px);
-}
-
-/* 4) La tarjeta visible */
+/* Tarjeta base */
 .empty-state .empty-card{
   width: min(680px, 100%);
   padding: 28px 32px;
@@ -1027,97 +783,169 @@ body.layout .card .card-body > .empty-state:only-child{
   -webkit-backdrop-filter: blur(10px);
 }
 
+/* Tipografías */
 .empty-state .empty-card h2{ margin: 0 0 10px; }
-.empty-state .empty-card p{ margin: 0 0 10px; }
+.empty-state .empty-card p{ margin: 0 0 10px; color: rgba(229,231,235,.90); }
+.empty-state .empty-card p:last-child{ margin-bottom: 0; }
+
+/* Caso A: empty-state como contenido principal (debajo topbar) */
+.content > .empty-state{
+  /* ocupa el “resto” del alto del content para centrar bajo topbar */
+  flex: 1 1 auto;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+}
+
+/* Evita offsets por márgenes antiguos */
+.content > .empty-state .empty-card{
+  margin: 0 auto !important;
+}
+
+/* Caso B: dentro de card-body, único hijo */
+.card .card-body > .empty-state:only-child{
+  min-height: clamp(280px, 55vh, 720px);
+  padding: 28px;
+}
+
+/* =========================================================
+   ✅ EMPTY STATE (GLOBAL UNIFICADO, SIDEBAR VISIBLE)
+   - Funciona aunque .empty-state venga anidado (ej: embed_wrap)
+   - Centrado en el área de contenido (columna derecha)
+   - Bajo topbar, sin esconder sidebar
+   ========================================================= */
+
+/* Wrapper base */
+.empty-state{
+  display: grid;
+  place-items: center;
+  padding: 28px;
+}
+
+/* Tarjeta base */
+.empty-state .empty-card{
+  width: min(680px, 100%);
+  padding: 28px 32px;
+  text-align: center;
+
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 18px;
+  box-shadow: 0 18px 46px rgba(2, 6, 23, 0.55);
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Tipografías */
+.empty-state .empty-card h2{ margin: 0 0 10px; }
+.empty-state .empty-card p{ margin: 0 0 10px; color: rgba(229,231,235,.90); }
 .empty-state .empty-card p:last-child{ margin-bottom: 0; }
 
 /* =========================================================
-   FIX CRÍTICO — Dropdown usuario/export (stacking + click)
-   Pegar al FINAL de base.css (o en user_dropdown.css)
+   FIX CLAVE: empty-state anidado (embed_wrap, wrappers, cards)
+   - Si el empty-state está en cualquier profundidad dentro de .content,
+     le damos altura mínima “real” para poder centrar.
    ========================================================= */
 
-/* 1) Asegura que el topbar cree stacking y quede por encima */
-.topbar{
-  position: relative !important;
-  z-index: 5000 !important;
-  overflow: visible !important;
+/* Asegura que .content pueda “alojar” centrado vertical consistente */
+.content{
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-/* 2) El shield NO debe bloquear clicks del header */
-.topbar .iframe-click-shield{
-  pointer-events: none !important;
+/* Cualquier empty-state dentro del área de contenido:
+   centra respecto al viewport descontando topbar + paddings típicos */
+.content .empty-state{
+  min-height: clamp(
+    280px,
+    calc(100vh - var(--topbar-h, 64px) - 48px),
+    100vh
+  );
 }
 
-/* 3) Dropdown usuario SIEMPRE por encima y sin “display:none” residual */
+/* Si el empty-state está dentro de una card-body y es el único hijo,
+   le damos una altura más “card-friendly” (sin forzar 100vh) */
+.card .card-body > .empty-state:only-child{
+  min-height: clamp(280px, 55vh, 720px);
+}
+
+/* =========================
+   10) Export + Perfil (header) — USER DROPDOWN SKIN
+   ========================= */
+
+/* Contenedor del dropdown (perfil) */
 .user-menu{
-  position: relative !important;
+  position:relative !important;
+  display:inline-flex;
+  align-items:center;
   z-index: 6000 !important;
 }
 
+/* Menú desplegable (misma estética que export-menu) */
 .user-menu .dropdown-menu{
+  position:absolute;
+  top: calc(100% + 10px);
+  right: 0;
+
+  min-width: 220px;
+  padding: 10px;
+
+  border-radius: 14px;
+  border: 1px solid var(--dropdown-border);
+  background: var(--dropdown-bg);
+  box-shadow: var(--shadow-2);
+
   z-index: 6500 !important;
+
+  /* Por defecto oculto; se muestra con .dropdown-open */
+  display: none;
 }
 
-/* fuerza visible cuando el JS agrega la clase */
+/* Estado abierto (lo usas desde JS) */
 .user-menu.dropdown-open .dropdown-menu{
   display: block !important;
 }
 
-/* 4) Export: asegurar que el dropdown quede arriba en todos los layouts */
-.export-wrapper{
-  position: relative !important;
-  z-index: 6000 !important;
+/* Reset básico del form para que no meta márgenes */
+.user-menu .dropdown-menu form{
+  margin: 0;
 }
 
-.export-wrapper .export-dropdown{
-  z-index: 6500 !important;
+/* Botones/items del dropdown */
+.user-menu .dropdown-menu button{
+  width:100%;
+  text-align:left;
+
+  padding:10px 12px;
+  border-radius:12px;
+
+  border: 1px solid transparent;
+  background: transparent;
+
+  color: var(--text);
+  font-weight: 400;
+  line-height: 1;
+
+  transition: background .12s ease, border-color .12s ease, transform .08s ease;
 }
 
-/* clave: el wrapper es el que recibe la clase */
-.export-wrapper.is-open .export-dropdown{
-  display: block !important;
+.user-menu .dropdown-menu button:hover{
+  background: var(--dropdown-item-hover);
+  border-color: rgba(59,130,246,.26);
 }
 
-/* =========================================================
-   Animación dropdowns (sidebar + details)
-   - CSS-only para <details> con .nav-dropdown
-   - Anima el bloque .tenant-list.nav-submenu
-   ========================================================= */
-
-:root{
-  --dd-ease: cubic-bezier(.2,.8,.2,1);
-  --dd-dur: 180ms;
+.user-menu .dropdown-menu button:active{
+  transform: translateY(1px);
 }
 
-/* Estado cerrado: colapsado */
-.sidebar details.nav-dropdown .tenant-list.nav-submenu{
-  /* Asegurar que el contenido pueda animarse */
-  overflow: hidden;
-
-  /* animación */
-  max-height: 0;
-  opacity: 0;
-  transform: translateY(-4px);
-
-  transition:
-    max-height var(--dd-dur) var(--dd-ease),
-    opacity var(--dd-dur) var(--dd-ease),
-    transform var(--dd-dur) var(--dd-ease);
+/* Opcional: estilo “peligro” SOLO para cerrar sesión */
+.user-menu .dropdown-menu button[type="submit"]{
+  color: #fecaca;
 }
-
-/* Estado abierto */
-.sidebar details.nav-dropdown[open] .tenant-list.nav-submenu{
-  /* Debe ser mayor que la altura máxima esperada del submenu */
-  max-height: 520px;
-
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* Preferencia accesible: si el usuario reduce animaciones */
-@media (prefers-reduced-motion: reduce){
-  .sidebar details.nav-dropdown .tenant-list.nav-submenu{
-    transition: none !important;
-    transform: none !important;
-  }
+.user-menu .dropdown-menu button[type="submit"]:hover{
+  background: rgba(239,68,68,.12);
+  border-color: rgba(239,68,68,.28);
+  color: #fff;
 }

@@ -40,11 +40,38 @@ function colorForActionKey(key) {
   return PALETTE[hashToIndex(k, PALETTE.length)];
 }
 
+function norm(s) { return String(s ?? "").trim().toLowerCase(); }
+
+/* =========================
+ * "Nice ticks" enteros
+ * ========================= */
+function niceStep(maxValue, targetTicks = 7) {
+  const max = Math.max(0, Number(maxValue) || 0);
+  if (max <= 10) return 1;
+
+  const raw = max / targetTicks;
+  const pow = Math.pow(10, Math.floor(Math.log10(raw)));
+  const normv = raw / pow;
+
+  let mult;
+  if (normv <= 1) mult = 1;
+  else if (normv <= 2) mult = 2;
+  else if (normv <= 5) mult = 5;
+  else mult = 10;
+
+  return Math.max(1, Math.round(mult * pow));
+}
+function ceilToStep(v, step) {
+  const n = Math.max(0, Number(v) || 0);
+  const s = Math.max(1, Number(step) || 1);
+  return Math.ceil(n / s) * s;
+}
+
 /**
  * renderActionBar(payload, activeKey?)
- * - Si activeKey no viene, lo toma de getState().actionFilter
  * - Atenúa todas las barras ≠ activeKey con rgba(255,255,255,0.18)
- * - Borde blanco siempre visible (no solo en hover)
+ * - Borde blanco siempre visible
+ * - Sin decimales (ticks + tooltip)
  */
 export function renderActionBar(payload, activeKey) {
   const { labels = [], data = [], keys = [] } = payload;
@@ -55,10 +82,7 @@ export function renderActionBar(payload, activeKey) {
   const stateKey = (getState()?.actionFilter ?? "").toString();
   const focusKey = (activeKey ?? stateKey).toString();
 
-  const ctx = el.getContext("2d");
-  const norm = (s) => String(s ?? "").trim().toLowerCase();
-
-  // Colores con efecto de foco (igual a msgSeverity)
+  // Colores con efecto de foco
   const backgroundColors = keys.map((k) => {
     if (focusKey && norm(k) !== norm(focusKey)) return "rgba(255,255,255,0.18)";
     return withAlpha(colorForActionKey(k), "FF");
@@ -66,6 +90,10 @@ export function renderActionBar(payload, activeKey) {
 
   // Borde blanco siempre
   const BORDER = "#e5e7eb";
+
+  const maxVal = Math.max(0, ...(data || []).map((v) => Number(v || 0)));
+  const step = niceStep(maxVal, 7);
+  const suggestedMax = ceilToStep(maxVal, step);
 
   const conf = {
     type: "bar",
@@ -79,7 +107,7 @@ export function renderActionBar(payload, activeKey) {
         hoverBorderColor: BORDER,
         borderWidth: 2,
         hoverBorderWidth: 2,
-        borderSkipped: false,   // siempre los 4 lados
+        borderSkipped: false,
       }],
     },
     options: {
@@ -91,15 +119,23 @@ export function renderActionBar(payload, activeKey) {
           enabled: true,
           callbacks: {
             title: (items) => (items?.[0] ? String(items[0].label) : ""),
-            label: (item) => `Cantidad: ${item.formattedValue}`,
+            label: (item) => `Cantidad: ${Math.round(item.parsed?.x ?? item.raw ?? 0)}`,
           },
         },
       },
-      elements: {
-        bar: { borderWidth: 2, borderSkipped: false }, // refuerzo global
-      },
+      elements: { bar: { borderWidth: 2, borderSkipped: false } },
       scales: {
-        x: { beginAtZero: true, ticks: { color: AXIS }, grid: { color: GRID } },
+        x: {
+          beginAtZero: true,
+          suggestedMax,
+          ticks: {
+            color: AXIS,
+            stepSize: step,
+            precision: 0,
+            callback: (v) => String(Math.round(v)),
+          },
+          grid: { color: GRID },
+        },
         y: {
           type: "category",
           ticks: {
@@ -116,10 +152,11 @@ export function renderActionBar(payload, activeKey) {
   };
 
   if (!chart) {
+    const ctx = el.getContext("2d");
     chart = new Chart(ctx, conf);
     ctx.canvas.onclick = (evt) => {
       const elp = chart.getElementsAtEventForMode(evt, "nearest", { intersect: true }, true);
-      if (!elp.length) return;
+      if (!elp?.length) return;
       const idx = elp[0].index;
       actions.toggleAction?.(keys[idx]); // usar la key cruda
     };

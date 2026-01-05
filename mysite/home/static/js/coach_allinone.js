@@ -5,16 +5,18 @@
   const qs = (sel) => document.querySelector(sel);
   const qsa = (sel) => Array.from(document.querySelectorAll(sel));
 
-  function findInnMonitorSummary() {
+  function findSummaryByText(text) {
     const summaries = qsa(".nav summary.nav-item");
-    return summaries.find((el) => el.textContent.trim().includes("Inn-Monitor")) || null;
+    return summaries.find((el) => el.textContent.trim().includes(text)) || null;
   }
 
-  function findSiemLink() {
-    return qs('.nav a.nav-item[href*="/siem/"]') || null;
+  function findInnMonitorSummary() {
+    // El summary de Site24x7 no tiene id; lo buscamos por texto
+    return findSummaryByText("Inn-Monitor");
   }
 
-  // ORDEN FIJO: Home -> Alarmas -> SOAR -> SIEM -> Inn-Monitor -> Configuración
+  // ORDEN FIJO (solo items grandes):
+  // Home -> Alarmas -> SOAR -> SIEM -> Inn-Monitor -> Configuración
   const stepsConfig = [
     {
       key: "home",
@@ -45,7 +47,8 @@
       title: "SIEM",
       description:
         "Desde SIEM puedes revisar las alertas y realizar correlaciones avanzadas.",
-      getTarget: () => findSiemLink(),
+      // FIX: SIEM es summary con id siemSummary
+      getTarget: () => qs("#siemSummary"),
       dotId: "coachDotSiem",
     },
     {
@@ -66,7 +69,7 @@
     },
   ];
 
-  let steps = stepsConfig.slice(); // NO filtramos: el salto lo hacemos en navegación
+  let steps = stepsConfig.slice();
   let currentIndex = 0;
 
   let backdropEl = null;
@@ -100,6 +103,7 @@
   }
 
   function clearNavEffects() {
+    // SOLO items grandes (no subitems)
     qsa(".nav .nav-item, .nav summary.nav-item").forEach((el) => {
       el.classList.remove("coachmark-dim", "coachmark-highlight");
     });
@@ -117,7 +121,7 @@
     }
   }
 
-  // Encuentra el siguiente índice "válido" en la dirección indicada
+  // Encuentra el siguiente índice válido en la dirección indicada
   // dir = +1 (siguiente) o -1 (anterior)
   function findNextExistingIndex(fromIndex, dir) {
     let i = fromIndex;
@@ -285,33 +289,35 @@
     document.body.appendChild(panelEl);
 
     btnSkip.addEventListener("click", endCoach);
-    btnPrev.addEventListener("click", () => goToStep(currentIndex - 1));
+    btnPrev.addEventListener("click", () => goToStep(currentIndex - 1, -1));
     btnNext.addEventListener("click", () => {
       if (currentIndex >= steps.length - 1) endCoach();
-      else goToStep(currentIndex + 1);
+      else goToStep(currentIndex + 1, +1);
     });
 
     backdropEl.addEventListener("click", endCoach);
 
     window.addEventListener("resize", positionStep, { passive: true });
     window.addEventListener("scroll", positionStep, true);
+
+    // Escape cierra
+    window.addEventListener("keydown", (e) => {
+      if (panelEl && !panelEl.classList.contains("hidden") && e.key === "Escape") endCoach();
+    });
   }
 
   function goToStep(index, directionHint = +1) {
-    // Si el índice está fuera, cerramos.
     if (index < 0 || index >= steps.length) {
       endCoach();
       return;
     }
 
-    // Si el target no existe, saltar al siguiente válido según dirección
     const desired = index;
     const existsAtDesired = !!steps[desired].getTarget();
 
     if (!existsAtDesired) {
       const next = findNextExistingIndex(desired, directionHint);
       if (next === -1) {
-        // Si no hay más hacia esa dirección, intenta al revés antes de cerrar
         const alt = findNextExistingIndex(desired, -directionHint);
         if (alt === -1) endCoach();
         else goToStep(alt, -directionHint);
@@ -359,12 +365,9 @@
 
     createCoachDom();
 
-    // Siempre parte desde Home si existe; si no, usa el primer paso disponible.
-    const startIndex = steps[0].getTarget()
-      ? 0
-      : findNextExistingIndex(0, +1);
-
+    const startIndex = steps[0].getTarget() ? 0 : findNextExistingIndex(0, +1);
     if (startIndex === -1) return;
+
     goToStep(startIndex, +1);
   }
 

@@ -3,11 +3,18 @@
   let hideTimer = null;
   let inflight = 0;
 
+  // Detección dinámica de página embed (si es así, no mostramos overlay global)
+  const isEmbed = function(){
+    return !!(document.body && document.body.classList && document.body.classList.contains('is-embed'));
+  };
+
   // Ventana de tiempo para considerar que un request fue gatillado por acción del usuario
   const USER_ACTION_WINDOW_MS = 1500;
   let lastUserActionAt = 0;
 
   const ensureOverlay = () => {
+    if (isEmbed()) return null; // no creamos overlay global en embeds
+
     let ov = document.getElementById("loading-overlay");
     if (!ov) {
       ov = document.createElement("div");
@@ -25,6 +32,7 @@
   };
 
   const isOverlayActive = () => {
+    if (isEmbed()) return false;
     const ov = document.getElementById("loading-overlay");
     return !!(ov && ov.classList.contains("is-active"));
   };
@@ -34,7 +42,10 @@
   };
 
   const show = (msg = "Cargando datos…") => {
+    if (isEmbed()) return; // evita mostrar overlay global en embeds
+
     const ov = ensureOverlay();
+    if (!ov) return;
     const txt = ov.querySelector(".loading-text");
     if (txt) txt.textContent = msg;
 
@@ -153,6 +164,12 @@
   };
 
   const bindHandlers = () => {
+    // Si estamos en embed, eliminamos cualquier overlay global existente para evitar que aparezca por un race
+    if (isEmbed()) {
+      const existing = document.getElementById('loading-overlay');
+      if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+    }
+
     // Al cargar la página actual, overlay apagado
     hide();
 

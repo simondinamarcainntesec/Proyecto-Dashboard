@@ -5,7 +5,7 @@
     <section class="empty-state">
       <div class="empty-card">
         <h2>Dashboard no disponible</h2>
-        <p>No hay datos disponibles de <strong>Networks</strong> para esta empresa.</p>
+        <p>No hay datos disponibles de <strong>Threat Analytics</strong> para esta empresa.</p>
         <p>Por favor, contacte con un administrador.</p>
       </div>
     </section>
@@ -17,9 +17,17 @@
 {% block embed_body %}
   <div class="iframe-container">
     <div class="iframe-overlay" role="status" aria-live="polite">
-      <div class="overlay-card"><div class="spinner" aria-hidden="true"></div><div class="overlay-text">Cargando datos…</div></div>
+      <div class="overlay-card">
+        <div class="spinner" aria-hidden="true"></div>
+        <div class="overlay-text">Cargando datos…</div>
+      </div>
     </div>
-    <!-- placeholder: cargaremos el src real desde JS tras pre-carga -->
-    <iframe class="is-loading iframe-placeholder" src="about:blank" data-src="{{ iframe_url }}" aria-hidden="true"></iframe>
+
+    <iframe
+      class="is-loading iframe-placeholder"
+      src="about:blank"
+      data-src="{{ iframe_url }}"
+      aria-hidden="true">
+    </iframe>
   </div>
 {% endblock %}

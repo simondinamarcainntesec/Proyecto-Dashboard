@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="{% static 'css/siem_embeds.css' %}?v={% now 'U' %}">
 </head>
 
-<body class="layout is-embed" data-username="{{ request.user.username|default:'anon' }}">
+<body class="layout is-embed soar" data-username="{{ request.user.username|default:'anon' }}">
 
   <!-- Sidebar -->
   {% include "partials/sidebar.html" %}
@@ -109,6 +109,7 @@
   <script defer src="{% static 'js/country_filter_modal.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/cred_modal.js' %}?v={% now 'U' %}"></script>
   <script src="{% static 'js/chat_popup_launcher.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/sidebar_animation.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/coach_allinone.js' %}?v={% now 'U' %}"></script>  <script defer src="{% static 'js/iframe-loader.js' %}?v={% now 'U' %}"></script>
   {% include 'partials/config_notificaciones_modal.html' %}
   {% include 'partials/_country_filter_modal.html' %}

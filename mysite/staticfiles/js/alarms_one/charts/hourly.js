@@ -6,6 +6,31 @@ import { actions } from "../state.js";
 
 let chart;
 
+// --- Helpers ---
+const zeros = (n) => Array.from({ length: n }, () => 0);
+const safeNum = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+
+// ✅ SIN separador de miles (no puntos, no comas)
+const NF = new Intl.NumberFormat("en-US", { useGrouping: false });
+
+// step “bonito”: 1/2/5 * 10^n (da 10, 20, 50, 100, 200, 500, 1000…)
+function niceStep(maxValue, targetTicks = 8) {
+  const max = Number(maxValue);
+  if (!Number.isFinite(max) || max <= 0) return 1;
+
+  const raw = max / targetTicks;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw / mag;
+
+  let nice;
+  if (norm <= 1) nice = 1;
+  else if (norm <= 2) nice = 2;
+  else if (norm <= 5) nice = 5;
+  else nice = 10;
+
+  return Math.max(1, Math.round(nice * mag));
+}
+
 export function renderHourly(state) {
   const el = document.getElementById("hourlyChart");
   if (!el) return;
@@ -13,10 +38,6 @@ export function renderHourly(state) {
 
   const hourLabels = Array.isArray(data.hourLabels) ? data.hourLabels.slice() : []; // "00".."23"
   const fmtLabels = hourLabels.map((h) => `${h}:00`);
-
-  // --- Helpers ---
-  const zeros = (n) => Array.from({ length: n }, () => 0);
-  const safeNum = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
   let series = Array.isArray(data.hourData) ? data.hourData.slice() : zeros(hourLabels.length);
   let label = "Alarmas (por hora, rango actual)";
@@ -39,12 +60,10 @@ export function renderHourly(state) {
       });
       label = `Alarmas por hora — Subtype: ${state.subtypeFilter}`;
     }
-
   } else if (state.deviceFilter) {
     const dk = data.canonicalDeviceKey(state.deviceFilter);
     series = hourLabels.map((h) => safeNum((data.devByHourRaw?.[h] || {})[dk]));
     label = `Alarmas por hora — Dispositivo: ${dk}`;
-
   } else if (state.levelFilter) {
     const hasLevelHourly = !!data.levelCountsByHourRaw && typeof data.levelCountsByHourRaw === "object";
     const trySeries = hasLevelHourly
@@ -64,7 +83,6 @@ export function renderHourly(state) {
       label = "Alarmas (por hora, rango actual)";
       console.info("[hourly] Sin datos por level; usando serie global.");
     }
-
   } else if (state.severityFilter) {
     series = hourLabels.map((h) => {
       const m = data.sevByHourRaw?.[h] || {};
@@ -72,11 +90,9 @@ export function renderHourly(state) {
       return safeNum(m[hk]);
     });
     label = `Alarmas por hora — Severidad: ${state.severityFilter}`;
-
   } else if (state.actionFilter) {
     series = hourLabels.map((h) => safeNum((data.actByHourNorm?.[h] || {})[state.actionFilter]));
     label = `Alarmas por hora — Acción: ${state.actionFilter}`;
-
   } else if (state.msgSeverityFilter) {
     series = hourLabels.map((h) => safeNum((data.msgSeverityByHourRaw?.[h] || {})[state.msgSeverityFilter]));
     label = `Alarmas por hora — Msg Severity: ${state.msgSeverityFilter}`;
@@ -86,15 +102,20 @@ export function renderHourly(state) {
   const activeHour = state.hourFilter ? String(state.hourFilter).trim() : "";
   const baseColor = "#22C55E";
   const bg = fmtLabels.map((_, i) => {
-    const hourKey = hourLabels[i]; // "00".. "23"
+    const hourKey = hourLabels[i];
     if (activeHour && hourKey !== activeHour) return "rgba(255,255,255,0.18)";
-    return baseColor; // sólido para la hora activa o si no hay filtro
+    return baseColor;
   });
   const border = fmtLabels.map((_, i) => {
     const hourKey = hourLabels[i];
     if (activeHour && hourKey !== activeHour) return "rgba(229,231,235,0.85)";
     return "#e5e7eb";
   });
+
+  // ====== ESCALA “BONITA” ======
+  const maxY = Math.max(0, ...series.map((v) => safeNum(v)));
+  const stepY = niceStep(maxY, 8);
+  const niceMax = Math.ceil((maxY || 0) / stepY) * stepY;
 
   const conf = {
     type: "bar",
@@ -117,7 +138,12 @@ export function renderHourly(state) {
       animation: { duration: 600, easing: "easeOutQuart" },
       plugins: {
         legend: { display: false },
-        tooltip: { enabled: true },
+        tooltip: {
+          enabled: true,
+          callbacks: {
+            label: (ctx) => `${ctx.dataset.label}: ${NF.format(Math.round(ctx.parsed.y))}`,
+          },
+        },
       },
       scales: {
         x: {
@@ -126,7 +152,15 @@ export function renderHourly(state) {
         },
         y: {
           beginAtZero: true,
-          ticks: { color: AXIS },
+          suggestedMax: niceMax || undefined,
+          grace: "5%",
+          ticks: {
+            color: AXIS,
+            stepSize: stepY,
+            precision: 0,
+            maxTicksLimit: 9,
+            callback: (v) => NF.format(Math.round(v)), // ✅ 3500 en vez de 3.500
+          },
           grid: { color: GRID },
         },
       },
@@ -139,7 +173,7 @@ export function renderHourly(state) {
       const points = chart.getElementsAtEventForMode(evt, "nearest", { intersect: true }, true);
       if (!points.length) return;
       const idx = points[0].index;
-      const h = hourLabels[idx]; // usa el valor "00".."23"
+      const h = hourLabels[idx];
       actions.toggleHour?.(h);
     };
   } else {

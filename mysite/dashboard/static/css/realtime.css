@@ -218,7 +218,7 @@
 
 .datatable .is-right{ text-align:right; }
 
-/* Pills de cantidad (fallback porque base.css no define --pill-bg/--pill-text) */
+/* Pills base (se usa para "cantidad" u otros) */
 .pill{
   display:inline-block;
   padding: 4px 10px;
@@ -232,6 +232,39 @@
   text-align: center;
 
   border: 1px solid rgba(55, 48, 163, .18);
+}
+
+/* ✅ NUEVO: Pills de severidad (mismo look que tu CSS de referencia) */
+/* Uso: <span class="pill sev-critical">CRITICAL</span> */
+.pill.sev-critical{
+  background:#dc262633;
+  border:1px solid #dc2626aa;
+  color:#fff;
+}
+.pill.sev-high{
+  background:#f9731633;
+  border:1px solid #f97316aa;
+  color:#fff;
+}
+.pill.sev-medium{
+  background:#f59e0b33;
+  border:1px solid #f59e0baa;
+  color:#fff;
+}
+.pill.sev-low{
+  background:#38bdf833;
+  border:1px solid #38bdf8aa;
+  color:#fff;
+}
+.pill.sev-info{
+  background:#60a5fa33;
+  border:1px solid #60a5faaa;
+  color:#fff;
+}
+.pill.sev-na{
+  background:#6b728033;
+  border:1px solid #6b7280aa;
+  color:#fff;
 }
 
 .cell-device{
@@ -467,7 +500,7 @@
 
 @keyframes ao-spin{ to{ transform: rotate(360deg); } }
 
-/* logModal HTML blanco/negro + pills severidad */
+/* logModal HTML blanco/negro */
 #logHtml table{
   width: 100%;
   border-collapse: collapse;
@@ -486,26 +519,43 @@
 #logHtml thead th{ font-weight: 700; }
 #logHtml tr:hover td{ background: #f5f5f5; }
 
+/* logModal pills severidad (reusa .pill + sev-*) */
 #logModal .pill{
   display:inline-block;
   padding: 2px 8px;
   border-radius: 999px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 800;
   line-height: 1.6;
-
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.18);
+  letter-spacing: .2px;
 }
-
-#logModal .pill.sev-critical{ background:#FF6B6B22; border-color:#FF6B6B55; }
-#logModal .pill.sev-high    { background:#F59E0B22; border-color:#F59E0B55; }
-#logModal .pill.sev-medium  { background:#F0E44222; border-color:#F0E44255; color:#222; }
-#logModal .pill.sev-low     { background:#10B98122; border-color:#10B98155; }
-#logModal .pill.sev-info    { background:#60A5FA22; border-color:#60A5FA55; }
-#logModal .pill.sev-na      { background:#6B728022; border-color:#6B728055; }
 
 #logModal .modal-card{
   max-width: min(1280px, calc(100% - 64px));
   width: 100%;
+}
+
+/* =========================================
+   FIX: Modal realtime debe cubrir TOPBAR
+   (blur/oscurecer también tenant/llamar/chat)
+   ========================================= */
+
+/* Asegura que el overlay modal quede por encima de topbar/sidebar */
+#alarmsModal.modal,
+#logModal.modal{
+  z-index: 9000 !important; /* mayor que la topbar de base.css */
+}
+
+/* Backdrop ocupa toda la pantalla sí o sí */
+#alarmsModal .modal-backdrop,
+#logModal .modal-backdrop{
+  position: fixed;
+  inset: 0;
+}
+
+/* La tarjeta del modal encima del backdrop */
+#alarmsModal .modal-card,
+#logModal .modal-card{
+  position: relative;
+  z-index: 9001 !important;
 }

@@ -59,6 +59,14 @@ body.coachmark-open .sidebar .coachmark-highlight{
   position:relative;
 }
 
+/* (Opcional, pero recomendado) Evita el marker de <summary> y asegura buen “box model” */
+.nav summary.nav-item{
+  list-style:none;
+}
+.nav summary.nav-item::-webkit-details-marker{
+  display:none;
+}
+
 /* Dot (usa el que ya pusiste en HTML: .coachmark-dot + hidden) */
 .coachmark-dot{
   position:absolute;
@@ -161,8 +169,11 @@ body.coachmark-open .sidebar .coachmark-highlight{
   z-index:1011;
 }
 
-/* Si alguna vista antigua dejó estilos por ID, esto los neutraliza sin romper nada */
-body.coachmark-open #soarSummary{
+/* =========================================================
+   FIX REAL: neutraliza estilos “legacy” por ID SOLO cuando NO está highlight
+   (antes esto mataba el highlight en SOAR porque el target es #soarSummary)
+   ========================================================= */
+body.coachmark-open #soarSummary:not(.coachmark-highlight){
   background: unset !important;
   border: unset !important;
   box-shadow: unset !important;

@@ -23,7 +23,6 @@ from django.views.decorators.http import require_GET
 from home.models import TenantCredentials, WhitelistCountryPreference
 from home.countries import ALL_COUNTRIES
 
-
 from .realtime_transform import build_realtime_context
 
 logger = logging.getLogger(__name__)
@@ -188,10 +187,7 @@ def _extract_kv_generic(raw_block) -> dict:
     try:
         obj = json.loads(s)
         if isinstance(obj, dict):
-            return {
-                _norm_key(k): _strip_html(str(v))
-                for k, v in obj.items()
-            }
+            return {_norm_key(k): _strip_html(str(v)) for k, v in obj.items()}
     except Exception:
         pass
 
@@ -240,13 +236,236 @@ def _extract_kv_generic(raw_block) -> dict:
     return kv
 
 
+# ===================== HARMONY (bunion_harmony) =====================
+
+_UUID_REGEX = re.compile(
+    r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b",
+    re.I,
+)
+
+
+def _is_bunion_harmony(alarm: dict) -> bool:
+    app = _get_value_case_insensitive(alarm, "application")
+    return str(app or "").strip().lower() == "bunion_harmony"
+
+
+def _harmony_clean_text(s: str) -> str:
+    if s is None:
+        return ""
+    s = str(s)
+    s = re.sub(r"&nbsp;", " ", s, flags=re.I)
+    s = re.sub(r"<br\s*/?>", " ", s, flags=re.I)
+    s = re.sub(r"</?div[^>]*>", " ", s, flags=re.I)
+    s = re.sub(r"<[^>]+>", " ", s, flags=re.I)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+
+def _harmony_rx_one(html: str, pattern: str) -> str:
+    m = re.search(pattern, html, flags=re.I | re.S)
+    return _harmony_clean_text(m.group(1)) if m else ""
+
+
+def _parse_harmony_message(html: str) -> dict:
+    """
+    Extrae campos útiles desde el HTML "Harmony Endpoint Custom Alert Notification".
+    SOLO usar cuando alarm.application == bunion_harmony.
+    Devuelve dict con claves normalizadas para _message_extract_multiple_sources.
+    """
+    if not html:
+        return {}
+
+    # Tenant / Service / Importance
+    tenant = (
+        _harmony_rx_one(html, r"Tenant:[\s\S]*?<a[^>]*>(.*?)</a>")
+        or _harmony_rx_one(html, r"Tenant:\s*([\s\S]*?)</p>")
+    )
+    service = (
+        _harmony_rx_one(html, r"Service Name:[\s\S]*?<a[^>]*>(.*?)</a>")
+        or _harmony_rx_one(html, r"Service Name:\s*([\s\S]*?)</p>")
+    )
+    importance = (
+        _harmony_rx_one(html, r"Importance:[\s\S]*?<a[^>]*>(.*?)</a>")
+        or _harmony_rx_one(html, r"Importance:\s*([\s\S]*?)</p>")
+    )
+
+    # Summary: "Alert matched 3 times on 1 device" o "different devices"
+    match_count = ""
+    device_count = ""
+    m = re.search(
+        r"Alert matched\s*(\d+)\s*times\s*on\s*(\d+)\s*(?:different\s*)?devices?",
+        html,
+        flags=re.I,
+    )
+    if m:
+        match_count = m.group(1)
+        device_count = m.group(2)
+
+    # Custom alert / Tag / Matched on
+    custom_alert = _harmony_rx_one(html, r"Custom alert name:\s*(.*?)</p>")
+    tag = _harmony_rx_one(html, r"Tag:\s*(.*?)</p>")
+    matched_on = _harmony_rx_one(html, r"Matched on:\s*(.*?)</p>")
+
+    # URL
+    threat_url = _harmony_rx_one(
+        html,
+        r'href="(https://portal\.checkpoint\.com/Dashboard/endpoint/ThreatHunting#[^"]+)"',
+    )
+
+    # Tabla device-table
+    devices = []
+    statuses = []
+    report_ids = []
+    events = []
+
+    # OJO: algunos correos usan class="x_...device-table"
+    table_html = ""
+    tm = re.search(
+        r"<table[^>]*class=\"[^\"]*device-table[^\"]*\"[^>]*>([\s\S]*?)</table>",
+        html,
+        flags=re.I,
+    )
+    if tm:
+        table_html = tm.group(1) or ""
+
+    # Filas: 4 <td>
+    if table_html:
+        row_re = re.compile(
+            r"<tr[^>]*>\s*"
+            r"<td[^>]*>([\s\S]*?)</td>\s*"
+            r"<td[^>]*>([\s\S]*?)</td>\s*"
+            r"<td[^>]*>([\s\S]*?)</td>\s*"
+            r"<td[^>]*>([\s\S]*?)</td>\s*"
+            r"</tr>",
+            flags=re.I,
+        )
+        for r in row_re.findall(table_html):
+            rid = _harmony_clean_text(r[0])
+            dev = _harmony_clean_text(r[1])
+            st = _harmony_clean_text(r[2])
+            evtime = _harmony_clean_text(r[3])
+
+            if not rid or not _UUID_REGEX.search(rid):
+                continue
+
+            report_ids.append(rid)
+            if dev:
+                devices.append(dev)
+            if st:
+                statuses.append(st)
+
+            events.append(
+                {
+                    "report_id": rid,
+                    "device_name": dev,
+                    "attack_status": st,
+                    "event_time_gmt": evtime,
+                }
+            )
+
+    # Uniq preservando orden
+    def uniq_keep_order(seq):
+        seen = set()
+        out = []
+        for x in seq:
+            if not x:
+                continue
+            k = str(x)
+            if k in seen:
+                continue
+            seen.add(k)
+            out.append(k)
+        return out
+
+    devices_u = uniq_keep_order(devices)
+    statuses_u = uniq_keep_order(statuses)
+    report_ids_u = uniq_keep_order(report_ids)
+
+    # Elegimos "device principal" para realtime
+    primary_device = devices_u[0] if devices_u else ""
+
+    # Level: attack status (si hay varios, join)
+    level = ", ".join(statuses_u) if statuses_u else ""
+
+    # Subtype: custom alert name (más útil que "create" del recent_activities)
+    subtype = custom_alert or tag or "Harmony"
+
+    # msg_severity: importance (en minúsculas)
+    msg_sev = (importance or "").strip().lower()
+
+    # log_description: armar algo útil
+    desc_parts = []
+    if tenant:
+        desc_parts.append(f"Tenant={tenant}")
+    if service:
+        desc_parts.append(f"Service={service}")
+    if importance:
+        desc_parts.append(f"Importance={importance}")
+    if custom_alert:
+        desc_parts.append(f"Alert={custom_alert}")
+    if tag:
+        desc_parts.append(f"Tag={tag}")
+    if match_count and device_count:
+        desc_parts.append(f"Matched={match_count} on {device_count} device(s)")
+    if devices_u:
+        desc_parts.append(f"Devices={','.join(devices_u)}")
+    if statuses_u:
+        desc_parts.append(f"Status={','.join(statuses_u)}")
+    if report_ids_u:
+        # no reventar el UI: limitar
+        rid_join = ",".join(report_ids_u[:10])
+        if len(report_ids_u) > 10:
+            rid_join += "..."
+        desc_parts.append(f"ReportIDs={rid_join}")
+    if matched_on:
+        desc_parts.append(f"Rule={matched_on}")
+    if threat_url:
+        desc_parts.append("ThreatHuntingURL=available")
+
+    log_description = " | ".join(desc_parts).strip()
+
+    # merged con claves normalizadas (lower) para el extractor
+    merged = {
+        "tenant": tenant,
+        "service name": service,
+        "importance": importance,
+        "severity": msg_sev,                 # para msg_severity
+        "device name": primary_device,       # para msg_device_name
+        "level": level,                      # para level
+        "subtype": subtype,                  # para subtype
+        "log description": log_description,  # para log_description
+        "tag": tag,
+        "custom alert name": custom_alert,
+        "matched on": matched_on,
+        "threat hunting url": threat_url,
+        "match count": match_count,
+        "device count": device_count,
+        # extra: eventos (por si después lo necesitas)
+        "events": events,
+    }
+    return merged
+
+
 def _message_extract_multiple_sources(alarm: dict, wanted: list[str]) -> dict:
     """
     Combina info tanto de 'log_details' como de 'message',
     normalizando claves y devolviendo solo las pedidas en 'wanted'.
-    Aplica la misma lógica de severidad que en el JS:
-    severity / Severity / severity2 / level.
+
+    Para bunion_harmony:
+      - parsea el HTML y lo transforma a llaves compatibles con realtime.
     """
+    merged: dict[str, str] = {}
+
+    # ✅ PARSEO ESPECÍFICO SOLO SI application == bunion_harmony
+    if _is_bunion_harmony(alarm):
+        raw_html = _get_value_case_insensitive(alarm, "message")
+        if isinstance(raw_html, str) and raw_html:
+            try:
+                merged.update(_parse_harmony_message(raw_html))
+            except Exception as e:
+                logger.exception("[REALTIME][HARMONY] Error parseando HTML: %s", e)
+
+    # Para todo el resto (o fallback si harmony no entregó algo)
     detail_keys_candidates = [
         "log_details",
         "logdetail",
@@ -254,7 +473,6 @@ def _message_extract_multiple_sources(alarm: dict, wanted: list[str]) -> dict:
         "log detail",
         "logdetails",
     ]
-    merged: dict[str, str] = {}
 
     for dk in detail_keys_candidates:
         block = _get_value_case_insensitive(alarm, dk)
@@ -312,9 +530,7 @@ def value_for_column(alarm: dict, column: str):
         return _get_value_case_insensitive(alarm, column)
 
     if column == "eventtime":
-        return _to_datetime_santiago(
-            _get_value_case_insensitive(alarm, column)
-        )
+        return _to_datetime_santiago(_get_value_case_insensitive(alarm, column))
 
     if column == "aotags":
         return _get_value_case_insensitive(alarm, column)
@@ -448,27 +664,16 @@ def realtime_page(request):
 
     except Exception as e:
         # Incluye errores de token, 401/403, etc.
-        logger.exception(
-            "[REALTIME] Error construyendo dashboard realtime: %s",
-            e,
-        )
-        error_public = (
-            "No fue posible obtener las alarmas en tiempo real para este tenant."
-        )
-        # ctx queda vacío y KPIs en 0 → el template entra en el bloque de 'error'
+        logger.exception("[REALTIME] Error construyendo dashboard realtime: %s", e)
+        error_public = "No fue posible obtener las alarmas en tiempo real para este tenant."
 
     # Credenciales activas del tenant
     cred = None
     try:
         if tenant:
-            cred = TenantCredentials.get_active_for_tenant(
-                int(getattr(tenant, "id", 0))
-            )
+            cred = TenantCredentials.get_active_for_tenant(int(getattr(tenant, "id", 0)))
     except Exception as e:
-        logger.exception(
-            "[REALTIME] Error obteniendo credenciales del tenant: %s",
-            e,
-        )
+        logger.exception("[REALTIME] Error obteniendo credenciales del tenant: %s", e)
 
     # Selector de tenants para Inntesec (según el tenant del USUARIO, no el activo)
     tenants_list = []
@@ -487,9 +692,7 @@ def realtime_page(request):
     except WhitelistCountryPreference.DoesNotExist:
         selected_paises = []
     except Exception as e:
-        logger.exception(
-            "[REALTIME] Error leyendo preferencias de países: %s", e
-        )
+        logger.exception("[REALTIME] Error leyendo preferencias de países: %s", e)
         selected_paises = []
 
     page_ctx = {
@@ -502,9 +705,7 @@ def realtime_page(request):
         "cred": cred,
         "whitelist_countries": ALL_COUNTRIES,
         "selected_paises": selected_paises,
-        # error genérico para el template (None si todo OK)
         "error": error_public,
-        # contexto realtime original
         **ctx,
     }
     return render(request, "dashboard/realtime.html", page_ctx)
@@ -521,9 +722,7 @@ def realtime_data(request):
     try:
         _, _, alarms = _fetch_alarms_today_direct()
         alarms = _filter_for_request_tenant(request, alarms)
-        ctx = build_realtime_context(
-            alarms, value_for_column, tzname="America/Santiago"
-        )
+        ctx = build_realtime_context(alarms, value_for_column, tzname="America/Santiago")
         return JsonResponse({"ok": True, "data": ctx}, json_dumps_params={"indent": 2})
     except Exception as e:
         logger.exception("[REALTIME] realtime_data error: %s", e)
@@ -613,9 +812,7 @@ def _apply_query_filters(request, alarms):
         sev = _lc(value_for_column(a, "severity"))
         msg = _lc(value_for_column(a, "msg_severity"))
         lvl = value_for_column(a, "level")
-        dev = value_for_column(a, "msg_device_name") or value_for_column(
-            a, "device"
-        )
+        dev = value_for_column(a, "msg_device_name") or value_for_column(a, "device")
         stp = value_for_column(a, "subtype")
         hh = _hour_str_from_alarm(a)
 
@@ -676,14 +873,11 @@ def realtime_alarms_by_subtype(request):
                     else str(dt or ""),
                     "severity": _lc(value_for_column(a, "severity")),
                     "msg_severity": _lc(ext.get("Severity") or ""),
-                    "device": (
-                        ext.get("Device Name") or ext.get("Device") or ""
-                    ).strip(),
+                    "device": (ext.get("Device Name") or ext.get("Device") or "").strip(),
                     "level": (ext.get("Level") or "").strip(),
                     "action": _get_value_case_insensitive(a, "actions")
                     or _get_value_case_insensitive(a, "Action"),
                     "subtype": (ext.get("Subtype") or "").strip(),
-                    "log_description": (ext.get("Log Description") or "").strip(),
                 }
             )
 
@@ -738,9 +932,7 @@ def realtime_alarm_log_table(request):
                 break
 
         if not found:
-            return JsonResponse(
-                {"ok": False, "html": "<em>Alarma no encontrada</em>"}
-            )
+            return JsonResponse({"ok": False, "html": "<em>Alarma no encontrada</em>"})
 
         raw_msg = _get_value_case_insensitive(found, "message")
         raw_logdetails = _get_value_case_insensitive(found, "log_details")

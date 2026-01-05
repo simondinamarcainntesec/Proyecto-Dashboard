@@ -114,6 +114,9 @@
     
             <a class="tenant-option nav-subitem {% if app_name == 'siem' and url_name == 'eventos_diarios' %}is-active{% endif %}"
               href="{% url 'siem:eventos_diarios' %}">Eventos diarios</a>
+
+            <a class="tenant-option nav-subitem {% if app_name == 'siem' and url_name == 'threat_analytics' %}is-active{% endif %}"
+              href="{% url 'siem:threat_analytics' %}">Threat Analytics</a>
           </div>
         </details>
         {% endwith %}
@@ -604,6 +607,7 @@
   <script defer src="{% static 'js/country_filter_modal.js' %}?v={% now 'U' %}"></script>
   <script src="{% static 'js/chat_popup_launcher.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/coach_allinone.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/sidebar_animation.js' %}?v={% now 'U' %}"></script>
 
   <!-- NUEVO -->
   <script defer src="{% static 'js/soar_assign_ticket.js' %}?v={% now 'U' %}"></script>

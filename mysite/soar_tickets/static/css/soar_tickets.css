@@ -1,6 +1,8 @@
 /* static/css/soar_tickets.css */
 /* =========================================================
-   SOAR Tickets — UI + Modal + Fixes (Sidebar + Modal layout)
+   SOAR Tickets — UI + Modal (Ticket) — Ajustado a referencia
+   - Referencia: modal estilo toolbar/listas (block, card, h4, stacked)
+   - Objetivo: que Ticket Modal (foto 2) se vea como (foto 1)
    ========================================================= */
 
 /* =========================
@@ -12,7 +14,18 @@
   justify-content:space-between;
   gap:14px;
   margin-bottom:12px;
+
+  /* aire lateral */
+  padding-left: 10px;
+  padding-right: 10px;
 }
+@media (min-width: 900px){
+  .tickets-head{
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}
+
 .tickets-title{
   margin:0;
   font-size:32px;
@@ -29,6 +42,9 @@
   align-items:center;
   gap:8px;
   flex-wrap:wrap;
+
+  /* evita pegado al borde derecho */
+  padding-right: 2px;
 }
 .tab{
   display:inline-flex;
@@ -83,7 +99,8 @@
    Modal: tamaños base
    ========================= */
 .ticket-modal-card{
-  max-width: min(1100px, calc(100% - 64px));
+  /* referencia se siente más “ancha” (tipo incidentModal) */
+  max-width: min(1400px, calc(100% - 64px));
   width: 100%;
 }
 .close-modal-card{
@@ -97,32 +114,27 @@
 #ticketSuccessModal { z-index: 10020; }
 
 /* =========================================================
-   FIX: core de modales SOLO para Tickets (no global)
-   - evita depender de base.css/list.css
-   - no toca otros modales del portal
+   CORE Modal (SCOPED) — Igual a referencia
    ========================================================= */
-body.soar.modal-open{ overflow:hidden; } /* <-- CAMBIO: antes body.modal-open */
+body.soar.modal-open{ overflow:hidden; } /* solo en tickets */
 
-/* Contenedor modal */
+/* Contenedor modal (igual referencia: display:block cuando visible) */
 #ticketModal.modal,
 #closeTicketModal.modal,
 #ticketSuccessModal.modal{
-  position:fixed;
-  inset:0;
-  display:none;                 /* hidden por defecto */
+  position: fixed;
+  inset: 0;
+  display: none;
 }
 
 /* Visible cuando se quita .hidden */
 #ticketModal.modal:not(.hidden),
 #closeTicketModal.modal:not(.hidden),
 #ticketSuccessModal.modal:not(.hidden){
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:24px;
+  display: block;
 }
 
-/* Backdrop */
+/* Backdrop (igual referencia) */
 #ticketModal .modal-backdrop,
 #closeTicketModal .modal-backdrop,
 #ticketSuccessModal .modal-backdrop{
@@ -132,76 +144,168 @@ body.soar.modal-open{ overflow:hidden; } /* <-- CAMBIO: antes body.modal-open */
   backdrop-filter: blur(4px);
 }
 
-/* Card base (Ticket + Close) */
+/* Card base (igual referencia) */
 #ticketModal .modal-card,
 #closeTicketModal .modal-card{
-  position:relative;
-  z-index:1;
+  position: relative;
+  z-index: 1;
   background: var(--card, #0f1d35);
   border: 1px solid var(--border, #1e293b);
-  border-radius: 18px;
-  box-shadow: 0 18px 48px rgba(2,6,23,.55);
-  margin: 0;
-  padding: 16px;
+  border-radius: 12px;               /* referencia: 12px */
+  width: calc(100% - 48px);          /* referencia */
+  margin: 5vh auto;                  /* referencia */
+  padding: 16px;                     /* referencia */
   color: var(--text, #e5e7eb);
+  box-shadow: 0 10px 28px rgba(2,6,23,.35); /* referencia */
 }
 
-/* Header (Ticket + Close) */
+/* Header (igual referencia) */
 #ticketModal .modal-header,
 #closeTicketModal .modal-header{
   display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  padding-bottom:10px;
-  margin-bottom:12px;
-  border-bottom:1px solid rgba(255,255,255,.08);
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border, #1e293b);
+  margin-bottom: 12px;
 }
 
-/* Botón cerrar (Ticket + Close) */
+/* Botón cerrar (igual referencia) */
 #ticketModal .modal-close,
 #closeTicketModal .modal-close{
-  width:34px;
-  height:34px;
-  display:grid;
-  place-items:center;
-  border-radius:10px;
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.03);
-  color:#e5e7eb;
-  cursor:pointer;
+  background: transparent;
+  border: 1px solid var(--border, #1e293b);
+  border-radius: 8px;
+  color: var(--text, #e5e7eb);
+  padding: 4px 8px;
+  cursor: pointer;
+  width: auto;
+  height: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 #ticketModal .modal-close:hover,
 #closeTicketModal .modal-close:hover{
-  background: rgba(255,255,255,.08);
+  background: rgba(255, 255, 255, 0.08);
 }
 
-/* Body scroll control */
+/* Body (igual referencia) */
 #ticketModal .modal-body,
 #closeTicketModal .modal-body{
   display:flex;
-  flex-direction:column;
-  gap:12px;
-  max-height: min(70vh, 720px);
-  overflow:auto;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 65vh;     /* referencia */
+  overflow-y: auto;
 }
 
-/* Mantén card con max-height útil */
-#ticketModal .modal-card{ max-height: 85vh; }
-
-
-/* =========================
-   Modal: título
-   ========================= */
-.ticket-modal-title{
+/* =========================================================
+   Ticket Modal: título y layout interno (como referencia)
+   ========================================================= */
+#ticketModal .ticket-modal-title{
   display:flex;
   align-items:center;
   gap:10px;
 }
 
-/* =========================
-   Grid: Información del ticket
-   ========================= */
+/* Bloques internos (ENCABEZADO / RIESGO / CLASIF / ACCIONES / APPLICATION)
+   -> igual a la referencia .block */
+#ticketModal .block,
+#closeTicketModal .block{
+  background: var(--panel, #0f1b31);
+  border: 1px solid var(--border, #1e293b);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+#ticketModal .block h4,
+#closeTicketModal .block h4{
+  margin: .1rem 0 .6rem;
+  font-size: 14px;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+  color: #cbd5e1;
+}
+
+#ticketModal .block p,
+#closeTicketModal .block p{
+  margin: .35rem 0;
+  line-height: 1.5;
+  color: #cbd5e1;
+}
+
+/* Lista “Encabezado” (igual referencia .stacked) */
+#ticketModal .stacked,
+#closeTicketModal .stacked{
+  list-style:none;
+  padding:0;
+  margin:0;
+}
+#ticketModal .stacked li,
+#closeTicketModal .stacked li{
+  padding: 4px 0;
+  border-bottom: 1px dashed rgba(255,255,255,0.06);
+}
+#ticketModal .stacked li:last-child,
+#closeTicketModal .stacked li:last-child{
+  border-bottom: 0;
+}
+
+/* Tipografías utilitarias (por si en el HTML existen) */
+#ticketModal .mono,
+#closeTicketModal .mono{
+  font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+}
+#ticketModal .muted,
+#closeTicketModal .muted{ opacity:.92; }
+
+/* Acciones (botones) en el modal: alineación como referencia */
+#ticketModal .ticket-actions-row,
+#closeTicketModal .ticket-actions-row{
+  display:flex;
+  justify-content: flex-end;
+  align-items:center;
+  gap:10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+/* Asegura look de botones en modal (igual referencia) */
+#ticketModal .btn.primary,
+#closeTicketModal .btn.primary{
+  background: var(--brand,#3b82f6);
+  color:#fff;
+  border:0;
+  padding:8px 12px;
+  border-radius:12px;
+  font-weight:700;
+}
+#ticketModal .btn.ghost,
+#closeTicketModal .btn.ghost{
+  background:transparent;
+  border:1px solid var(--border,#1e293b);
+  color:var(--text,#e5e7eb);
+  padding:8px 12px;
+  border-radius:12px;
+  font-weight:700;
+}
+#ticketModal .btn.ghost-sm,
+#closeTicketModal .btn.ghost-sm{
+  background:transparent;
+  border:1px solid var(--border,#1e293b);
+  color:var(--text,#e5e7eb);
+  padding:8px 10px;
+  border-radius:12px;
+  font-size:12px;
+  font-weight:700;
+}
+
+/* =========================================================
+   (Si tu modal usa grid interno en algún punto, lo dejamos
+   pero con look consistente con la referencia)
+   ========================================================= */
 .ticket-info-grid{
   display:grid;
   grid-template-columns: 1fr 1fr;
@@ -212,16 +316,13 @@ body.soar.modal-open{ overflow:hidden; } /* <-- CAMBIO: antes body.modal-open */
 }
 
 .ticket-info-item{
-  padding:10px 12px;
-  border:1px solid rgba(255,255,255,.06);
-  border-radius:12px;
-  background: rgba(255,255,255,.02);
+  padding: 12px 12px;
+  border: 1px solid var(--border, #1e293b);
+  border-radius: 12px;
+  background: var(--panel, #0f1b31);
+  min-width: 0;
 }
-
-/* Items a ancho completo dentro del grid */
-.ticket-info-item.span-2{
-  grid-column: 1 / -1;
-}
+.ticket-info-item.span-2{ grid-column: 1 / -1; }
 
 .ticket-info-k{
   display:flex;
@@ -236,21 +337,13 @@ body.soar.modal-open{ overflow:hidden; } /* <-- CAMBIO: antes body.modal-open */
 }
 .ticket-info-v{
   color:#e5e7eb;
-  font-weight:700;
+  font-weight:800;
+  min-width:0;
 }
 
-.ticket-actions-row{
-  display:flex;
-  justify-content:flex-end;
-  gap:10px;
-  margin-top:12px;
-  flex-wrap:wrap;
-}
-
-/* =========================
-   Iconos (data-uri)
-   ========================= */
-/* <-- CAMBIO: scope a modales de tickets (evita pisar nav/global) */
+/* =========================================================
+   Iconos (data-uri) — scoped a modales de tickets
+   ========================================================= */
 #ticketModal .meta-ico,
 #closeTicketModal .meta-ico,
 #ticketSuccessModal .meta-ico,
@@ -259,7 +352,6 @@ body.soar.modal-open{ overflow:hidden; } /* <-- CAMBIO: antes body.modal-open */
   display:inline-block;
   opacity:.95;
 }
-
 #ticketModal .meta-ico.is-alert,
 #closeTicketModal .meta-ico.is-alert,
 #ticketSuccessModal .meta-ico.is-alert,
@@ -295,8 +387,6 @@ body.soar.modal-open{ overflow:hidden; } /* <-- CAMBIO: antes body.modal-open */
   background: no-repeat center/contain;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2360a5fa'%3E%3Cpath d='M12 1a11 11 0 1 0 11 11A11 11 0 0 0 12 1zm1 11h5v2h-7V6h2z'/%3E%3C/svg%3E");
 }
-
-/* Ticket + Observaciones + Éxito */
 #ticketModal .meta-ico.is-ticket,
 #closeTicketModal .meta-ico.is-ticket,
 #ticketSuccessModal .meta-ico.is-ticket,
@@ -318,8 +408,6 @@ body.soar.modal-open{ overflow:hidden; } /* <-- CAMBIO: antes body.modal-open */
   background: no-repeat center/contain;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2322c55e'%3E%3Cpath d='M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm-1 14-4-4 1.4-1.4L11 13.2l5.6-5.6L18 9l-7 7Z'/%3E%3C/svg%3E");
 }
-
-/* Comentario inicial */
 #ticketModal .meta-ico.is-note,
 #closeTicketModal .meta-ico.is-note,
 #ticketSuccessModal .meta-ico.is-note,
@@ -343,31 +431,17 @@ body.soar.modal-open{ overflow:hidden; } /* <-- CAMBIO: antes body.modal-open */
   min-height: 120px;
 }
 .notes-textarea:focus{
-  border-color: rgba(59,130,246,.9);
+  border-color: rgba(59,130,246,.65);
   box-shadow: 0 0 0 3px rgba(59,130,246,.18);
 }
 
 /* =========================================================
- * Modal Ticket Success (igual al estilo "Exportación")
+ * Modal Ticket Success (se mantiene)
  * ========================================================= */
-#ticketSuccessModal.modal:not(.hidden){
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-}
-
-/* Mantén backdrop con blur */
-#ticketSuccessModal .modal-backdrop{
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(4px);
-}
-
-/* Card centrada y compacta */
 #ticketSuccessModal .success-info-card{
   max-width: 640px;
   width: calc(100% - 32px);
-  margin: 0;
+  margin: 5vh auto;
   padding: 26px 24px;
   border-radius: 18px;
   background: #0c1428;
@@ -375,21 +449,15 @@ body.soar.modal-open{ overflow:hidden; } /* <-- CAMBIO: antes body.modal-open */
   box-shadow: 0 18px 48px rgba(2,6,23,.55);
   text-align: center;
 }
-
-/* Header centrado, sin línea */
 #ticketSuccessModal .modal-header{
-  justify-content: center;
+  display:flex;
+  justify-content:center;
+  align-items:center;
   border-bottom: 0;
   margin-bottom: 8px;
   padding-bottom: 0;
 }
-
-/* No queremos la X en este modal */
-#ticketSuccessModal .modal-close{
-  display: none;
-}
-
-/* Título grande */
+#ticketSuccessModal .modal-close{ display:none; }
 #ticketSuccessTitle{
   font-size: 26px;
   font-weight: 900;
@@ -397,16 +465,12 @@ body.soar.modal-open{ overflow:hidden; } /* <-- CAMBIO: antes body.modal-open */
   color: #eaf1ff;
   margin: 0;
 }
-
-/* Body sin scroll, centrado */
 #ticketSuccessModal .modal-body{
   max-height: none;
   overflow: visible;
   gap: 12px;
   align-items: center;
 }
-
-/* Texto */
 #ticketSuccessModal .success-info-text{
   margin: 6px 0 14px;
   color: #cbd5e1;
@@ -414,14 +478,10 @@ body.soar.modal-open{ overflow:hidden; } /* <-- CAMBIO: antes body.modal-open */
   line-height: 1.55;
   max-width: 520px;
 }
-
-/* Acciones centradas */
 #ticketSuccessModal .success-info-actions{
   display: flex;
   justify-content: center;
 }
-
-/* Botón OK */
 #ticketSuccessModal .btn.primary{
   padding: 10px 18px;
   border-radius: 14px;
@@ -429,149 +489,29 @@ body.soar.modal-open{ overflow:hidden; } /* <-- CAMBIO: antes body.modal-open */
 }
 
 /* =========================================================
-   FIX FINAL: Modal Ticket (layout igual a tu referencia)
-   - blinda grid 2 columnas y cards internas
-   ========================================================= */
-#ticketModal .modal-card.ticket-modal-card{
-  max-width: min(1100px, calc(100% - 64px)) !important;
-  width: 100% !important;
-  padding: 18px 18px !important;
+ * ✅ FIX: Centrar "Ticket cerrado con éxito" al medio pantalla
+ * ========================================================= */
+
+/* Cuando el success modal está visible, lo centramos con flex */
+#ticketSuccessModal.modal:not(.hidden){
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
 }
 
-#ticketModal .modal-header{
-  padding-bottom: 12px !important;
-  margin-bottom: 14px !important;
+/* Asegura backdrop atrás y card arriba */
+#ticketSuccessModal .modal-backdrop{
+  z-index: 0;
 }
+#ticketSuccessModal .success-info-card{
+  position: relative;
+  z-index: 1;
 
-#ticketModal .ticket-modal-title{
-  display:flex !important;
-  align-items:center !important;
-  gap:10px !important;
-  margin:0 !important;
-}
+  /* antes: margin: 5vh auto;  -> eso lo deja arriba */
+  margin: 0 auto;
 
-#ticketModal .block{
-  background: rgba(255,255,255,.02) !important;
-  border: 1px solid rgba(255,255,255,.06) !important;
-  border-radius: 14px !important;
-  padding: 14px 14px !important;
-}
-
-#ticketModal .modal-body{
-  display:flex !important;
-  flex-direction: column !important;
-  gap: 12px !important;
-
-  max-height: 72vh !important;
-  overflow: auto !important;
-
-  position: relative !important;
-}
-
-#ticketModal .ticket-info-grid{
-  display:grid !important;
-  grid-template-columns: 1fr 1fr !important;
-  gap: 10px 18px !important;
-  align-items: stretch !important;
-}
-
-@media (max-width: 860px){
-  #ticketModal .ticket-info-grid{
-    grid-template-columns: 1fr !important;
-  }
-}
-
-#ticketModal .ticket-info-item{
-  padding: 12px 12px !important;
-  border: 1px solid rgba(255,255,255,.06) !important;
-  border-radius: 12px !important;
-  background: rgba(2,6,23,.18) !important;
-  min-width: 0 !important;
-}
-
-#ticketModal .ticket-info-item.span-2{
-  grid-column: 1 / -1 !important;
-}
-
-#ticketModal .ticket-info-k{
-  display:flex !important;
-  align-items:center !important;
-  gap:8px !important;
-
-  font-size: 12px !important;
-  letter-spacing: .3px !important;
-  text-transform: uppercase !important;
-
-  color: #cbd5e1 !important;
-  opacity: .95 !important;
-
-  margin-bottom: 6px !important;
-}
-
-#ticketModal .ticket-info-v{
-  color: #e5e7eb !important;
-  font-weight: 800 !important;
-  min-width: 0 !important;
-}
-
-#ticketModal .ticket-actions-row{
-  display:flex !important;
-  justify-content:flex-end !important;
-  align-items:center !important;
-  gap:10px !important;
-
-  width: 100% !important;
-  margin-top: 12px !important;
-  margin-left: auto !important;
-
-  flex-wrap: wrap !important;
-}
-
-#ticketModal .ticket-actions-row .btn{
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 12px;
-  width: auto !important;
-}
-
-#ticketModal .stacked{
-  list-style: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-#ticketModal .stacked li{
-  padding: 6px 0 !important;
-  border-bottom: 1px dashed rgba(255,255,255,0.08) !important;
-}
-#ticketModal .stacked li:last-child{
-  border-bottom: 0 !important;
-}
-
-#ticketModal .block p{
-  margin: .35rem 0 !important;
-  line-height: 1.55 !important;
-  color: #cbd5e1 !important;
-}
-
-/* =========================================================
-   FIX: Aire lateral en header + tabs (Mis Tickets)
-   ========================================================= */
-
-/* Da aire a ambos lados del bloque superior */
-.tickets-head{
-  padding-left: 10px;
-  padding-right: 10px;
-}
-
-/* Opcional: un poquito más de separación visual con el borde del card */
-@media (min-width: 900px){
-  .tickets-head{
-    padding-left: 14px;
-    padding-right: 14px;
-  }
-}
-
-/* Evita que las tabs queden pegadas al borde derecho */
-.tickets-tabs{
-  padding-right: 2px;
+  /* mantiene tu look */
+  max-width: 640px;
+  width: min(640px, calc(100% - 32px));
 }

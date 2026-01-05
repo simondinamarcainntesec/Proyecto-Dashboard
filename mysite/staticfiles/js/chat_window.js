@@ -53,6 +53,25 @@
     analyzingEl = null;
   }
 
+  function resetChat(){
+    // Limpia persistencia + UI
+    try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+    log.innerHTML = "";
+    hideAnalyzing();
+    status.textContent = "Listo";
+    input.disabled = false;
+    btn.disabled = false;
+  }
+
+  // ===== RESET al cerrar popup =====
+  // pagehide es más confiable (incluye casos de BFCache / navegación)
+  window.addEventListener("pagehide", resetChat);
+
+  // beforeunload como respaldo (no siempre dispara en todos los escenarios)
+  window.addEventListener("beforeunload", () => {
+    try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+  });
+
   // Render historial
   const hist = loadHistory();
   for (const it of hist) appendBubble(it.text, it.who);
@@ -137,12 +156,7 @@
 
     // Si estás usando el reset al reabrir:
     if (ev?.data?.type === "reset") {
-      try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
-      log.innerHTML = "";
-      hideAnalyzing();
-      status.textContent = "Listo";
-      input.disabled = false;
-      btn.disabled = false;
+      resetChat();
       window.focus();
     }
   });

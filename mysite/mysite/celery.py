@@ -81,6 +81,7 @@ def at_worker_ready(sender, **kwargs):
         print("[CELERY STARTUP] Lanzando ingesta mensual y recordatorio de tickets...")
         sender.app.send_task("integrations.tasks.ingesta_mensual_ciclica")
         #sender.app.send_task("soar_tickets.tasks.send_due_soon_reminders")
+        #sender.app.send_task("integrations.tasks.tarea_sync_empresas")
     except Exception as exc:
         print(f"[CELERY STARTUP] Error: {exc!r}")
 

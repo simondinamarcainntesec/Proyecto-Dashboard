@@ -22,7 +22,12 @@
         <div class="overlay-text">Cargando datos…</div>
       </div>
     </div>
-    <!-- placeholder: cargaremos el src real desde JS tras pre-carga -->
-    <iframe class="is-loading iframe-placeholder" src="about:blank" data-src="{{ iframe_url }}" aria-hidden="true"></iframe>
+
+    <iframe
+      class="is-loading iframe-placeholder"
+      src="about:blank"
+      data-src="{{ iframe_url }}"
+      aria-hidden="true">
+    </iframe>
   </div>
 {% endblock %}

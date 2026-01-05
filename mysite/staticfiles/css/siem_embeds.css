@@ -54,6 +54,68 @@ html, body { height: 100%; }
   transition: filter .25s ease;
 }
 
+/* Overlay específico para cada iframe (cubre SOLO el contenedor del iframe) */
+.iframe-container .iframe-overlay{
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2,6,23,0.95); /* Más opaco para ocultar pantallas de inicialización del embed */
+  z-index: 900; /* arriba del iframe */
+  transition: opacity .25s ease, visibility .25s ease;
+}
+.iframe-container .iframe-overlay.hidden{
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.iframe-container .iframe-overlay .overlay-card{
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: rgba(0,0,0,0.45);
+  padding: 12px 18px;
+  border-radius: 12px;
+  color: #fff;
+  font-weight: 600;
+  backdrop-filter: blur(6px);
+}
+.iframe-container .iframe-overlay .spinner{
+  width: 18px;
+  height: 18px;
+  border: 3px solid rgba(255,255,255,0.2);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .9s linear infinite;
+}
+
+/* Manual load CTA */
+.iframe-container[data-autoload="manual"] .iframe-overlay .overlay-card{flex-direction:column;gap:8px}
+
+
+@keyframes spin{ to { transform: rotate(360deg); } }
+
+/* Estados del iframe mientras carga */
+.iframe-container iframe.is-loading{
+  opacity: 0;
+  pointer-events: none;
+  filter: blur(1px);
+  transition: opacity .25s ease, filter .25s ease;
+}
+/* Estado cuando la carga se alarga: dejamos al iframe visible pero ligeramente desenfocado */
+.iframe-container iframe.is-stalled{
+  opacity: 0.95;
+  pointer-events: auto;
+  filter: blur(.5px);
+  transition: opacity .25s ease, filter .25s ease;
+}
+.iframe-container iframe.is-loaded{
+  opacity: 1;
+  pointer-events: auto;
+  filter: none;
+}
+
 /* Dark-mode “fake dark” para iframes blancos */
 [data-theme="dark"] .iframe-container iframe{
   filter: invert(0.9) hue-rotate(180deg) contrast(1.05);
@@ -112,61 +174,35 @@ html, body { height: 100%; }
   padding: 2px 0;
 }
 
-/* =========================================================
-   EMPTY STATE — sin “tarjeta grande” de fondo (foto2)
-   Activa cuando _embed_base añade .embed-empty / .card-empty
-   ========================================================= */
-
-/* 1) Apagar la tarjeta grande SOLO en empty */
-.wrap.embed-empty .card.card-empty{
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
+/* Defensa adicional: si por alguna razón existe el overlay global, ocultarlo cuando estamos en un embed */
+body.is-embed #loading-overlay{
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
-/* 2) Quitar “caja” del body de la card grande */
-.wrap.embed-empty .card.card-empty .card-body{
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
-  padding: 0 !important;
+/* ============================================================
+   Tenant dropdown (solo embeds): misma estética pero más “glass”
+   ============================================================ */
+body.is-embed{
+  /* Más transparente que el default de base.css */
+  --dropdown-bg: linear-gradient(
+    180deg,
+    rgba(15,23,42,.70) 0%,
+    rgba(11,18,32,.70) 100%
+  );
 
-  /* deja espacio para que el empty-state se centre bien */
-  min-height: clamp(360px, 62vh, 820px);
-  display: grid;
-  place-items: center;
+  /* borde igual o levemente más sutil */
+  --dropdown-border: rgba(148,163,184,.16);
 }
 
-/* 3) Opcional: que el header no se vea dentro de una card grande */
-.wrap.embed-empty .card.card-empty .card-head{
-  background: transparent !important;
-  border-bottom: 0 !important;
-  box-shadow: none !important;
-}
-
-/* 4) Empty-state centrado, SIN panel gigante detrás */
-.wrap.embed-empty .empty-state{
-  width: 100%;
-  display: grid;
-  place-items: center;
-  padding: 28px;
-}
-
-/* 5) La tarjeta chica (la que sí quieres ver) */
-.wrap.embed-empty .empty-state .empty-card{
-  width: min(680px, 100%);
-  padding: 28px 32px;
-  text-align: center;
-
-  background: rgba(15, 23, 42, 0.55);
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 18px;
-  box-shadow: 0 18px 46px rgba(2, 6, 23, 0.55);
-
+/* Refuerza el “glass” para que no se vea como panel sólido */
+body.is-embed .topbar .tenant-dropdown .tenant-list{
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
 
-.wrap.embed-empty .empty-state .empty-card h2{ margin: 0 0 10px; }
-.wrap.embed-empty .empty-state .empty-card p{ margin: 0 0 10px; }
-.wrap.embed-empty .empty-state .empty-card p:last-child{ margin-bottom: 0; }
+body.is-embed .topbar .tenant-dropdown .tenant-list{
+  background: var(--dropdown-bg) !important;
+  border-color: var(--dropdown-border) !important;
+}

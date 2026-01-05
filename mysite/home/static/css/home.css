@@ -30,6 +30,7 @@
   font-size: 14.5px;
   line-height: 1.4;
 }
+
 /* Grids */
 .home-page .grid{ display:grid; gap:16px; }
 .home-page .grid-kpis{ grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -57,13 +58,13 @@
   color: var(--muted);
   font-weight: 900;
   letter-spacing: .2px;
-  font-size: 13px;       /* antes: default, ahora intermedio */
+  font-size: 13px;
 }
 
 /* Valor KPI */
 .home-page .kpi-value{
   margin-top:12px;
-  font-size: 29px;       /* antes 32px; versión pequeña 26px */
+  font-size: 29px;
   font-weight:900;
   letter-spacing:.2px;
 }
@@ -80,7 +81,7 @@
 .home-page .card-head{ padding:16px 16px 0 16px; }
 .home-page .card-title{
   margin:0;
-  font-size:15px;        /* antes 16px; versión pequeña 14px */
+  font-size:15px;
   font-weight:900;
 }
 
@@ -89,7 +90,7 @@
   color:var(--muted);
   font-weight:600;
   line-height:1.35;
-  font-size:13.5px;      /* antes default; versión pequeña 12.5px */
+  font-size:13.5px;
 }
 .home-page .card-body{ padding:14px 16px 16px 16px; }
 
@@ -116,7 +117,7 @@
   padding:10px 12px; border-radius:14px;
   background: rgba(15,23,42,.35);
   border:1px solid rgba(148,163,184,.12);
-  font-size: 14px;       /* intermedio */
+  font-size: 14px;
 }
 .home-page .severity-main{ display:flex; align-items:center; gap:10px; min-width:0; }
 .home-page .severity-ico{
@@ -127,14 +128,14 @@
 }
 .home-page .pill{
   display:inline-flex; align-items:center;
-  padding:6px 10px; border-radius:999px; /* mantenemos padding original */
+  padding:6px 10px; border-radius:999px;
   font-weight:700;
   border:1px solid rgba(148,163,184,.16);
   background: rgba(148,163,184,.10);
   color: rgba(229,231,235,.92);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   max-width:240px;
-  font-size: 13px;       /* antes default; versión pequeña 12px */
+  font-size: 13px;
 }
 .home-page .severity-count{ font-weight:800; font-size: 14px; }
 
@@ -168,13 +169,13 @@
 
 .home-page .home-ip-input{
   flex:1 1 auto;
-  padding:12px 12px;       /* vuelve a lo original */
+  padding:12px 12px;
   border-radius:14px;
   border:1px solid rgba(30,41,59,.85);
   background: rgba(15,23,42,.55);
   color: var(--text);
   outline:none;
-  font-size:14px;          /* intermedio */
+  font-size:14px;
 }
 .home-page .home-ip-input::placeholder{ color: rgba(148,163,184,.75); }
 .home-page .home-ip-input:focus{
@@ -189,7 +190,7 @@
   background: rgba(59,130,246,.18);
   color: var(--text);
   font-weight:700;
-  font-size:14px;          /* intermedio */
+  font-size:14px;
 }
 .home-page .home-ip-btn:hover{
   background: rgba(59,130,246,.26);
@@ -201,7 +202,7 @@
   display:flex; flex-wrap:wrap; align-items:center; gap:8px;
   color: var(--muted);
   font-weight:600;
-  font-size:13.5px;        /* intermedio */
+  font-size:13.5px;
 }
 .home-page .home-ip-examples-label{ font-weight:400; }
 .home-page .home-ip-example-pill{
@@ -211,7 +212,7 @@
   background: rgba(148,163,184,.10);
   color: rgba(229,231,235,.92);
   font-weight:700;
-  font-size:13px;          /* intermedio */
+  font-size:13px;
 }
 
 /* Modal IP */
@@ -239,7 +240,7 @@
   border-bottom:1px solid rgba(148,163,184,.14);
   display:flex; align-items:center; justify-content:space-between; gap:12px;
 }
-.home-page #ipSearchModal .modal-head h3{ margin:0; font-size:15px; font-weight:800; } /* antes 16px */
+.home-page #ipSearchModal .modal-head h3{ margin:0; font-size:15px; font-weight:800; }
 .home-page #ipSearchModal .close-btn{
   width:40px; height:40px; border-radius:12px;
   border:1px solid rgba(148,163,184,.16);
@@ -306,7 +307,7 @@
   border:1px solid rgba(59,130,246,.25);
   background: rgba(59,130,246,.10);
 }
-.home-page .home-whitelist-title-text h2{ margin:0; font-size:15px; font-weight:900; } /* antes 16px */
+.home-page .home-whitelist-title-text h2{ margin:0; font-size:15px; font-weight:900; }
 .home-page .home-whitelist-subtitle{ margin:4px 0 0 0; color: var(--muted); font-weight:600; font-size:13.5px; }
 
 .home-page .home-whitelist-table-wrapper{ overflow:auto; }
@@ -335,7 +336,7 @@
   color: rgba(229,231,235,.92);
   font-weight:400;
   background: rgba(15,23,42,.20);
-  font-size:13.5px;        /* intermedio */
+  font-size:13.5px;
 }
 .home-page .home-whitelist-table tbody tr:hover td{ background: rgba(59,130,246,.08); }
 
@@ -344,7 +345,7 @@
   font-weight:400;
 }
 
-/* Empty state */
+/* Empty state (base) */
 .home-page .empty-card{
   max-width:720px;
   margin:40px auto;
@@ -354,14 +355,14 @@
   box-shadow: var(--shadow);
   padding:18px;
 }
-.home-page .empty-card h2{ margin:0 0 8px 0; font-weight:900; font-size:18px; } /* antes default */
+.home-page .empty-card h2{ margin:0 0 8px 0; font-weight:900; font-size:18px; }
 .home-page .empty-card p{ margin:6px 0 0 0; color: var(--muted); font-weight:600; font-size:13.5px; }
 
 /* Overlays ticket */
 .home-page #ticketLoadingOverlay,
 .home-page #ticketDialog{
   position:fixed; inset:0; z-index:140;
-  display:flex; align-items:center; justify-content:center;
+  display:flex; align-items:center; justify-content:flex-end;
   padding:18px;
   background: rgba(2,6,23,.70);
   backdrop-filter: blur(6px);

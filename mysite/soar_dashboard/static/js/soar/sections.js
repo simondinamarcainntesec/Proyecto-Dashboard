@@ -3,10 +3,16 @@
   const $  = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
-  const chips        = $$('.section-chips .chip');
   const gridSelector = '.grid-main';
   const cardSelector = '.grid-main .card';
   const norm = (v) => String(v || '').toLowerCase().trim();
+
+  // ✅ Chips: ahora son .soar-chip (fallback a .chip por compatibilidad)
+  const chipSelector = '.section-chips .soar-chip, .section-chips .chip';
+  const chips = $$(chipSelector);
+
+  // Si no hay chips, no hacemos nada (evita errores en otras páginas)
+  if (!chips.length) return;
 
   // ---------- Overlay liviano "recalculando" ----------
   function ensureRecalcOverlay() {
@@ -44,7 +50,6 @@
       grid.classList.remove('recalc-busy');
     };
 
-    // fallback auto-cierre
     const t = setTimeout(hide, ms);
     return () => { clearTimeout(t); hide(); };
   }
@@ -61,14 +66,16 @@
 
   function getActiveSec() {
     const params = new URLSearchParams(window.location.search);
-    return norm(params.get('sec') || ($('.section-chips .chip.active')?.dataset.sec) || 'all');
+    // ✅ Lee ?sec=... o el chip activo actual (soar-chip/chip)
+    const activeChip = $(`${chipSelector}.active`);
+    return norm(params.get('sec') || (activeChip?.dataset.sec) || 'all');
   }
 
   function setActiveChip(sec) {
     const val = norm(sec || 'all');
-    $$('.section-chips .chip').forEach(c =>
-      c.classList.toggle('active', norm(c.dataset.sec || 'all') === val)
-    );
+    $$(chipSelector).forEach(c => {
+      c.classList.toggle('active', norm(c.dataset.sec || 'all') === val);
+    });
   }
 
   function persistSec(sec) {
@@ -87,7 +94,6 @@
     const isAll = (val === 'all');
 
     if (!animate) {
-      // Sin animación (p.ej. al cargar la página)
       cards.forEach(card => {
         const willShow = isAll ? true : parseGroups(card).has(val);
         if (willShow) {
@@ -102,13 +108,12 @@
           card.classList.remove('is-fade-in', 'is-fade-out', 'show');
         }
       });
-      // Resize silencioso
+
       setTimeout(() => window.dispatchEvent(new Event('resize')), 0);
       return;
     }
 
-    // Con animación (cuando el usuario hace clic)
-    // fase 1: fade-out de las que serán ocultadas
+    // fase 1: fade-out
     cards.forEach(card => {
       const willShow = isAll ? true : parseGroups(card).has(val);
       card.classList.remove('is-fade-in', 'show');
@@ -117,7 +122,7 @@
       }
     });
 
-    // fase 2: aplicar display + fade-in a las que se muestran
+    // fase 2: display + fade-in
     requestAnimationFrame(() => {
       cards.forEach(card => {
         const willShow = isAll ? true : parseGroups(card).has(val);
@@ -145,7 +150,6 @@
   function setSection(sec, { animate = true } = {}) {
     const val = norm(sec || 'all');
 
-    // Solo mostrar overlay/animación si animate === true (clic del usuario)
     let done = () => {};
     if (animate) done = showRecalc();
 
@@ -153,7 +157,6 @@
     persistSec(val);
     applySection(val, { animate });
 
-    // cerrar overlay un poco después
     if (animate) setTimeout(done, 280);
   }
 
@@ -162,7 +165,7 @@
     chip.addEventListener('click', () => setSection(chip.dataset.sec, { animate: true }));
   });
 
-  // Reaplicar si el grid cambia (re-render) — sin animación
+  // Reaplicar si cambia el grid (sin animación)
   const gridMain = $(gridSelector);
   if (gridMain) {
     const observer = new MutationObserver(() => applySection(getActiveSec(), { animate: false }));
@@ -171,9 +174,8 @@
 
   // ---------- Init (sin animación) ----------
   (function init() {
-    // Creamos overlay una vez (no lo mostramos)
     ensureRecalcOverlay();
     const initial = getActiveSec();
-    setSection(initial, { animate: false }); // <-- sin overlay/animación al cargar
+    setSection(initial, { animate: false });
   })();
 })();

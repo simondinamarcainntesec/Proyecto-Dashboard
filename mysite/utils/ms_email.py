@@ -526,21 +526,35 @@ def enviar_correo_ticket_recordatorio_2dias(ticket) -> bool:
         logger.exception("[SOAR_TICKETS] Error enviando correo recordatorio 2 días: %s", e)
         return False
 
-def enviar_correo_ticket_cerrado(ticket) -> bool:
+from typing import Optional
+
+def enviar_correo_ticket_cerrado(ticket, to_email: Optional[str] = None, recipient=None) -> bool:
     """
-    Correo al cerrar un ticket:
-    - mismo estilo corporativo
-    - incluye: quién cerró, cuándo, comentario inicial y comentario final
-    - incluye detalle completo del evento (riesgo/clasificación/acciones/application)
+    Correo al cerrar un ticket.
+
+    Destinatario:
+    - Si to_email viene definido, envía a ese correo.
+    - Si no, envía al asignado (assigned_to.email).
+
+    Saludo (nombre mostrado):
+    - Si recipient viene definido, saluda con ese usuario (full name).
+    - Si no, saluda con el asignado.
     """
     try:
         assigned = getattr(ticket, "assigned_to", None)
-        if not assigned or not getattr(assigned, "email", ""):
+
+        assigned_email = (getattr(assigned, "email", "") or "").strip()
+        target_email = (to_email or assigned_email or "").strip()
+        if not target_email:
             logger.warning(
-                "[SOAR_TICKETS] Cierre: ticket %s sin email de asignado, no se envía correo.",
+                "[SOAR_TICKETS] Cierre: ticket %s sin email de destinatario, no se envía correo.",
                 getattr(ticket, "id", None),
             )
             return False
+
+        # ✅ Nombre a mostrar según destinatario real
+        recipient_user = recipient or assigned
+        recipient_name = _full_name(recipient_user) or "—"
 
         tenant_name = (getattr(getattr(ticket, "tenant", None), "name", "") or "").strip() or "—"
         ticket_code = f"TICKET-{int(ticket.id):04d}" if getattr(ticket, "id", None) else "TICKET-—"
@@ -591,7 +605,7 @@ def enviar_correo_ticket_cerrado(ticket) -> bool:
 
         asunto = f"Ticket cerrado — {ticket_code}"
 
-        # ===== Estilos (mismo feeling) =====
+        # ===== Estilos =====
         card_wrap_style = (
             "border:1px solid #e6e6e6;"
             "border-radius:10px;"
@@ -642,8 +656,9 @@ def enviar_correo_ticket_cerrado(ticket) -> bool:
               Ticket cerrado
             </h2>
 
+            <!-- ✅ Saludo correcto según destinatario -->
             <p style="margin:0 0 16px; color:#374151; font-size:14px; line-height:1.6;">
-              Hola, <b>{_html(assigned_name)}</b>. Se ha cerrado el ticket <b>{_html(ticket_code)}</b>.
+              Hola, <b>{_html(recipient_name)}</b>. Se ha cerrado el ticket <b>{_html(ticket_code)}</b>.
             </p>
 
             <!-- Resumen -->
@@ -654,6 +669,7 @@ def enviar_correo_ticket_cerrado(ticket) -> bool:
                 <b>Fecha de creación:</b> {_html(created_dt_str)}<br>
                 <b>Fecha de término (vencimiento):</b> {_html(due_str)}<br>
                 <b>Creado por:</b> {_html(created_by)}<br>
+                <b>Asignado a:</b> {_html(assigned_name)}<br>
                 <b>Cerrado por:</b> {_html(closed_by)}<br>
                 <b>Fecha de cierre:</b> {_html(closed_dt_str)}<br>
               </p>
@@ -673,13 +689,11 @@ def enviar_correo_ticket_cerrado(ticket) -> bool:
               </p>
             </div>
 
-            <!-- Bloques completos -->
             {section_card("Riesgo detectado", _html(riesgo_detectado))}
             {section_card("Clasificación", _html(clasificacion))}
             {section_card("Acciones recomendadas", _html(acciones))}
             {section_card("Application", _html(application)) if application else ""}
 
-            <!-- Comentarios -->
             {section_card("Comentario inicial", _html(initial_notes)) if initial_notes else section_card("Comentario inicial", "—")}
             {section_card("Comentario final (cierre)", _html(final_notes)) if final_notes else section_card("Comentario final (cierre)", "—")}
 
@@ -693,8 +707,8 @@ def enviar_correo_ticket_cerrado(ticket) -> bool:
         </html>
         """
 
-        enviar_correo_ms(assigned.email, asunto, cuerpo_html)
-        logger.info("[SOAR_TICKETS] Correo de cierre enviado a %s para %s", assigned.email, ticket_code)
+        enviar_correo_ms(target_email, asunto, cuerpo_html)
+        logger.info("[SOAR_TICKETS] Correo de cierre enviado a %s para %s", target_email, ticket_code)
         return True
 
     except Exception as e:

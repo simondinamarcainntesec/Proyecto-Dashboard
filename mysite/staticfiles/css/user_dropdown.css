@@ -118,66 +118,60 @@
   --inntesec-border: rgba(255, 255, 255, 0.08);
 }
 
-/* === Botón principal del tenant (summary) === */
-.tenant-summary {
-  background-color: var(--inntesec-blue);
-  color: var(--inntesec-text);
-  border: 1px solid var(--inntesec-blue-hover);
-  border-radius: 6px;
-  padding: 0.45rem 0.8rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  cursor: pointer;
-  transition: background-color 0.25s ease, border-color 0.25s ease;
-}
-
-.tenant-summary:hover {
-  background-color: var(--inntesec-blue-hover);
-}
-
-.tenant-summary .caret {
-  font-size: 0.8rem;
-  opacity: 0.8;
-  transition: transform 0.2s ease;
-}
+/* Tenant summary: rely on `base.css` for appearance (transparent look, borders and padding)
+   We keep no solid-color overrides here so topbar tenant matches site-wide.
+*/
+.tenant-summary{ /* intentionally empty - use base.css */ }
 
 /* Flecha rota cuando está abierto */
-.tenant-dropdown[open] .caret {
-  transform: rotate(180deg);
-}
+.tenant-dropdown[open] .caret{ transform: rotate(180deg); }
 
-/* === Lista del tenant === */
-.tenant-list {
-  background-color: var(--inntesec-bg);
-  border: 1px solid var(--inntesec-border);
-  border-radius: 8px;
+/* === Lista del tenant (topbar user menu) === */
+.user-menu .tenant-list {
+  /* Use base.css dropdown variables so appearance is consistent across the site */
+  background: var(--dropdown-bg);
+  border: 1px solid var(--dropdown-border);
+  border-radius: 16px;
   margin-top: 0.25rem;
-  padding: 0.25rem 0;
-  color: var(--inntesec-text);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+  padding: 10px;
+  color: var(--text);
+  box-shadow: var(--shadow-2);
   animation: fadeSlideIn 0.25s ease forwards;
+  min-width: 320px;
+  max-width: 520px;
+  max-height: min(72vh, 560px);
+  overflow: auto;
 }
 
-.tenant-option {
+.user-menu .tenant-option {
   all: unset;
   display: block;
   width: 100%;
   text-align: left;
-  padding: 0.6rem 1rem;
-  font-size: 0.9rem;
-  color: var(--inntesec-text);
-  cursor: pointer;
-  transition: background-color 0.2s ease;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: transparent;
+
+  color: var(--text);
+  font-weight: 400;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  transition: background 0.12s ease, border-color 0.12s ease;
 }
 
-.tenant-option:hover {
-  background-color: var(--inntesec-bg-hover);
+.user-menu .tenant-option:hover {
+  background: var(--dropdown-item-hover);
+  border-color: rgba(59,130,246,.26);
 }
 
-.tenant-option.is-active {
-  background-color: var(--inntesec-blue);
-  font-weight: 600;
+.user-menu .tenant-option.is-active {
+  background: var(--dropdown-item-active);
+  border-color: rgba(96,165,250,.55);
+  box-shadow: inset 0 0 0 1px rgba(96,165,250,.25);
 }
 
 /* === Menú del usuario (arriba derecha) === */
@@ -267,10 +261,10 @@
     transform: translateY(0);
   }
 }
-/* === Corrección de estilo para submenú Configuración === */
+/* === Corrección de estilo para submenú Configuración (topbar) === */
 
 /* Quita subrayado y color violeta heredado */
-.tenant-option.nav-subitem {
+.user-menu .tenant-option.nav-subitem {
   text-decoration: none;
   color: var(--inntesec-text, #e5e7eb);
   font-weight: 500;
@@ -282,13 +276,13 @@
 }
 
 /* Hover coherente */
-.tenant-option.nav-subitem:hover {
+.user-menu .tenant-option.nav-subitem:hover {
   background-color: var(--inntesec-bg-hover, #132449);
   color: #fff;
 }
 
 /* Activo igual al resto */
-.tenant-option.nav-subitem.is-active {
+.user-menu .tenant-option.nav-subitem.is-active {
   background-color: var(--inntesec-blue, rgb(18, 27, 51));
   border: 1px solid var(--inntesec-border, rgba(255,255,255,0.08));
   color: #fff;
@@ -296,8 +290,8 @@
 }
 
 /* Ícono alineado con el texto */
-.tenant-option.nav-subitem span,
-.tenant-option.nav-subitem svg,
-.tenant-option.nav-subitem::before {
+.user-menu .tenant-option.nav-subitem span,
+.user-menu .tenant-option.nav-subitem svg,
+.user-menu .tenant-option.nav-subitem::before {
   vertical-align: middle;
 }

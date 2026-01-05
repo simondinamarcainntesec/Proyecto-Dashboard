@@ -32,6 +32,31 @@ let currentKeys = [];
 const trunc = (s, n=14) => (String(s??"").length>n ? String(s).slice(0,n-1)+"…" : String(s));
 const eqCI = (a,b) => String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
 
+/* =========================
+ * "Nice ticks" enteros
+ * ========================= */
+function niceStep(maxValue, targetTicks = 7) {
+  const max = Math.max(0, Number(maxValue) || 0);
+  if (max <= 10) return 1;
+
+  const raw = max / targetTicks;
+  const pow = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw / pow;
+
+  let mult;
+  if (norm <= 1) mult = 1;
+  else if (norm <= 2) mult = 2;
+  else if (norm <= 5) mult = 5;
+  else mult = 10;
+
+  return Math.max(1, Math.round(mult * pow));
+}
+function ceilToStep(v, step) {
+  const n = Math.max(0, Number(v) || 0);
+  const s = Math.max(1, Number(step) || 1);
+  return Math.ceil(n / s) * s;
+}
+
 export function renderSubtypeBar(ds, activeKey = "") {
   const canvas = document.getElementById("subtypeBar");
   if (!canvas) return;
@@ -70,6 +95,11 @@ export function renderSubtypeBar(ds, activeKey = "") {
   // borde blanco permanente
   const BORDER = "#e5e7eb";
 
+  // ====== ticks enteros + stepSize "nice"
+  const maxVal = Math.max(0, ...values);
+  const step = niceStep(maxVal, 7);
+  const suggestedMax = ceilToStep(maxVal, step);
+
   const cfg = {
     type: "bar",
     data: {
@@ -95,7 +125,7 @@ export function renderSubtypeBar(ds, activeKey = "") {
         tooltip: {
           callbacks: {
             title: (items) => (items?.[0] ? String(items[0].label) : ""),
-            label: (item) => `Cantidad: ${item.formattedValue}`,
+            label: (item) => `Cantidad: ${Math.round(item.parsed?.y ?? item.raw ?? 0)}`,
           },
         },
       },
@@ -119,7 +149,13 @@ export function renderSubtypeBar(ds, activeKey = "") {
         },
         y: {
           beginAtZero: true,
-          ticks: { color: AXIS },
+          suggestedMax,
+          ticks: {
+            color: AXIS,
+            stepSize: step,
+            precision: 0,
+            callback: (v) => String(Math.round(v)),
+          },
           grid: { color: GRID },
         },
       },

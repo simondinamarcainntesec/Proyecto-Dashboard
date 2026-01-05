@@ -12,6 +12,8 @@ from pathlib import Path
 import httpx
 from celery import shared_task
 from django.conf import settings
+from django.db import connection
+
 
 from inyeccion_api.models import Alarm
 from inyeccion_api.utils import _map_api_alarm_to_model
@@ -295,6 +297,7 @@ def tarea_ingesta_api():
         logger.exception("❌ Error inesperado durante la ingesta diaria: %s", e)
 
 
+
 @shared_task
 def ingesta_mensual_ciclica():
     """
@@ -303,6 +306,14 @@ def ingesta_mensual_ciclica():
     """
     try:
         logger.info("🚀 Inicio de ingesta histórica mensual")
+
+        # =========================
+        # TRUNCATE previo
+        # =========================
+        logger.warning("🧹 Truncando tabla public.inyeccion_api_alarm antes de la ingesta...")
+        with connection.cursor() as cursor:
+            cursor.execute("TRUNCATE TABLE public.inyeccion_api_alarm;")
+        logger.warning("✅ Tabla public.inyeccion_api_alarm truncada.")
 
         tz = pytz_timezone("America/Santiago")
         today = datetime.now(tz)

@@ -6,6 +6,31 @@ let chart;
 
 function norm(s){ return String(s ?? "").trim().toLowerCase(); }
 
+/* =========================
+ * "Nice ticks" enteros
+ * ========================= */
+function niceStep(maxValue, targetTicks = 7) {
+  const max = Math.max(0, Number(maxValue) || 0);
+  if (max <= 10) return 1;
+
+  const raw = max / targetTicks;
+  const pow = Math.pow(10, Math.floor(Math.log10(raw)));
+  const normv = raw / pow;
+
+  let mult;
+  if (normv <= 1) mult = 1;
+  else if (normv <= 2) mult = 2;
+  else if (normv <= 5) mult = 5;
+  else mult = 10;
+
+  return Math.max(1, Math.round(mult * pow));
+}
+function ceilToStep(v, step) {
+  const n = Math.max(0, Number(v) || 0);
+  const s = Math.max(1, Number(step) || 1);
+  return Math.ceil(n / s) * s;
+}
+
 export function renderMsgSeverityBar(payload, activeKey) {
   const el = document.getElementById("msgSeverityBar");
   if (!el) return;
@@ -23,6 +48,11 @@ export function renderMsgSeverityBar(payload, activeKey) {
   const borders = labels.map((lbl) =>
     focus && norm(lbl) !== norm(focus) ? "rgba(229,231,235,0.85)" : "#e5e7eb"
   );
+
+  // step/ticks enteros
+  const maxVal = Math.max(0, ...(data || []).map((v) => Number(v || 0)));
+  const step = niceStep(maxVal, 7);
+  const suggestedMax = ceilToStep(maxVal, step);
 
   if (!chart) {
     // Creación inicial
@@ -42,19 +72,31 @@ export function renderMsgSeverityBar(payload, activeKey) {
       options: {
         indexAxis: "y",
         animation: { duration: 600, easing: "easeOutQuart" },
-        plugins: { legend: { display: false }, tooltip: { enabled: true } },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            enabled: true,
+            callbacks: {
+              label: (item) => `Cantidad: ${Math.round(item.parsed?.x ?? item.raw ?? 0)}`,
+            },
+          },
+        },
         scales: {
           x: {
             beginAtZero: true,
-            ticks: { color: "#E5E7EB" },
+            suggestedMax,
+            ticks: {
+              color: "#E5E7EB",
+              stepSize: step,
+              precision: 0,
+              callback: (v) => String(Math.round(v)),
+            },
             grid: { color: "rgba(229,231,235,0.14)" },
           },
           y: {
-            // Forzamos escala categórica para evitar 0,1,2,3
             type: "category",
             ticks: {
               color: "#E5E7EB",
-              // Leemos SIEMPRE desde chart.data.labels (no cerramos sobre `labels`)
               callback: (_, i) => (chart?.data?.labels?.[i] ?? ""),
             },
             grid: { color: "rgba(229,231,235,0.14)" },
@@ -71,7 +113,6 @@ export function renderMsgSeverityBar(payload, activeKey) {
       actions.toggleMsgSeverity?.(keys[idx]);
     };
 
-    // Guardamos geometría
     chart.$static = { labels: labels.slice(), values: data.slice() };
     return;
   }
@@ -93,6 +134,11 @@ export function renderMsgSeverityBar(payload, activeKey) {
     ds.backgroundColor = bg;
     ds.borderColor = borders;
     ds.hoverBorderColor = borders;
+
+    // actualizar suggestedMax/step si hiciera falta (por seguridad)
+    chart.options.scales.x.suggestedMax = suggestedMax;
+    chart.options.scales.x.ticks.stepSize = step;
+
     chart.update("none");
   } else {
     // Actualización completa
@@ -101,6 +147,9 @@ export function renderMsgSeverityBar(payload, activeKey) {
     chart.data.datasets[0].backgroundColor = bg;
     chart.data.datasets[0].borderColor = borders;
     chart.data.datasets[0].hoverBorderColor = borders;
+
+    chart.options.scales.x.suggestedMax = suggestedMax;
+    chart.options.scales.x.ticks.stepSize = step;
 
     chart.$static = { labels: labels.slice(), values: data.slice() };
     chart.update();

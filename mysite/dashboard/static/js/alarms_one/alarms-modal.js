@@ -1,4 +1,6 @@
 // alarms-modal.js — abortable fetch + requestId + loader visual + BUSCADOR en tiempo real
+// + abrir desde DISPOSITIVOS (realtime) + severidad con pill/colores
+// + expone window.AlarmsModal (para devicesTable.js)
 
 const EP = (window.RT_ENDPOINTS || {});
 const Q  = (sel) => document.querySelector(sel);
@@ -50,23 +52,57 @@ function fmtTime(iso) {
 function showModal() { Q("#alarmsModal")?.classList.remove("hidden"); }
 function hideModal() { Q("#alarmsModal")?.classList.add("hidden"); }
 
+// título dinámico (para device / etc.)
+let _modalBaseTitle = "Alarmas";
+
 function renderCount(n) {
   const h = Q("#alarmsModalTitle");
-  if (h) h.innerHTML = `Alarmas <span style="margin-left:.5rem;font-weight:600;opacity:.9">(${n})</span>`;
+  if (h) {
+    const t = (_modalBaseTitle || "Alarmas").trim() || "Alarmas";
+    h.innerHTML = `${t} <span style="margin-left:.5rem;font-weight:600;opacity:.9">(${n})</span>`;
+  }
 }
 
 function ensureSpinnerStyles() {
   if (document.getElementById("ao-spinner-styles")) return;
+
   const css = `
   @keyframes ao-spin { to { transform: rotate(360deg); } }
   .ao-loading { display:flex; align-items:center; justify-content:center; gap:.6rem; padding:14px 8px; }
   .ao-spinner { width:22px; height:22px; border-radius:50%; border:3px solid rgba(255,255,255,.25); border-top-color:#fff; animation: ao-spin .8s linear infinite; }
   .ao-loading span { font-family: Inter, system-ui, Segoe UI, Arial, sans-serif; font-size: .95rem; opacity:.9; }
   #logLoadingOverlay { display:flex; align-items:center; justify-content:center; padding:24px 0; min-height: 200px; }
+
+  /* ===== Pills severidad (recupera colores) ===== */
+  .pill{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:2px 10px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:900;
+    letter-spacing:.2px;
+    border:1px solid rgba(255,255,255,.14);
+    background: rgba(148,163,184,.10);
+    color:#e5e7eb;
+    text-transform: lowercase;
+    white-space: nowrap;
+  }
+  .pill.sev-notice { background: rgba(148,163,184,.14); border-color: rgba(148,163,184,.40); }
+  .pill.sev-info, .pill.sev-information { background: rgba(59,130,246,.16); border-color: rgba(59,130,246,.45); }
+  .pill.sev-warning { background: rgba(245,158,11,.16); border-color: rgba(245,158,11,.45); }
+  .pill.sev-alert { background: rgba(16,185,129,.16); border-color: rgba(16,185,129,.45); }
+  .pill.sev-error { background: rgba(239,68,68,.14); border-color: rgba(239,68,68,.45); }
+  .pill.sev-critical, .pill.sev-critico, .pill.sev-critica { background: rgba(239,68,68,.18); border-color: rgba(239,68,68,.55); }
+  .pill.sev-na, .pill.sev-n-a { background: rgba(6,182,212,.14); border-color: rgba(6,182,212,.40); }
+
   @media (prefers-color-scheme: light){
     .ao-spinner { border:3px solid rgba(30,41,59,.25); border-top-color:#0f172a; }
     .ao-loading span { color:#0f172a; }
+    .pill{ color:#0f172a; border-color: rgba(15,23,42,.18); }
   }`;
+
   const tag = document.createElement("style");
   tag.id = "ao-spinner-styles";
   tag.textContent = css;
@@ -93,6 +129,35 @@ function renderLoading() {
 function clearRows() {
   const tbody = Q("#alarmsTable tbody");
   if (tbody) tbody.innerHTML = "";
+}
+
+/* =========================
+ * Severidad pill helpers
+ * ========================= */
+function normKey(s) {
+  return String(s ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, ""); // quita tildes
+}
+
+function sevLabel(row) {
+  return String(row.msg_severity || row.severity || "").trim() || "—";
+}
+
+function sevSlug(label) {
+  const k = normKey(label).replace(/\s+/g, "-");
+  if (k === "critical" || k === "critico" || k === "critica") return "critical";
+  if (k === "information" || k === "info") return "information";
+  if (k === "n/a" || k === "na" || k === "n-a") return "na";
+  return k || "notice";
+}
+
+function renderSevPill(row) {
+  const lbl = sevLabel(row);
+  const slug = sevSlug(lbl);
+  return `<span class="pill sev-${slug}">${normKey(lbl) || "—"}</span>`;
 }
 
 /* =========================
@@ -132,12 +197,11 @@ function renderRowsFromCache(query) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${fmtTime(r.eventtime)}</td>
-      <td>${(r.msg_severity || r.severity || "").toUpperCase()}</td>
+      <td>${renderSevPill(r)}</td>
       <td>${r.device || "—"}</td>
       <td>${r.level || "—"}</td>
       <td>${r.action || "—"}</td>
       <td>${r.subtype || "—"}</td>
-      <td>${r.log_description || "—"}</td>
     `.trim();
     tr.addEventListener("click", () => openLog(r.alarmid));
     tbody.appendChild(tr);
@@ -219,7 +283,6 @@ function renderLogError(msg) {
  * ========================= */
 async function openLog(alarmid) {
   try {
-    // Mostrar SOLO la tarjeta vacía con spinner
     showLogLoadingCard();
 
     const u = new URL(EP.log, window.location.origin);
@@ -229,7 +292,6 @@ async function openLog(alarmid) {
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || "No se pudo cargar");
 
-    // Poblar contenido real
     const metaEl = document.getElementById("logMeta");
     if (metaEl) {
       const m = j.meta || {};
@@ -246,10 +308,8 @@ async function openLog(alarmid) {
     const htmlEl = document.getElementById("logHtml");
     if (htmlEl) htmlEl.innerHTML = j.html || "<em>Sin detalles</em>";
 
-    // Ahora sí mostramos las secciones y quitamos el overlay
     hideLogLoadingCard();
 
-    // Cierres
     document.querySelector("#logModal [data-close-log]")?.addEventListener("click", () => {
       document.getElementById("logModal")?.classList.add("hidden");
     }, { once: true });
@@ -317,6 +377,7 @@ async function fetchRowsAbortable(params) {
  * Abridores por gráfico
  * ========================= */
 async function openFromSubtype() {
+  _modalBaseTitle = "Alarmas";
   const st = getStateSafe();
   const params = { ...currentFilters() };
   if (String(st.subtypeFilter || "").trim()) {
@@ -336,6 +397,7 @@ async function openFromSubtype() {
 }
 
 async function openFromLevel() {
+  _modalBaseTitle = "Alarmas";
   const st = getStateSafe();
   const params = { ...currentFilters() };
   if (String(st.levelFilter || "").trim()) params.level = st.levelFilter;
@@ -350,6 +412,7 @@ async function openFromLevel() {
 }
 
 async function openFromSeverity() {
+  _modalBaseTitle = "Alarmas";
   const st = getStateSafe();
   const params = { ...currentFilters() };
   if (String(st.severityFilter || "").trim()) params.severity = st.severityFilter;
@@ -364,6 +427,7 @@ async function openFromSeverity() {
 }
 
 async function openFromActions() {
+  _modalBaseTitle = "Alarmas";
   const st = getStateSafe();
   const params = { ...currentFilters() };
   if (String(st.actionFilter || "").trim()) params.action = st.actionFilter;
@@ -378,6 +442,7 @@ async function openFromActions() {
 }
 
 async function openFromMsgSeverity() {
+  _modalBaseTitle = "Alarmas";
   const st = getStateSafe();
   const params = { ...currentFilters() };
   if (String(st.msgSeverityFilter || "").trim()) params.msg_severity = st.msgSeverityFilter;
@@ -392,6 +457,7 @@ async function openFromMsgSeverity() {
 }
 
 async function openFromHourly() {
+  _modalBaseTitle = "Alarmas";
   const st = getStateSafe();
   const params = { ...currentFilters() };
   if (String(st.hourFilter || "").trim()) {
@@ -418,6 +484,87 @@ async function openFromHourly() {
 }
 
 /* =========================
+ * Abridor DESDE DISPOSITIVOS (tabla)
+ * ========================= */
+async function openFromDevice() {
+  _modalBaseTitle = "Alarmas";
+  const params = { ...currentFilters() };
+
+  // 1) device desde estado espejo (window.getState o body.dataset)
+  let devKey = String(params.device || "").trim();
+
+  // 2) si no hay, buscar fila activa
+  if (!devKey) {
+    const activeRow =
+      document.querySelector("#device-table-body tr.is-active") ||
+      document.querySelector("#device-table-body tr.selected") ||
+      document.querySelector('#device-table-body tr[aria-selected="true"]');
+
+    devKey =
+      activeRow?.getAttribute("data-device") ||
+      activeRow?.dataset?.device ||
+      "";
+  }
+
+  // 3) fallback: primera fila con data-device o primera fila
+  if (!devKey) {
+    const firstRow =
+      document.querySelector("#device-table-body tr[data-device]") ||
+      document.querySelector("#device-table-body tr");
+
+    devKey =
+      firstRow?.getAttribute("data-device") ||
+      firstRow?.dataset?.device ||
+      "";
+  }
+
+  if (!devKey) {
+    const b = Q("#btn-open-device-alarms");
+    if (b) {
+      b.disabled = true;
+      setTimeout(() => (b.disabled = false), 500);
+    }
+    return;
+  }
+
+  params.device = devKey;
+
+  showModal(); clearRows(); renderLoading();
+  wireSearch();
+
+  try {
+    const j = await fetchRowsAbortable(params);
+    if (!j) return;
+    setRowsCache(j.rows || []);
+    renderRowsFromCache("");
+  } catch {
+    setRowsCache([]);
+    renderRowsFromCache("");
+  }
+}
+
+/* =========================
+ * API pública (para DeviceTable u otros módulos)
+ * ========================= */
+async function openForFilters({ title, filters } = {}) {
+  _modalBaseTitle = (title || "Alarmas").trim() || "Alarmas";
+  const params = { ...currentFilters(), ...(filters || {}) };
+
+  showModal(); clearRows(); renderLoading();
+  wireSearch();
+
+  try {
+    const j = await fetchRowsAbortable(params);
+    if (!j) return;
+    setRowsCache(j.rows || []);
+    renderRowsFromCache("");
+  } catch {
+    setRowsCache([]);
+    renderRowsFromCache("");
+  }
+}
+
+/* =========================
  * Wire buttons + API pública
  * ========================= */
 (function wireButtons(){
@@ -427,6 +574,9 @@ async function openFromHourly() {
   Q("#btn-open-action-alarms")?.addEventListener("click", openFromActions);
   Q("#btn-open-msgsev-alarms")?.addEventListener("click", openFromMsgSeverity);
   Q("#btn-open-hourly-alarms")?.addEventListener("click", openFromHourly);
+
+  // botón para tabla de dispositivos (realtime)
+  Q("#btn-open-device-alarms")?.addEventListener("click", openFromDevice);
 })();
 
 window.openSubtypeAlarms     = openFromSubtype;
@@ -435,3 +585,10 @@ window.openSeverityAlarms    = openFromSeverity;
 window.openActionAlarms      = openFromActions;
 window.openMsgSeverityAlarms = openFromMsgSeverity;
 window.openHourlyAlarms      = openFromHourly;
+window.openDeviceAlarms      = openFromDevice;
+
+// API para devicesTable.js (y cualquiera)
+window.AlarmsModal = {
+  openForFilters,
+  open: openForFilters,
+};

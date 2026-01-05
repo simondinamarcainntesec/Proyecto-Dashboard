@@ -21,19 +21,70 @@ const COLOR_BY_NAME = {
   critical: "#EF4444",
   "n/a": "#06B6D4",
   warning: "#F97316",
+
+  // por si tus "levels" vienen como estados (como en tu screenshot)
+  active: "#22C55E",
+  dormant: "#F59E0B",
+  "dormant, active": "#3B82F6",
 };
+
+// Paleta fallback (si aparece un label nuevo no mapeado)
+const FALLBACK_PALETTE = [
+  "#22C55E", "#3B82F6", "#F59E0B", "#EF4444",
+  "#8B5CF6", "#10B981", "#06B6D4", "#F97316",
+  "#A855F7", "#14B8A6", "#EAB308", "#FB7185",
+];
 
 const DEFAULT_COLOR = "#9CA3AF";
 const withAlpha = (hex, alphaHex = "CC") =>
   (hex || DEFAULT_COLOR).slice(0, 7) + alphaHex;
+
+// hash simple para elegir color por texto de forma estable
+function hashStr(s) {
+  const str = String(s ?? "");
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+function colorFromString(name) {
+  const idx = hashStr(name) % FALLBACK_PALETTE.length;
+  return FALLBACK_PALETTE[idx] || DEFAULT_COLOR;
+}
+
+// ====== TICKS "NICE" (10 en 10 / 100 en 100 / etc.) ======
+function niceStep(maxValue, targetTicks = 7) {
+  const max = Math.max(0, Number(maxValue) || 0);
+  if (max <= 10) return 1;
+
+  const raw = max / targetTicks; // step ideal
+  const pow = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw / pow;
+
+  // 1-2-5-10
+  let mult;
+  if (norm <= 1) mult = 1;
+  else if (norm <= 2) mult = 2;
+  else if (norm <= 5) mult = 5;
+  else mult = 10;
+
+  return Math.max(1, Math.round(mult * pow));
+}
+
+function ceilToStep(v, step) {
+  const n = Math.max(0, Number(v) || 0);
+  const s = Math.max(1, Number(step) || 1);
+  return Math.ceil(n / s) * s;
+}
 
 let chart;
 let canvas;
 let mounted = false;
 
 const pretty = (k) => LEVEL_NAME_MAP[String(k ?? "").trim()] || String(k ?? "");
-const colorForPretty = (name) =>
-  COLOR_BY_NAME[String(name ?? "").trim().toLowerCase()] || DEFAULT_COLOR;
+const colorForPretty = (name) => {
+  const key = String(name ?? "").trim().toLowerCase();
+  return COLOR_BY_NAME[key] || colorFromString(key);
+};
 
 function buildDataset() {
   const state = getState();
@@ -70,6 +121,11 @@ function render() {
 
   const BORDER = "#e5e7eb";
 
+  // ====== step dinámico según el máximo (10/100/500/etc.) ======
+  const maxVal = Math.max(0, ...series);
+  const step = niceStep(maxVal, 7);
+  const suggestedMax = ceilToStep(maxVal, step);
+
   const cfg = {
     type: "bar",
     data: {
@@ -79,7 +135,7 @@ function render() {
           label: "Level",
           data: series,
           backgroundColor: backgroundColors,
-          borderColor: BORDER,          // borde blanco permanente
+          borderColor: BORDER,
           hoverBorderColor: BORDER,
           borderWidth: 2,
           hoverBorderWidth: 2,
@@ -97,7 +153,8 @@ function render() {
         tooltip: {
           callbacks: {
             title: (items) => (items?.[0] ? String(items[0].label) : ""),
-            label: (item) => `Cantidad: ${item.formattedValue}`,
+            // sin separadores raros (plano)
+            label: (item) => `Cantidad: ${Math.round(item.parsed.y)}`,
           },
         },
       },
@@ -123,7 +180,13 @@ function render() {
         },
         y: {
           beginAtZero: true,
-          ticks: { color: AXIS },
+          suggestedMax,
+          ticks: {
+            color: AXIS,
+            stepSize: step,
+            precision: 0,
+            callback: (v) => String(Math.round(v)), // sin puntos (miles)
+          },
           grid: { color: GRID },
         },
       },
@@ -137,7 +200,12 @@ function render() {
 
     canvas.onclick = (evt) => {
       if (!chart) return;
-      const hits = chart.getElementsAtEventForMode(evt, "nearest", { intersect: true }, true);
+      const hits = chart.getElementsAtEventForMode(
+        evt,
+        "nearest",
+        { intersect: true },
+        true
+      );
       if (!hits?.length) return;
       const idx = hits[0].index;
       const lbl = chart.data.labels?.[idx];

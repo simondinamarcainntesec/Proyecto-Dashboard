@@ -1,6 +1,5 @@
 // charts/trend.js
 import { TXT, AXIS, GRID } from "../theme.js";
-import { actions } from "../state.js";
 
 let chart;
 
@@ -8,20 +7,10 @@ let chart;
 function fmtDDMM(label) {
   const s = String(label || "").trim();
 
-  // ISO: 2025-11-03 -> 03-11
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-    return `${s.slice(8,10)}-${s.slice(5,7)}`;
-  }
-
-  // DD/MM/YYYY -> DD-MM
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
-    return `${s.slice(0,2)}-${s.slice(3,5)}`;
-  }
-
-  // DD-MM (ya correcto)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return `${s.slice(8, 10)}-${s.slice(5, 7)}`;
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return `${s.slice(0, 2)}-${s.slice(3, 5)}`;
   if (/^\d{2}-\d{2}$/.test(s)) return s;
 
-  // Fallback: intentar Date y formatear
   const d = new Date(s);
   if (!isNaN(d.getTime())) {
     const dd = String(d.getDate()).padStart(2, "0");
@@ -29,40 +18,64 @@ function fmtDDMM(label) {
     return `${dd}-${mm}`;
   }
 
-  // Último recurso: dejar tal cual
   return s;
 }
 
 export function renderTrend(conf) {
-  const ctx = document.getElementById("trendChart").getContext("2d");
+  const canvas = document.getElementById("trendChart");
+  if (!canvas) return;
+
+  const ctx = canvas.getContext("2d");
+  const labels = Array.isArray(conf?.labels) ? conf.labels.slice() : [];
+
+  // Normaliza datasets para que TODOS queden con el look de referencia
+  const datasetsIn = Array.isArray(conf?.datasets) ? conf.datasets : [];
+  const datasets = datasetsIn.map((ds) => ({
+    ...ds,
+    tension: 0.25,
+    fill: false,                 // ✅ sin relleno (como referencia)
+    borderColor: "#60A5FA",
+    backgroundColor: "#60A5FA",
+    pointRadius: 3,
+    pointHoverRadius: 5,
+    borderWidth: 2,
+  }));
+
+  const dataConf = { labels, datasets };
 
   const opts = {
+    responsive: true,
+    maintainAspectRatio: false,
+
+    // Animación consistente con la referencia
     animation: { duration: 600, easing: "easeOutQuart" },
+    animations: {
+      numbers: { type: "number", duration: 600, easing: "easeOutQuart" },
+      tension: { duration: 600, easing: "easeOutQuart", from: 0.35, to: 0.25 },
+    },
+
     interaction: { mode: "index", intersect: false },
+
     plugins: {
       legend: {
         position: "top",
         labels: { color: TXT },
-        onClick: (e, item) => {
-          const sev = String(item.text).trim();
-          actions.toggleSeverity(sev);
-        },
+        onClick: () => {}, // ✅ no filtra/ni hace toggle al click (como referencia)
       },
       tooltip: { enabled: true },
     },
+
     scales: {
       x: {
+        type: "category",
         ticks: {
           color: AXIS,
-          autoSkip: false,        // ← mostrar TODOS los días
-          minRotation: 55,        // ← diagonal
-          maxRotation: 55,        // ← diagonal fija
+          autoSkip: false,   // ✅ muestra todos los días
+          minRotation: 55,   // ✅ diagonal fija
+          maxRotation: 55,
           padding: 6,
           font: { size: 11 },
-          callback: (value, index) => {
-            const raw = conf?.labels?.[index];
-            return fmtDDMM(raw);
-          },
+          callback: (value, index) => fmtDDMM(labels[index]),
         },
         grid: { color: GRID },
       },
@@ -72,13 +85,20 @@ export function renderTrend(conf) {
         grid: { color: GRID },
       },
     },
+
+    // ✅ solo eventos “vista” (sin click)
+    events: ["mousemove", "mouseout", "touchstart", "touchmove", "touchend"],
   };
 
   if (!chart) {
-    chart = new Chart(ctx, { type: "line", data: conf, options: opts });
+    chart = new Chart(ctx, { type: "line", data: dataConf, options: opts });
   } else {
-    chart.data = conf;
+    chart.data = dataConf;
     chart.options = opts;
     chart.update();
   }
+
+  // Cursor normal (no clickeable)
+  canvas.style.cursor = "default";
+  canvas.onclick = null;
 }

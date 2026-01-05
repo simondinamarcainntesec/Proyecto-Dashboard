@@ -121,6 +121,9 @@
     
             <a class="tenant-option nav-subitem {% if app_name == 'siem' and url_name == 'eventos_diarios' %}is-active{% endif %}"
               href="{% url 'siem:eventos_diarios' %}">Eventos diarios</a>
+
+            <a class="tenant-option nav-subitem {% if app_name == 'siem' and url_name == 'threat_analytics' %}is-active{% endif %}"
+              href="{% url 'siem:threat_analytics' %}">Threat Analytics</a>
           </div>
         </details>
         {% endwith %}
@@ -128,9 +131,6 @@
         {% endif %}
         {% endwith %}
         {% endwith %}
-    
-      
-        {# --- fin bloque "tenant and tenant.alarms_one_id" --- #}
     
         {# ===== Site24x7 ===== #}
         {% if tenant %}
@@ -645,6 +645,7 @@
   <script defer src="{% static 'js/home_ip_tickets.js' %}?v={% now 'U' %}"></script>
   <script src="{% static 'js/country_filter_modal.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/menus_dropdowns.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/sidebar_animation.js' %}?v={% now 'U' %}"></script>
 
   <script defer src="{% static 'js/alarms_one/page-loader-universal.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/coach_allinone.js' %}?v={% now 'U' %}"></script>

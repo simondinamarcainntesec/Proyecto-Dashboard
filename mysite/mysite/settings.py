@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     'site24x7',
     'tenants.apps.TenantsConfig',
     'soar_tickets',
+    'compliance',
 ]
 
 SITE_ID = 1
