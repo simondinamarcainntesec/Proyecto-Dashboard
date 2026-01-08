@@ -122,7 +122,7 @@ def build_realtime_context(alarms: list[dict], value_for_column, tzname="America
         sev        = _norm_sev(value_for_column(a, "severity"))
         msgsev     = _norm_msgsev(value_for_column(a, "msg_severity"))
 
-        # ✅ fallback robusto para device
+        # fallback robusto para device
         dev_raw = value_for_column(a, "msg_device_name") or value_for_column(a, "device")
         device     = _norm_dev(dev_raw)
 

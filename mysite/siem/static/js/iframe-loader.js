@@ -27,11 +27,22 @@
         container.appendChild(overlay);
       }
 
-      // Estado inicial
-      iframe.classList.add('is-loading');
+      var MIN_DISPLAY_MS = 7000; // 6 segundos (estándar)
       var startAt = Date.now();
-      overlay.dataset.startAt = startAt;
-      var MIN_DISPLAY_MS = 6000; // 6 segundos (estándar)
+
+      function showOverlay(){
+        startAt = Date.now();
+        overlay.dataset.startAt = startAt;
+        overlay.classList.remove('hidden');
+        overlay.style.opacity = '';
+        overlay.style.visibility = '';
+        iframe.classList.add('is-loading');
+        iframe.classList.remove('is-loaded');
+        iframe.setAttribute('aria-hidden','true');
+        iframe.style.visibility = 'hidden';
+      }
+      // Estado inicial
+      showOverlay();
 
       // Helper para ocultar overlay respetando el tiempo mínimo
       function hideOverlayRespectingMinAndFinalize(visibleIframe){
@@ -44,6 +55,7 @@
             ifr.classList.remove('is-loading');
             ifr.classList.add('is-loaded');
             ifr.removeAttribute('aria-hidden');
+            ifr.style.visibility = 'visible';
           }
         };
         if(remaining > 0){
@@ -60,7 +72,7 @@
 
       function watchIframeLoadAndFinalize(targetIframe){
         var done = false;
-        var STABILIZATION_MS = 0; // No extra stabilization — respetamos el tiempo mínimo (MIN_DISPLAY_MS) solamente
+        var STABILIZATION_MS = 5000; // No extra stabilization — respetamos el tiempo mínimo (MIN_DISPLAY_MS) solamente
         var onload = function(){
           if(done) return; done = true;
           // Calculamos cuánto queda del mínimo y esperamos al menos STABILIZATION_MS
@@ -87,6 +99,7 @@
       var LOAD_TIMEOUT_MS = 15000;
       function startLoad(){
         if(!dataSrc) return;
+        showOverlay();
         // show spinner
         var sp = container.querySelector('.spinner');
         if(sp) sp.style.display = '';

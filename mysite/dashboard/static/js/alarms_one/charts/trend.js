@@ -33,7 +33,7 @@ export function renderTrend(conf) {
   const datasets = datasetsIn.map((ds) => ({
     ...ds,
     tension: 0.25,
-    fill: false,                 // ✅ sin relleno (como referencia)
+    fill: false,                 // sin relleno (como referencia)
     borderColor: "#60A5FA",
     backgroundColor: "#60A5FA",
     pointRadius: 3,
@@ -60,7 +60,7 @@ export function renderTrend(conf) {
       legend: {
         position: "top",
         labels: { color: TXT },
-        onClick: () => {}, // ✅ no filtra/ni hace toggle al click (como referencia)
+        onClick: () => {}, // no filtra/ni hace toggle al click (como referencia)
       },
       tooltip: { enabled: true },
     },
@@ -70,8 +70,8 @@ export function renderTrend(conf) {
         type: "category",
         ticks: {
           color: AXIS,
-          autoSkip: false,   // ✅ muestra todos los días
-          minRotation: 55,   // ✅ diagonal fija
+          autoSkip: false,   // muestra todos los días
+          minRotation: 55,   // diagonal fija
           maxRotation: 55,
           padding: 6,
           font: { size: 11 },
@@ -86,7 +86,7 @@ export function renderTrend(conf) {
       },
     },
 
-    // ✅ solo eventos “vista” (sin click)
+    // solo eventos “vista” (sin click)
     events: ["mousemove", "mouseout", "touchstart", "touchmove", "touchend"],
   };
 

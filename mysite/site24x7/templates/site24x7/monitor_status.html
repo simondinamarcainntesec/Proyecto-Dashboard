@@ -28,161 +28,162 @@
   </div>
 
   <!-- Sidebar -->
-      <aside class="sidebar">
-      <div class="brand">
-        <img src="{% static 'img/inntesec CSS negro 1.avif' %}" alt="Logo Inntesec" />
-      </div>
-    
-      <nav class="nav">
-        {% if tenant and tenant.alarms_one_id %}
-    
-        <a id="homeNav" class="nav-item {% if request.resolver_match.app_name == 'home' %}is-active{% endif %}"
-          href="{% url 'home:index' %}">
-          <span class="nav-ico">🏠</span>Home
-          <span id="coachDotHome" class="coachmark-dot hidden"></span>
-        </a>
-    
-        {# ===== Alarmas ===== #}
-        {% with url_name=request.resolver_match.url_name %}
-        <details class="tenant-dropdown nav-dropdown" {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}open{% endif %}>
-          <summary id="alarmsSummary"
-            class="nav-item {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}is-active{% endif %}">
-            <span class="nav-ico">📊</span>Alarmas
-            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
-            </svg>
-            <span id="coachDotAlarms" class="coachmark-dot hidden"></span>
-          </summary>
-    
-          <div class="tenant-list nav-submenu">
-            <a class="tenant-option nav-subitem {% if url_name == 'dashboard_alarmsone' %}is-active{% endif %}"
-              href="{% url 'dashboard:dashboard_alarmsone' %}">Dashboard</a>
-            <a class="tenant-option nav-subitem {% if url_name == 'dashboard_realtime' %}is-active{% endif %}"
-              href="{% url 'dashboard:dashboard_realtime' %}">Tiempo Real</a>
-          </div>
-        </details>
-        {% endwith %}
-    
-        {# ===== SOAR ===== #}
-        {% with app_name=request.resolver_match.app_name %}
-        <details class="tenant-dropdown nav-dropdown" {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' or app_name == 'soar_tickets' %}open{% endif %}>
-          <summary id="soarSummary"
-            class="nav-item {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' or app_name == 'soar_tickets' %}is-active{% endif %}">
-            <span class="nav-ico">🚨</span>SOAR
-            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
-            </svg>
-            <span id="coachDotSoar" class="coachmark-dot hidden"></span>
-          </summary>
-    
-          <div class="tenant-list nav-submenu">
-            <a class="tenant-option nav-subitem {% if app_name == 'soar_dashboard' %}is-active{% endif %}"
-              href="{% url 'soar_dashboard:dashboard' %}">Dashboard</a>
-            <a class="tenant-option nav-subitem {% if app_name == 'soar_incidents' %}is-active{% endif %}"
-              href="{% url 'soar_incidents:list' %}">Eventos</a>
-            <a class="tenant-option nav-subitem {% if app_name == 'soar_tickets' %}is-active{% endif %}"
-              href="{% url 'soar_tickets:list' %}">Tickets</a>
-          </div>
-        </details>
-        {% endwith %}
-    
-        {# ===== SIEM (dropdown con Alertas + dashboards) ===== #}
-        {% with raw_siem_id=tenant.logs360siem_id|default_if_none:"" %}
-        {% with siem_id=raw_siem_id|stringformat:"s" %}
-        {% if siem_id and siem_id != "0" and siem_id != "null" and siem_id != "NULL" and siem_id != "None" %}
-        {% with app_name=request.resolver_match.app_name %}
-        {% with url_name=request.resolver_match.url_name %}
-        <details class="tenant-dropdown nav-dropdown" {% if app_name == 'siem' %}open{% endif %}>
-          <summary id="siemSummary" class="nav-item {% if app_name == 'siem' %}is-active{% endif %}">
-            <span class="nav-ico">🧠</span>SIEM
-            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
-            </svg>
-            <span id="coachDotSiem" class="coachmark-dot hidden"></span>
-          </summary>
-    
-          <div class="tenant-list nav-submenu">
-            <a class="tenant-option nav-subitem {% if app_name == 'siem' and url_name == 'alerts_logs360' %}is-active{% endif %}"
-              href="{% url 'siem:alerts_logs360' %}">Alertas</a>
-    
-            <a class="tenant-option nav-subitem {% if app_name == 'siem' and url_name == 'microsoft365' %}is-active{% endif %}"
-              href="{% url 'siem:microsoft365' %}">Microsoft 365</a>
-    
-            <a class="tenant-option nav-subitem {% if app_name == 'siem' and url_name == 'networks' %}is-active{% endif %}"
-              href="{% url 'siem:networks' %}">Networks</a>
-    
-            <a class="tenant-option nav-subitem {% if app_name == 'siem' and url_name == 'eventos_diarios' %}is-active{% endif %}"
-              href="{% url 'siem:eventos_diarios' %}">Eventos diarios</a>
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="{% static 'img/inntesec CSS negro 1.avif' %}" alt="Logo Inntesec" />
+    </div>
 
-            <a class="tenant-option nav-subitem {% if app_name == 'siem' and url_name == 'threat_analytics' %}is-active{% endif %}"
-              href="{% url 'siem:threat_analytics' %}">Threat Analytics</a>
-          </div>
-        </details>
-        {% endwith %}
-        {% endwith %}
-        {% endif %}
-        {% endwith %}
-        {% endwith %}
-    
-        {% endif %}
-        {# --- fin bloque "tenant and tenant.alarms_one_id" --- #}
-    
-        {# ===== Site24x7 ===== #}
-        {% if tenant %}
-        {% with raw_site_id=tenant.site24x7_id|default_if_none:"" %}
-        {% with site_id=raw_site_id|stringformat:"s" %}
-        {% if site_id and site_id != "0" and site_id != "null" and site_id != "NULL" and site_id != "None" %}
-        {% with app_name=request.resolver_match.app_name %}
-        {% with url_name=request.resolver_match.url_name %}
-        <details class="tenant-dropdown nav-dropdown" {% if app_name == 'site24x7' %}open{% endif %}>
-          <summary class="nav-item {% if app_name == 'site24x7' %}is-active{% endif %}">
-            <span class="nav-ico">📡</span>Inn-Monitor
-            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
-            </svg>
-            <span id="coachDotInnMonitor" class="coachmark-dot hidden"></span>
-          </summary>
-    
-          <div class="tenant-list nav-submenu">
-            <a class="tenant-option nav-subitem {% if app_name == 'site24x7' and url_name == 'monitor_status' %}is-active{% endif %}"
-              href="{% url 'site24x7:monitor_status' %}">Monitores</a>
-    
-            <a class="tenant-option nav-subitem {% if app_name == 'site24x7' and url_name == 'anomaly_status' %}is-active{% endif %}"
-              href="{% url 'site24x7:anomaly_status' %}">Anomalías</a>
-    
-            <a class="tenant-option nav-subitem {% if app_name == 'site24x7' and url_name == 'dashboard' %}is-active{% endif %}"
-              href="{% url 'site24x7:dashboard' %}">Dashboard</a>
-          </div>
-        </details>
-        {% endwith %}
-        {% endwith %}
-        {% endif %}
-        {% endwith %}
-        {% endwith %}
-        {% endif %}
-    
-        {# ===== Configuración ===== #}
-        <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.url_name == 'cambiar_contrasena' %}open{% endif %}>
-          <summary id="settingsSummary"
-            class="nav-item {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}">
-            <span class="nav-ico">⚙️</span>Configuración
-            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24">
-              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
-            </svg>
-            <span id="coachDotConfig" class="coachmark-dot hidden"></span>
-          </summary>
-    
-          <div class="tenant-list nav-submenu">
-            <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}"
-              href="{% url 'cambiar_contrasena' %}">🔒 Cambiar contraseña</a>
-            <a class="tenant-option nav-subitem" href="#" onclick="toggleCredModal(true)">🔑 Credenciales</a>
-            <a class="tenant-option nav-subitem" href="#" onclick="toggleConfigModal(true)">🔔 Notificaciones</a>
-            <a class="tenant-option nav-subitem" href="#" onclick="toggleCountryModal(true)">🌎 Filtro países whitelist</a>
-          </div>
-        </details>
-    
-      </nav>
-    </aside>
+    <nav class="nav">
+      {% if tenant and tenant.alarms_one_id %}
+
+      <a id="homeNav" class="nav-item {% if request.resolver_match.app_name == 'home' %}is-active{% endif %}"
+        href="{% url 'home:index' %}">
+        <span class="nav-ico">🏠</span>Home
+        <span id="coachDotHome" class="coachmark-dot hidden"></span>
+      </a>
+
+      {# ===== Alarmas ===== #}
+      {% with url_name=request.resolver_match.url_name %}
+      <details class="tenant-dropdown nav-dropdown" {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}open{% endif %}>
+        <summary id="alarmsSummary"
+          class="nav-item {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}is-active{% endif %}">
+          <span class="nav-ico">📊</span>Alarmas
+          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+          <span id="coachDotAlarms" class="coachmark-dot hidden"></span>
+        </summary>
+
+        <div class="tenant-list nav-submenu">
+          <a class="tenant-option nav-subitem {% if url_name == 'dashboard_alarmsone' %}is-active{% endif %}"
+            href="{% url 'dashboard:dashboard_alarmsone' %}">Dashboard</a>
+          <a class="tenant-option nav-subitem {% if url_name == 'dashboard_realtime' %}is-active{% endif %}"
+            href="{% url 'dashboard:dashboard_realtime' %}">Tiempo Real</a>
+        </div>
+      </details>
+      {% endwith %}
+
+      {# ===== SOAR ===== #}
+      {% with app_name=request.resolver_match.app_name %}
+      <details class="tenant-dropdown nav-dropdown" {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' or app_name == 'soar_tickets' %}open{% endif %}>
+        <summary id="soarSummary"
+          class="nav-item {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' or app_name == 'soar_tickets' %}is-active{% endif %}">
+          <span class="nav-ico">🚨</span>SOAR
+          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+          <span id="coachDotSoar" class="coachmark-dot hidden"></span>
+        </summary>
+
+        <div class="tenant-list nav-submenu">
+          <a class="tenant-option nav-subitem {% if app_name == 'soar_dashboard' %}is-active{% endif %}"
+            href="{% url 'soar_dashboard:dashboard' %}">Dashboard</a>
+          <a class="tenant-option nav-subitem {% if app_name == 'soar_incidents' %}is-active{% endif %}"
+            href="{% url 'soar_incidents:list' %}">Eventos</a>
+          <a class="tenant-option nav-subitem {% if app_name == 'soar_tickets' %}is-active{% endif %}"
+            href="{% url 'soar_tickets:list' %}">Tickets</a>
+        </div>
+      </details>
+      {% endwith %}
+
+      {# ===== SIEM (dropdown con Alertas + dashboards) ===== #}
+      {% with raw_siem_id=tenant.logs360siem_id|default_if_none:"" %}
+      {% with siem_id=raw_siem_id|stringformat:"s" %}
+      {% if siem_id and siem_id != "0" and siem_id != "null" and siem_id != "NULL" and siem_id != "None" %}
+      {% with app_name=request.resolver_match.app_name %}
+      {% with url_name=request.resolver_match.url_name %}
+      <details class="tenant-dropdown nav-dropdown" {% if app_name == 'siem' %}open{% endif %}>
+        <summary id="siemSummary" class="nav-item {% if app_name == 'siem' %}is-active{% endif %}">
+          <span class="nav-ico">🧠</span>SIEM
+          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+          <span id="coachDotSiem" class="coachmark-dot hidden"></span>
+        </summary>
+
+        <div class="tenant-list nav-submenu">
+          <a class="tenant-option nav-subitem {% if app_name == 'siem' and url_name == 'alerts_logs360' %}is-active{% endif %}"
+            href="{% url 'siem:alerts_logs360' %}">Alertas</a>
+
+          <a class="tenant-option nav-subitem {% if app_name == 'siem' and url_name == 'microsoft365' %}is-active{% endif %}"
+            href="{% url 'siem:microsoft365' %}">Microsoft 365</a>
+
+          <a class="tenant-option nav-subitem {% if app_name == 'siem' and url_name == 'networks' %}is-active{% endif %}"
+            href="{% url 'siem:networks' %}">Networks</a>
+
+          <a class="tenant-option nav-subitem {% if app_name == 'siem' and url_name == 'eventos_diarios' %}is-active{% endif %}"
+            href="{% url 'siem:eventos_diarios' %}">Eventos diarios</a>
+
+          <a class="tenant-option nav-subitem {% if app_name == 'siem' and url_name == 'threat_analytics' %}is-active{% endif %}"
+            href="{% url 'siem:threat_analytics' %}">Threat Analytics</a>
+        </div>
+      </details>
+      {% endwith %}
+      {% endwith %}
+      {% endif %}
+      {% endwith %}
+      {% endwith %}
+
+      {% endif %}
+      {# --- fin bloque "tenant and tenant.alarms_one_id" --- #}
+
+      {# ===== Site24x7 ===== #}
+      {% if tenant %}
+      {% with raw_site_id=tenant.site24x7_id|default_if_none:"" %}
+      {% with site_id=raw_site_id|stringformat:"s" %}
+      {% if site_id and site_id != "0" and site_id != "null" and site_id != "NULL" and site_id != "None" %}
+      {% with app_name=request.resolver_match.app_name %}
+      {% with url_name=request.resolver_match.url_name %}
+      <details class="tenant-dropdown nav-dropdown" {% if app_name == 'site24x7' %}open{% endif %}>
+        <summary class="nav-item {% if app_name == 'site24x7' %}is-active{% endif %}">
+          <span class="nav-ico">📡</span>Inn-Monitor
+          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+          <span id="coachDotInnMonitor" class="coachmark-dot hidden"></span>
+        </summary>
+
+        <div class="tenant-list nav-submenu">
+          <a class="tenant-option nav-subitem {% if app_name == 'site24x7' and url_name == 'monitor_status' %}is-active{% endif %}"
+            href="{% url 'site24x7:monitor_status' %}">Monitores</a>
+
+          <a class="tenant-option nav-subitem {% if app_name == 'site24x7' and url_name == 'anomaly_status' %}is-active{% endif %}"
+            href="{% url 'site24x7:anomaly_status' %}">Anomalías</a>
+
+          <a class="tenant-option nav-subitem {% if app_name == 'site24x7' and url_name == 'dashboard' %}is-active{% endif %}"
+            href="{% url 'site24x7:dashboard' %}">Dashboard</a>
+        </div>
+      </details>
+      {% endwith %}
+      {% endwith %}
+      {% endif %}
+      {% endwith %}
+      {% endwith %}
+      {% endif %}
+
+      {# ===== Configuración ===== #}
+      <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.url_name == 'cambiar_contrasena' %}open{% endif %}>
+        <summary id="settingsSummary"
+          class="nav-item {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}">
+          <span class="nav-ico">⚙️</span>Configuración
+          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24">
+            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+          <span id="coachDotConfig" class="coachmark-dot hidden"></span>
+        </summary>
+
+        <div class="tenant-list nav-submenu">
+          <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}"
+            href="{% url 'cambiar_contrasena' %}">🔒 Cambiar contraseña</a>
+          <a class="tenant-option nav-subitem" href="#" onclick="toggleCredModal(true)">🔑 Credenciales</a>
+          <a class="tenant-option nav-subitem" href="#" onclick="toggleConfigModal(true)">🔔 Notificaciones</a>
+          <a class="tenant-option nav-subitem" href="#" onclick="toggleCountryModal(true)">🌎 Filtro países
+            whitelist</a>
+        </div>
+      </details>
+
+    </nav>
+  </aside>
 
 
 
@@ -192,7 +193,7 @@
     <header class="topbar">
       <div class="top-left">
         <h1 class="top-title">
-          Tenant:
+          Cliente:
           {% if request.user.tenant.name|lower == "inntesec" %}
           <details class="tenant-dropdown">
             <summary class="tenant-summary">
@@ -216,10 +217,10 @@
           {% endif %}
         </h1>
       </div>
-    
+
       <div class="top-right">
         <button class="btn ghost" title="Actualizar" id="btn-refresh">⟳</button>
-    
+
         <!-- Menú Exportar (mismo que dashboard) -->
         <div class="export-wrapper">
           <button class="btn ghost" title="Exportar" id="btn-export-toggle">⬇︎</button>
@@ -228,23 +229,23 @@
             <button type="button" data-export-format="csv">📊 Exportar CSV</button>
           </div>
         </div>
-    
+
         <!-- Guía rápida -->
         <button id="showCoachBtn" class="btn ghost" title="Mostrar guía rápida" onclick="window.startInntesecCoach()">
           💡 Guía rápida
         </button>
-    
+
         <!-- Inntesec Agent: texto + botones -->
         <a>Inntesec Agent:</a>
-    
+
         <button class="btn ghost" type="button" onclick="window.openRetellCallWindow()">
           📞 Llamar
         </button>
-    
+
         <button class="btn ghost" type="button" onclick="openChatPopup()">
           💬 Chat
         </button>
-    
+
         <div class="user-menu" id="userMenu">
           <button type="button" id="userButton" class="user-button">
             <div class="user-avatar">
@@ -257,7 +258,7 @@
               <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
             </svg>
           </button>
-    
+
           <div class="dropdown-menu">
             <form action="{% url 'logout' %}" method="post">
               {% csrf_token %}
@@ -271,151 +272,149 @@
 
     {# ===== Estados especiales ===== #}
     {% if not tenant %}
-      <section class="empty-state">
-        <div class="empty-card">
-          <h2>Servicio Inn-Monitor no disponible</h2>
-          <p>No se pudo determinar el tenant para este usuario.</p>
-          <p>Por favor, contacte con un administrador.</p>
-        </div>
-      </section>
+    <section class="empty-state">
+      <div class="empty-card">
+        <h2>Servicio Inn-Monitor no disponible</h2>
+        <p>No se pudo determinar el tenant para este usuario.</p>
+        <p>Por favor, contacte con un administrador.</p>
+      </div>
+    </section>
     {% elif not tenant.site24x7_id %}
-      <section class="empty-state">
-        <div class="empty-card">
-          <h2>Servicio Inn-Monitor no disponible</h2>
-          <p>
-            La empresa <strong>{{ tenant.name|default:"—" }}</strong>
-            no tiene configurado el servicio de <strong>Site24x7</strong>.
-          </p>
-          <p>Por favor, contacte con un administrador.</p>
-        </div>
-      </section>
+    <section class="empty-state">
+      <div class="empty-card">
+        <h2>Servicio Inn-Monitor no disponible</h2>
+        <p>
+          La empresa <strong>{{ tenant.name|default:"—" }}</strong>
+          no tiene configurado el servicio de <strong>Site24x7</strong>.
+        </p>
+        <p>Por favor, contacte con un administrador.</p>
+      </div>
+    </section>
     {% else %}
-      {% if error %}
-        {# Error de token / API → mensaje genérico, como SIEM/Realtime #}
-        <section class="empty-state">
-          <div class="empty-card">
-            <h2>Servicio Inn-Monitor no disponible</h2>
-            <p>
-              Ocurrió un error inesperado al consultar el estado de monitores
-              para la empresa <strong>{{ tenant.name|default:"—" }}</strong>.
-            </p>
-            <p>Por favor, contacte con un administrador.</p>
-          </div>
-        </section>
-      {% elif total_monitors|default:0 == 0 %}
-        <section class="empty-state">
-          <div class="empty-card">
-            <h2>Sin monitores disponibles</h2>
-            <p>No se encontraron monitores configurados para <strong>{{ tenant.name|default:"—" }}</strong>.</p>
-          </div>
-        </section>
-      {% else %}
+    {% if error %}
+    {# Error de token / API → mensaje genérico, como SIEM/Realtime #}
+    <section class="empty-state">
+      <div class="empty-card">
+        <h2>Servicio Inn-Monitor no disponible</h2>
+        <p>
+          Ocurrió un error inesperado al consultar el estado de monitores
+          para la empresa <strong>{{ tenant.name|default:"—" }}</strong>.
+        </p>
+        <p>Por favor, contacte con un administrador.</p>
+      </div>
+    </section>
+    {% elif total_monitors|default:0 == 0 %}
+    <section class="empty-state">
+      <div class="empty-card">
+        <h2>Sin monitores disponibles</h2>
+        <p>No se encontraron monitores configurados para <strong>{{ tenant.name|default:"—" }}</strong>.</p>
+      </div>
+    </section>
+    {% else %}
 
-      <!-- Contenido principal ENVUELTO para captura -->
-      <section class="wrap" id="dashboard-export-area" data-page-slug="Inn-monitor_Monitores">
-        <div class="card">
-          <div class="card-head">
-            <h3>Estado de Monitores</h3>
-          </div>
+    <!-- Contenido principal ENVUELTO para captura -->
+    <section class="wrap" id="dashboard-export-area" data-page-slug="Inn-monitor_Monitores">
+      <div class="card">
+        <div class="card-head">
+          <h3>Estado de Monitores</h3>
+        </div>
 
-          <div class="card-body">
-            <!-- KPIs -->
-            <section class="grid grid-kpis kpis-site24x7">
-              <div class="card kpi">
-                <div class="kpi-top">
-                  <span class="kpi-label">Arriba</span>
-                  <span class="kpi-icon-site kpi-icon-up">✓</span>
-                </div>
-                <div class="kpi-value">{{ count_up }}</div>
+        <div class="card-body">
+          <!-- KPIs -->
+          <section class="grid grid-kpis kpis-site24x7">
+            <div class="card kpi">
+              <div class="kpi-top">
+                <span class="kpi-label">Arriba</span>
+                <span class="kpi-icon-site kpi-icon-up">✓</span>
               </div>
-
-              <div class="card kpi">
-                <div class="kpi-top">
-                  <span class="kpi-label">Con problemas</span>
-                  <span class="kpi-icon-site kpi-icon-trouble">!</span>
-                </div>
-                <div class="kpi-value">{{ count_trouble }}</div>
-              </div>
-
-              <div class="card kpi">
-                <div class="kpi-top">
-                  <span class="kpi-label">Críticos</span>
-                  <span class="kpi-icon-site kpi-icon-critical">⚠</span>
-                </div>
-                <div class="kpi-value">{{ count_critical }}</div>
-              </div>
-
-              <div class="card kpi">
-                <div class="kpi-top">
-                  <span class="kpi-label">Inactivos</span>
-                  <span class="kpi-icon-site kpi-icon-down">✕</span>
-                </div>
-                <div class="kpi-value">{{ count_down }}</div>
-              </div>
-
-              <div class="card kpi">
-                <div class="kpi-top">
-                  <span class="kpi-label">Suspendidos</span>
-                  <span class="kpi-icon-site kpi-icon-suspended">⏸</span>
-                </div>
-                <div class="kpi-value">{{ count_suspended }}</div>
-              </div>
-            </section>
-
-            <!-- Pill "Monitores totales" -->
-            <div class="meta-pill-row">
-              <span class="meta-pill">
-                <span class="meta-pill-dot"></span>
-                Monitores totales: <strong>{{ total_monitors }}</strong>
-              </span>
+              <div class="kpi-value">{{ count_up }}</div>
             </div>
 
-            <!-- Tabla -->
-            <div class="table-wrap">
-              <table class="tbl" id="tbl-site24x7-monitors">
-                <thead>
-                  <tr>
-                    <th>Estado</th>
-                    <th>Nombre del monitor</th>
-                    <th>Tipo</th>
-                    <th>Último sondeo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for m in monitors %}
-                  <tr
-                    data-status-code="{{ m.status|default:'' }}"
-                    data-status-name="{{ m.status_name|default:''|escape }}"
-                    data-monitor-name="{{ m.monitor_name|default:''|escape }}"
-                    data-monitor-type="{{ m.monitor_type|default:''|escape }}"
-                    data-last-polled="{{ m.last_polled_human|default:''|escape }}"
-                  >
-                    <td>
-                      {% with st=m.status %}
-                        <span class="pill
+            <div class="card kpi">
+              <div class="kpi-top">
+                <span class="kpi-label">Con problemas</span>
+                <span class="kpi-icon-site kpi-icon-trouble">!</span>
+              </div>
+              <div class="kpi-value">{{ count_trouble }}</div>
+            </div>
+
+            <div class="card kpi">
+              <div class="kpi-top">
+                <span class="kpi-label">Críticos</span>
+                <span class="kpi-icon-site kpi-icon-critical">⚠</span>
+              </div>
+              <div class="kpi-value">{{ count_critical }}</div>
+            </div>
+
+            <div class="card kpi">
+              <div class="kpi-top">
+                <span class="kpi-label">Inactivos</span>
+                <span class="kpi-icon-site kpi-icon-down">✕</span>
+              </div>
+              <div class="kpi-value">{{ count_down }}</div>
+            </div>
+
+            <div class="card kpi">
+              <div class="kpi-top">
+                <span class="kpi-label">Suspendidos</span>
+                <span class="kpi-icon-site kpi-icon-suspended">⏸</span>
+              </div>
+              <div class="kpi-value">{{ count_suspended }}</div>
+            </div>
+          </section>
+
+          <!-- Pill "Monitores totales" -->
+          <div class="meta-pill-row">
+            <span class="meta-pill">
+              <span class="meta-pill-dot"></span>
+              Monitores totales: <strong>{{ total_monitors }}</strong>
+            </span>
+          </div>
+
+          <!-- Tabla -->
+          <div class="table-wrap">
+            <table class="tbl" id="tbl-site24x7-monitors">
+              <thead>
+                <tr>
+                  <th>Estado</th>
+                  <th>Nombre del monitor</th>
+                  <th>Tipo</th>
+                  <th>Último sondeo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for m in monitors %}
+                <tr data-status-code="{{ m.status|default:'' }}"
+                  data-status-name="{{ m.status_name|default:''|escape }}"
+                  data-monitor-name="{{ m.monitor_name|default:''|escape }}"
+                  data-monitor-type="{{ m.monitor_type|default:''|escape }}"
+                  data-last-polled="{{ m.last_polled_human|default:''|escape }}">
+                  <td>
+                    {% with st=m.status %}
+                    <span class="pill
                           {% if st == 1 %} sev-low
                           {% elif st == 0 %} sev-critical
                           {% elif st == 2 %} sev-medium
                           {% elif st == 3 %} sev-high
                           {% elif st == 5 %} sev-info
                           {% else %} sev-na {% endif %}">
-                          {{ m.status_name|default:"—" }}
-                        </span>
-                      {% endwith %}
-                    </td>
-                    <td>{{ m.monitor_name }}</td>
-                    <td>{{ m.monitor_type|default:"—" }}</td>
-                    <td>{{ m.last_polled_human|default:"—" }}</td>
-                  </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-
+                      {{ m.status_name|default:"—" }}
+                    </span>
+                    {% endwith %}
+                  </td>
+                  <td>{{ m.monitor_name }}</td>
+                  <td>{{ m.monitor_type|default:"—" }}</td>
+                  <td>{{ m.last_polled_human|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
           </div>
+
         </div>
-      </section>
-      {% endif %}
+      </div>
+    </section>
+    {% endif %}
     {% endif %}
   </div>
 
@@ -432,9 +431,9 @@
 
   {# Librerías de export (solo cuando hay datos reales) #}
   {% if tenant and tenant.site24x7_id and not error and total_monitors|default:0 > 0 %}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script defer src="{% static 'js/site24x7_export.js' %}?v={% now 'U' %}"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script defer src="{% static 'js/site24x7_export.js' %}?v={% now 'U' %}"></script>
   {% endif %}
 
   <script defer src="{% static 'js/country_filter_modal.js' %}?v={% now 'U' %}"></script>
@@ -444,7 +443,7 @@
   {% include 'partials/cred_modal.html' %}
 
   <script>
-  window.__RETELL_POPUP_URL = "{% url 'retell_call_window' %}";
+    window.__RETELL_POPUP_URL = "{% url 'retell_call_window' %}";
   </script>
 
   <script defer src="{% static 'js/retell_open_popup.js' %}?v={% now 'U' %}"></script>

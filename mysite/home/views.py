@@ -16,6 +16,7 @@ import json
 
 from tenants.decorators import tenant_required
 from tenants.models import Tenant, TenantUser, NotificationChannelPreference
+from tenants.views import normalize_e164_phone
 
 from inyeccion_api.models import Alarm
 from soar_incidents.models import IncidenteSOAR
@@ -1232,31 +1233,72 @@ def _stream_blacklist_txt_response() -> HttpResponse:
 def _validate_creds(username: str, password: str) -> TenantCredentials | None:
     if not username or not password:
         return None
+
+    # Compatibilidad: intento directo (valores en texto plano en BD)
     try:
-        creds = TenantCredentials.objects.get(
+        legacy = TenantCredentials.objects.filter(
             username=username,
             password=password,
             is_active=True,
-        )
-        logger.info(
-            "[VALIDATE CREDS] OK username='%s', creds_pk=%s, tenant_fk=%s",
-            username,
-            creds.pk,
-            getattr(creds, "tenant_id", None),
-        )
-        return creds
-    except TenantCredentials.DoesNotExist:
-        logger.info(
-            "[VALIDATE CREDS] No se encontraron credenciales activas para username='%s'",
-            username,
-        )
-        return None
+        ).first()
+        if legacy:
+            logger.info(
+                "[VALIDATE CREDS] Match directo (legacy) username='%s', creds_pk=%s",
+                username,
+                legacy.pk,
+            )
+            try:
+                legacy.ensure_encrypted(persist=True)
+            except Exception:
+                logger.exception(
+                    "[VALIDATE CREDS] No se pudo asegurar cifrado (legacy) username='%s'",
+                    username,
+                )
+            return legacy
     except Exception:
-        logger.exception(
-            "[VALIDATE CREDS] Error inesperado buscando credenciales para username='%s'",
-            username,
-        )
+        logger.exception("[VALIDATE CREDS] Error en match directo (legacy)")
+
+    try:
+        qs = TenantCredentials.objects.filter(is_active=True)
+    except Exception:
+        logger.exception("[VALIDATE CREDS] Error consultando credenciales activas")
         return None
+
+    for creds in qs:
+        try:
+            if creds.username_plain == username and creds.password_plain == password:
+                try:
+                    creds.ensure_encrypted(persist=True)
+                except Exception:
+                    logger.exception(
+                        "[VALIDATE CREDS] No se pudo asegurar cifrado para username='%s'",
+                        username,
+                    )
+
+                logger.info(
+                    "[VALIDATE CREDS] OK username='%s', creds_pk=%s, tenant_fk=%s",
+                    username,
+                    creds.pk,
+                    getattr(creds, "tenant_id", None),
+                )
+                return creds
+        except Exception:
+            logger.exception(
+                "[VALIDATE CREDS] Error evaluando credencial username='%s'",
+                username,
+            )
+
+    logger.info(
+        "[VALIDATE CREDS] No se encontraron credenciales activas para username='%s'",
+        username,
+    )
+    return None
+
+    logger.info(
+        "[VALIDATE CREDS] No se encontraron credenciales activas para username='%s'",
+        username,
+    )
+    return None
 
 
 def _has_any_service(creds: TenantCredentials) -> bool:
@@ -1404,6 +1446,22 @@ def config_notificaciones(request):
             alarma_telegram,
         )
 
+        raw_phone = (request.POST.get("phone") or request.POST.get("telefono") or "").strip()
+        phone_value = None
+
+        if raw_phone == "":
+            phone_value = None
+        else:
+            phone_value = normalize_e164_phone(raw_phone)
+            if phone_value is None:
+                msg = (
+                    "Número inválido. Usa formato internacional E.164, ej: +56912345678 o +14155552671."
+                )
+                if is_ajax:
+                    return JsonResponse({"ok": False, "message": msg}, status=400)
+                messages.error(request, msg)
+                return HttpResponseRedirect(reverse("home:index"))
+
         tel_conf = {
             "baja": bool(request.POST.get("sev_tel_baja")),
             "media": bool(request.POST.get("sev_tel_media")),
@@ -1454,6 +1512,7 @@ def config_notificaciones(request):
             user.Alarma_Telefono = alarma_telefono
             user.Alarma_Correo = alarma_correo
             user.Alarma_Telegram = alarma_telegram
+            user.phone = phone_value
             user.hora_inicio = hora_inicio
             user.hora_fin = hora_fin
             user.save(
@@ -1461,6 +1520,7 @@ def config_notificaciones(request):
                     "Alarma_Telefono",
                     "Alarma_Correo",
                     "Alarma_Telegram",
+                    "phone",
                     "hora_inicio",
                     "hora_fin",
                 ]

@@ -31,7 +31,7 @@
       iframe.classList.add('is-loading');
       var startAt = Date.now();
       overlay.dataset.startAt = startAt;
-      var MIN_DISPLAY_MS = 6000; // 6 segundos (estándar)
+      var MIN_DISPLAY_MS = 7000; // 6 segundos (estándar)
 
       // Helper para ocultar overlay respetando el tiempo mínimo
       function hideOverlayRespectingMinAndFinalize(visibleIframe){

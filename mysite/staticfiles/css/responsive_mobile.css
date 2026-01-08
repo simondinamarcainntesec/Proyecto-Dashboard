@@ -1,0 +1,85 @@
+/* ================================================================
+   RESPONSIVE MOBILE CSS
+   Complementa base.css con reglas adicionales para móviles
+   ================================================================ */
+
+/* Ocultar hamburger button por defecto (se muestra solo en mobile via base.css) */
+.hamburger-btn {
+    display: none !important;
+}
+
+/* ================================================================
+   MOBILE: < 768px
+   ================================================================ */
+@media (max-width: 768px) {
+
+    /* Mostrar hamburger button en móviles */
+    .hamburger-btn {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        margin-right: 8px;
+        border-radius: 10px;
+        border: 1px solid rgba(30, 41, 59, .85);
+        background: rgba(11, 20, 40, .85);
+        color: #e5e7eb;
+        font-size: 20px;
+        line-height: 1;
+        cursor: pointer;
+        transition: background 0.12s ease;
+    }
+
+    .hamburger-btn:hover {
+        background: rgba(14, 26, 51, .95);
+        border-color: rgba(59, 130, 246, .22);
+    }
+
+    /* Asegurar que layout sea de una columna */
+    .layout {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Sidebar como overlay */
+    .sidebar {
+        position: fixed !important;
+        top: 0 !important;
+        left: -280px !important;
+        width: 280px !important;
+        height: 100vh !important;
+        z-index: 9998 !important;
+        transition: left 0.3s ease-out !important;
+        overflow-y: auto !important;
+    }
+
+    .sidebar.is-open {
+        left: 0 !important;
+        box-shadow: 4px 0 24px rgba(2, 6, 23, .65) !important;
+    }
+
+    /* Backdrop cuando sidebar abierto */
+    body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background: rgba(2, 6, 23, .70);
+        backdrop-filter: blur(4px);
+        z-index: 9997;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+    }
+
+    body.sidebar-open::before {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+
+    body.sidebar-open {
+        overflow: hidden;
+    }
+}

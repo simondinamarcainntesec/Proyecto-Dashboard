@@ -552,7 +552,7 @@ def enviar_correo_ticket_cerrado(ticket, to_email: Optional[str] = None, recipie
             )
             return False
 
-        # ✅ Nombre a mostrar según destinatario real
+        # Nombre a mostrar según destinatario real
         recipient_user = recipient or assigned
         recipient_name = _full_name(recipient_user) or "—"
 

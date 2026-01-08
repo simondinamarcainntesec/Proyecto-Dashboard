@@ -489,7 +489,7 @@ body.soar.modal-open{ overflow:hidden; } /* solo en tickets */
 }
 
 /* =========================================================
- * ✅ FIX: Centrar "Ticket cerrado con éxito" al medio pantalla
+ * FIX: Centrar "Ticket cerrado con éxito" al medio pantalla
  * ========================================================= */
 
 /* Cuando el success modal está visible, lo centramos con flex */
@@ -514,4 +514,17 @@ body.soar.modal-open{ overflow:hidden; } /* solo en tickets */
   /* mantiene tu look */
   max-width: 640px;
   width: min(640px, calc(100% - 32px));
+}
+
+/* === Estado Vencido === */
+.state-badge.is-overdue{
+  background: rgba(239, 68, 68, .14);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, .35);
+}
+
+/* opcional: resaltar "Vence" en el modal cuando está vencido */
+#tkt-due.is-overdue{
+  color: #ef4444;
+  font-weight: 800;
 }

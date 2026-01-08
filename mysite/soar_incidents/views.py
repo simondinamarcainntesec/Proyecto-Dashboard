@@ -2,7 +2,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 import csv
 import logging
-
+import json
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
@@ -197,12 +197,11 @@ def incidents_list(request):
     qs, tenant, from_q, to_q, q = _build_incidents_queryset(request)
 
     # ==============================
-    # ✅ NUEVO: filtros combinables (sev + assigned)
+    # filtros combinables (sev + assigned)
     # ==============================
-    sev_filter = (request.GET.get("sev") or "").strip().lower()          # low|medium|high|critical|""
-    assigned_filter = (request.GET.get("assigned") or "").strip().lower()  # yes|no|""
+    sev_filter = (request.GET.get("sev") or "").strip().lower()            # low|medium|high|critical|""
+    assigned_filter = (request.GET.get("assigned") or "").strip().lower()  # yes|no|1|0|""
 
-    # ---- helper para severidad (robusto con ES/EN)
     def _sev_q(sev_key: str):
         if sev_key == "critical":
             vals = ["critical", "crítico", "critico"]
@@ -214,7 +213,6 @@ def incidents_list(request):
             vals = ["low", "bajo"]
         else:
             vals = []
-
         qq = Q()
         for v in vals:
             qq |= Q(nivel_de_severidad__iexact=v)
@@ -222,61 +220,32 @@ def incidents_list(request):
 
     # ---- aplicar filtro severidad
     if sev_filter in ("low", "medium", "high", "critical"):
-        if hasattr(qs, "filter"):
-            qs = qs.filter(_sev_q(sev_filter))
-        else:
-            # qs es lista (fallback)
-            def norm(s):
-                return (str(s or "").strip().lower()
-                        .replace("í", "i").replace("ó", "o").replace("á", "a").replace("é", "e").replace("ú", "u"))
+        qs = qs.filter(_sev_q(sev_filter))
 
-            wanted = {
-                "critical": {"critical", "critico"},
-                "high": {"high", "alto"},
-                "medium": {"medium", "medio"},
-                "low": {"low", "bajo"},
-            }[sev_filter]
+    # ---- normalizar assigned (acepta yes/no y 1/0)
+    assigned_norm = ""
+    if assigned_filter in ("yes", "si", "true", "1"):
+        assigned_norm = "yes"
+    elif assigned_filter in ("no", "false", "0"):
+        assigned_norm = "no"
 
-            qs = [it for it in qs if norm(getattr(it, "nivel_de_severidad", "")) in wanted]
-
-    # ---- aplicar filtro asignación (ticket existe OPEN o CLOSED)
-    if assigned_filter in ("yes", "no"):
+    # ---- aplicar filtro asignación (ticket existe)
+    if assigned_norm in ("yes", "no"):
         try:
             from soar_tickets.models import SoarTicket
 
             if tenant:
-                if hasattr(qs, "filter"):
-                    ticket_alarm_ids_qs = SoarTicket.objects.filter(
-                        tenant_id=tenant.id
-                    ).values_list("alarm_id", flat=True)
+                # RECOMENDADO: solo OPEN
+                ticket_alarm_ids_qs = (
+                    SoarTicket.objects
+                    .filter(tenant_id=tenant.id, status=SoarTicket.STATUS_OPEN)
+                    .values_list("alarm_id", flat=True)
+                )
 
-                    if assigned_filter == "yes":
-                        qs = qs.filter(alarmd_id__in=ticket_alarm_ids_qs)
-                    else:
-                        qs = qs.exclude(alarmd_id__in=ticket_alarm_ids_qs)
+                if assigned_norm == "yes":
+                    qs = qs.filter(alarmd_id__in=ticket_alarm_ids_qs)
                 else:
-                    # qs es lista: limitamos consulta solo a alarm_ids presentes
-                    alarm_ids_all = [
-                        str(getattr(it, "alarmd_id", "")).strip()
-                        for it in qs
-                        if getattr(it, "alarmd_id", None)
-                    ]
-                    alarm_ids_all = [x for x in alarm_ids_all if x]
-
-                    ticket_alarm_ids = set()
-                    if alarm_ids_all:
-                        ticket_alarm_ids = set(
-                            SoarTicket.objects.filter(
-                                tenant_id=tenant.id,
-                                alarm_id__in=alarm_ids_all
-                            ).values_list("alarm_id", flat=True)
-                        )
-                        ticket_alarm_ids = {str(x).strip() for x in ticket_alarm_ids if x is not None}
-
-                    if assigned_filter == "yes":
-                        qs = [it for it in qs if str(getattr(it, "alarmd_id", "")).strip() in ticket_alarm_ids]
-                    else:
-                        qs = [it for it in qs if str(getattr(it, "alarmd_id", "")).strip() not in ticket_alarm_ids]
+                    qs = qs.exclude(alarmd_id__in=ticket_alarm_ids_qs)
 
         except Exception as e:
             logger.exception("[SOAR_INCIDENTS] Error aplicando filtro assigned: %s", e)
@@ -288,9 +257,11 @@ def incidents_list(request):
     page_obj = paginator.get_page(request.GET.get("page"))
 
     # ==============================
-    # ✅ IDs asignados (tickets OPEN o CLOSED) para los eventos de ESTA página
+    #  TICKETS de ESTA página (para mostrar "a quién" en modal + data-*)
     # ==============================
     assigned_alarm_ids = set()
+    ticket_map = {}
+
     try:
         from soar_tickets.models import SoarTicket
 
@@ -303,17 +274,66 @@ def incidents_list(request):
             alarm_ids_page = [x for x in alarm_ids_page if x]
 
             if alarm_ids_page:
-                assigned_alarm_ids = set(
-                    SoarTicket.objects.filter(
+                # RECOMENDADO: solo OPEN
+                tickets = (
+                    SoarTicket.objects
+                    .filter(
                         tenant_id=tenant.id,
                         alarm_id__in=alarm_ids_page,
-                    ).values_list("alarm_id", flat=True)
+                        status=SoarTicket.STATUS_OPEN,
+                    )
+                    .select_related("assigned_to")
                 )
-                assigned_alarm_ids = {str(x).strip() for x in assigned_alarm_ids if x is not None}
+
+                def _full_name(u):
+                    if not u:
+                        return ""
+                    fn = (getattr(u, "first_name", "") or "").strip()
+                    ln = (getattr(u, "last_name", "") or "").strip()
+                    full = (f"{fn} {ln}").strip()
+                    return full or (getattr(u, "username", "") or getattr(u, "email", "") or "").strip()
+
+                for tk in tickets:
+                    aid = str(getattr(tk, "alarm_id", "")).strip()
+                    if not aid:
+                        continue
+
+                    assigned_alarm_ids.add(aid)
+
+                    assignee = getattr(tk, "assigned_to", None)
+                    status = getattr(tk, "status", "") or ""
+                    ticket_map[aid] = {
+                        "assigned_to_name": _full_name(assignee),
+                        "status": str(status).strip(),
+                    }
+
+        #  inyectar atributos en cada item para el template (data-*)
+        if page_obj and page_obj.object_list:
+            for it in page_obj.object_list:
+                aid = str(getattr(it, "alarmd_id", "")).strip()
+                tk = ticket_map.get(aid)
+
+                has_ticket = bool(tk)
+                name = (tk or {}).get("assigned_to_name", "") if tk else ""
+                st = (tk or {}).get("status", "") if tk else ""
+
+                setattr(it, "has_ticket", has_ticket)
+                setattr(it, "ticket_assigned_to_name", name)
+                setattr(it, "ticket_status", st)
+
+                #  opcional: alias cómodo
+                setattr(it, "assigned_name", name)
 
     except Exception as e:
-        logger.exception("[SOAR_INCIDENTS] Error calculando assigned_alarm_ids: %s", e)
+        logger.exception("[SOAR_INCIDENTS] Error calculando ticket_map/assigned_alarm_ids: %s", e)
         assigned_alarm_ids = set()
+        ticket_map = {}
+        if page_obj and page_obj.object_list:
+            for it in page_obj.object_list:
+                setattr(it, "has_ticket", False)
+                setattr(it, "ticket_assigned_to_name", "")
+                setattr(it, "ticket_status", "")
+                setattr(it, "assigned_name", "")
 
     # ==============================
     # credenciales activas del tenant (para el modal)
@@ -328,7 +348,7 @@ def incidents_list(request):
     # Selector solo visible si el usuario pertenece a Inntesec
     tenants_list = []
     user_tenant = getattr(request.user, "tenant", None)
-    if user_tenant and user_tenant.name.lower() == "inntesec":
+    if user_tenant and (user_tenant.name or "").lower() == "inntesec":
         tenants_list = Tenant.objects.all().order_by("name")
 
     # Países para el modal de whitelist (POR TENANT, NO POR USER)
@@ -346,7 +366,7 @@ def incidents_list(request):
         logger.exception("[SOAR_INCIDENTS] Error leyendo preferencias de países (tenant): %s", e)
         selected_paises = []
 
-    # ✅ para paginación sin perder filtros
+    # para paginación sin perder filtros
     params = request.GET.copy()
     params.pop("page", None)
     base_qs = params.urlencode()
@@ -363,13 +383,14 @@ def incidents_list(request):
         "whitelist_countries": ALL_COUNTRIES,
         "selected_paises": selected_paises,
 
-        # ✅ NUEVO
+        # 
         "assigned_alarm_ids": assigned_alarm_ids,
         "sev_filter": sev_filter,
         "assigned_filter": assigned_filter,
         "base_qs": base_qs,
     }
     return render(request, "soar_incidents/list.html", context)
+
 
 
 

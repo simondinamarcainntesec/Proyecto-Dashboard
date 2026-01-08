@@ -56,7 +56,7 @@ def _get_token_via_script_local():
 
     try:
         out = subprocess.run(
-            ["python3", script_path, "--index", "0"],  # ✅ PRIMER token
+            ["python3", script_path, "--index", "0"],  # PRIMER token
             capture_output=True,
             text=True,
             timeout=25,
@@ -456,7 +456,7 @@ def _message_extract_multiple_sources(alarm: dict, wanted: list[str]) -> dict:
     """
     merged: dict[str, str] = {}
 
-    # ✅ PARSEO ESPECÍFICO SOLO SI application == bunion_harmony
+    # PARSEO ESPECÍFICO SOLO SI application == bunion_harmony
     if _is_bunion_harmony(alarm):
         raw_html = _get_value_case_insensitive(alarm, "message")
         if isinstance(raw_html, str) and raw_html:

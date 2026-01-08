@@ -4,7 +4,7 @@
    - KPI titles bold only
    - grid-main 50/50
    - Alinear el ancho del contenido con la Topbar (sin padding lateral extra)
-   - ✅ Tipografía “intermedia” (entre original y la versión muy pequeña)
+   - Tipografía “intermedia” (entre original y la versión muy pequeña)
    ========================================================= */
 
 /* Fondo/alto SOLO en Home */
@@ -22,7 +22,7 @@
 .home-page .empty-state{ padding: 0; }
 
 /* =========================================================
-   ✅ ESCALA TIPOGRÁFICA INTERMEDIA (solo HOME)
+   ESCALA TIPOGRÁFICA INTERMEDIA (solo HOME)
    - No tocamos la topbar (va en base.css)
    - Bajamos “un poco” títulos/subtítulos/tablas/pills/KPIs
    ========================================================= */

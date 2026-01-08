@@ -1,6 +1,6 @@
 // static/js/date_filters.js
 // Filtros de fecha (solo back). El buscador #q NO recarga la página.
-// ✅ Ahora preserva también sev y assigned al aplicar / chips / refresh / paginación.
+// Ahora preserva también sev y assigned al aplicar / chips / refresh / paginación.
 (function () {
   const form = document.getElementById("filters-form");
   const fromInput = document.getElementById("inp-from");
@@ -8,7 +8,7 @@
   const chips = document.querySelectorAll(".chip-btn");
   const btnRefresh = document.getElementById("btn-refresh");
 
-  // ✅ nuevos selects (si existen)
+  // nuevos selects (si existen)
   const sevSelect = document.getElementById("f-sev");
   const assignedSelect = document.getElementById("f-assigned");
 
@@ -31,7 +31,7 @@
     chips.forEach(c=>c.classList.toggle('is-active', c.dataset.range===range));
   }
 
-  // ✅ Antes: solo fechas. Ahora: fechas + sev + assigned.
+  // Antes: solo fechas. Ahora: fechas + sev + assigned.
   function submitPreservingFilters({page} = {}) {
     const params = new URLSearchParams(window.location.search);
 

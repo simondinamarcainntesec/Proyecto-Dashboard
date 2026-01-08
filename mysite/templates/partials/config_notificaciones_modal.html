@@ -32,43 +32,46 @@
           </label>
         </div>
 
+        <!-- Número telefónico (formato internacional) -->
+        <div id="telNumberWrap" class="config-option {% if not user.Alarma_Telefono %}hidden{% endif %}">
+          <span>📱 Número telefónico (con código país)</span>
+
+          <input
+            type="tel"
+            id="phone"
+            name="phone"
+            class="franja-input"
+            inputmode="tel"
+            autocomplete="tel"
+            placeholder="+56 9 1234 5678"
+            value="{{ user.phone|default:'' }}"
+          >
+
+          <small class="phone-help">
+            Formato requerido:
+            <code>+56912345678</code>, <code>+14155552671</code>
+          </small>
+          <small id="phoneError" class="form-error hidden" role="alert"></small>
+        </div>
+
         <!-- Severidades Teléfono -->
-        <div
-          id="telSeverity"
-          class="config-option {% if not user.Alarma_Telefono %}hidden{% endif %}"
-        >
+        <div id="telSeverity" class="config-option {% if not user.Alarma_Telefono %}hidden{% endif %}">
           <span>Severidad para Teléfono</span>
           <div class="severity-chips">
             <label class="severity-chip">
-              <input
-                type="checkbox"
-                name="sev_tel_baja"
-                {% if tel_baja %}checked{% endif %}
-              >
+              <input type="checkbox" name="sev_tel_baja" {% if tel_baja %}checked{% endif %}>
               Baja
             </label>
             <label class="severity-chip">
-              <input
-                type="checkbox"
-                name="sev_tel_media"
-                {% if tel_media %}checked{% endif %}
-              >
+              <input type="checkbox" name="sev_tel_media" {% if tel_media %}checked{% endif %}>
               Media
             </label>
             <label class="severity-chip">
-              <input
-                type="checkbox"
-                name="sev_tel_alta"
-                {% if tel_alta %}checked{% endif %}
-              >
+              <input type="checkbox" name="sev_tel_alta" {% if tel_alta %}checked{% endif %}>
               Alta
             </label>
             <label class="severity-chip">
-              <input
-                type="checkbox"
-                name="sev_tel_critica"
-                {% if tel_critica %}checked{% endif %}
-              >
+              <input type="checkbox" name="sev_tel_critica" {% if tel_critica %}checked{% endif %}>
               Crítica
             </label>
           </div>
@@ -82,8 +85,7 @@
             name="hora_inicio"
             class="franja-input"
             data-current-value="{{ user.hora_inicio|default:'' }}"
-          >
-          </select>
+          ></select>
 
           <label for="hora_fin" class="franja-label">Hasta:</label>
           <select
@@ -91,8 +93,7 @@
             name="hora_fin"
             class="franja-input"
             data-current-value="{{ user.hora_fin|default:'' }}"
-          >
-          </select>
+          ></select>
         </div>
 
         {# =============== CORREO =============== #}
@@ -114,35 +115,19 @@
           <span>Severidad para Correo</span>
           <div class="severity-chips">
             <label class="severity-chip">
-              <input
-                type="checkbox"
-                name="sev_mail_baja"
-                {% if mail_baja %}checked{% endif %}
-              >
+              <input type="checkbox" name="sev_mail_baja" {% if mail_baja %}checked{% endif %}>
               Baja
             </label>
             <label class="severity-chip">
-              <input
-                type="checkbox"
-                name="sev_mail_media"
-                {% if mail_media %}checked{% endif %}
-              >
+              <input type="checkbox" name="sev_mail_media" {% if mail_media %}checked{% endif %}>
               Media
             </label>
             <label class="severity-chip">
-              <input
-                type="checkbox"
-                name="sev_mail_alta"
-                {% if mail_alta %}checked{% endif %}
-              >
+              <input type="checkbox" name="sev_mail_alta" {% if mail_alta %}checked{% endif %}>
               Alta
             </label>
             <label class="severity-chip">
-              <input
-                type="checkbox"
-                name="sev_mail_critica"
-                {% if mail_critica %}checked{% endif %}
-              >
+              <input type="checkbox" name="sev_mail_critica" {% if mail_critica %}checked{% endif %}>
               Crítica
             </label>
           </div>
@@ -167,35 +152,19 @@
           <span>Severidad para Telegram</span>
           <div class="severity-chips">
             <label class="severity-chip">
-              <input
-                type="checkbox"
-                name="sev_tg_baja"
-                {% if tg_baja %}checked{% endif %}
-              >
+              <input type="checkbox" name="sev_tg_baja" {% if tg_baja %}checked{% endif %}>
               Baja
             </label>
             <label class="severity-chip">
-              <input
-                type="checkbox"
-                name="sev_tg_media"
-                {% if tg_media %}checked{% endif %}
-              >
+              <input type="checkbox" name="sev_tg_media" {% if tg_media %}checked{% endif %}>
               Media
             </label>
             <label class="severity-chip">
-              <input
-                type="checkbox"
-                name="sev_tg_alta"
-                {% if tg_alta %}checked{% endif %}
-              >
+              <input type="checkbox" name="sev_tg_alta" {% if tg_alta %}checked{% endif %}>
               Alta
             </label>
             <label class="severity-chip">
-              <input
-                type="checkbox"
-                name="sev_tg_critica"
-                {% if tg_critica %}checked{% endif %}
-              >
+              <input type="checkbox" name="sev_tg_critica" {% if tg_critica %}checked{% endif %}>
               Crítica
             </label>
           </div>

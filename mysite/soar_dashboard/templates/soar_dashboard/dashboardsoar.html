@@ -1,22 +1,79 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Portal Clientes – SOAR</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
   <link rel="stylesheet" href="{% static 'css/base.css' %}?v={% now 'U' %}" />
   <link rel="stylesheet" href="{% static 'css/soar.css' %}?v={% now 'U' %}" />
-  <link rel="stylesheet" href="{% static 'css/coachmark.css' %}?v={% now 'U' %}"/>
+  <link rel="stylesheet" href="{% static 'css/coachmark.css' %}?v={% now 'U' %}" />
   <link rel="stylesheet" href="{% static 'css/config_notificaciones_modal.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/cred_modal.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/country_filter_modal.css' %}?v={% now 'U' %}">
+  <link rel="stylesheet" href="{% static 'css/list.css' %}?v={% now 'U' %}">
+
+  <!--NUEVO: CSS del modal de asignación ticket -->
+  <link rel="stylesheet" href="{% static 'css/soar_assign_ticket_modal.css' %}?v={% now 'U' %}">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- opcional pero recomendado: ctx-menu siempre arriba -->
+  <style>
+    .ctx-menu { position: fixed; z-index: 99999; }
+
+    /* Header detalle: Ticket inline como tu foto 2 */
+    #soarIncidentDetailModal .modal-header{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+    }
+    #soarIncidentDetailModal .alert-title{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      margin:0;
+      line-height:1.25;
+    }
+    #soarIncidentDetailModal .inc-title-main{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    #soarIncidentDetailModal .inc-title-ticket{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    #soarIncidentDetailModal .inc-title-assignee{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      flex-wrap:wrap;
+    }
+    #soarIncidentDetailModal .inc-title-assignee .assignee-ico{
+      opacity:.9;
+      font-size:14px;
+      line-height:1;
+    }
+  </style>
 </head>
 
-<body class="layout soar" data-page-slug="soar_dashboard">
+<body
+  class="layout soar"
+  data-page-slug="soar_dashboard"
+  data-soar-tenant-users-url="{% url 'soar_tickets:api_tenant_users' %}"
+  data-soar-ticket-create-url="{% url 'soar_tickets:api_ticket_create' %}"
+>
+
+
   <!-- Overlay de carga -->
   <div id="loading-overlay" role="status" aria-live="polite" aria-label="Cargando">
     <div class="loading-card">
@@ -40,7 +97,6 @@
         <span id="coachDotHome" class="coachmark-dot hidden"></span>
       </a>
 
-      {# ===== Alarmas ===== #}
       {% with url_name=request.resolver_match.url_name %}
       <details class="tenant-dropdown nav-dropdown" {% if url_name == 'dashboard_alarmsone' or url_name == 'dashboard_realtime' %}open{% endif %}>
         <summary id="alarmsSummary"
@@ -61,7 +117,6 @@
       </details>
       {% endwith %}
 
-      {# ===== SOAR ===== #}
       {% with app_name=request.resolver_match.app_name %}
       <details class="tenant-dropdown nav-dropdown" {% if app_name == 'soar_dashboard' or app_name == 'soar_incidents' or app_name == 'soar_tickets' %}open{% endif %}>
         <summary id="soarSummary"
@@ -84,82 +139,9 @@
       </details>
       {% endwith %}
 
-      {# ===== SIEM (dropdown con Alertas + dashboards) ===== #}
-      {% with raw_siem_id=tenant.logs360siem_id|default_if_none:"" %}
-      {% with siem_id=raw_siem_id|stringformat:"s" %}
-      {% if siem_id and siem_id != "0" and siem_id != "null" and siem_id != "NULL" and siem_id != "None" %}
-      {% with app_name=request.resolver_match.app_name %}
-      {% with url_name=request.resolver_match.url_name %}
-      <details class="tenant-dropdown nav-dropdown" {% if app_name == 'siem' %}open{% endif %}>
-        <summary id="siemSummary" class="nav-item {% if app_name == 'siem' %}is-active{% endif %}">
-          <span class="nav-ico">🧠</span>SIEM
-          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
-          </svg>
-          <span id="coachDotSiem" class="coachmark-dot hidden"></span>
-        </summary>
-
-        <div class="tenant-list nav-submenu">
-          <a class="tenant-option nav-subitem {% if app_name == 'siem' and url_name == 'alerts_logs360' %}is-active{% endif %}"
-            href="{% url 'siem:alerts_logs360' %}">Alertas</a>
-
-          <a class="tenant-option nav-subitem {% if app_name == 'siem' and url_name == 'microsoft365' %}is-active{% endif %}"
-            href="{% url 'siem:microsoft365' %}">Microsoft 365</a>
-
-          <a class="tenant-option nav-subitem {% if app_name == 'siem' and url_name == 'networks' %}is-active{% endif %}"
-            href="{% url 'siem:networks' %}">Networks</a>
-
-          <a class="tenant-option nav-subitem {% if app_name == 'siem' and url_name == 'eventos_diarios' %}is-active{% endif %}"
-            href="{% url 'siem:eventos_diarios' %}">Eventos diarios</a>
-
-          <a class="tenant-option nav-subitem {% if app_name == 'siem' and url_name == 'threat_analytics' %}is-active{% endif %}"
-              href="{% url 'siem:threat_analytics' %}">Threat Analytics</a>
-        </div>
-      </details>
-      {% endwith %}
-      {% endwith %}
-      {% endif %}
-      {% endwith %}
-      {% endwith %}
-
-      {% endif %}
-      {# --- fin bloque "tenant and tenant.alarms_one_id" --- #}
-
-      {# ===== Site24x7 ===== #}
-      {% if tenant %}
-      {% with raw_site_id=tenant.site24x7_id|default_if_none:"" %}
-      {% with site_id=raw_site_id|stringformat:"s" %}
-      {% if site_id and site_id != "0" and site_id != "null" and site_id != "NULL" and site_id != "None" %}
-      {% with app_name=request.resolver_match.app_name %}
-      {% with url_name=request.resolver_match.url_name %}
-      <details class="tenant-dropdown nav-dropdown" {% if app_name == 'site24x7' %}open{% endif %}>
-        <summary class="nav-item {% if app_name == 'site24x7' %}is-active{% endif %}">
-          <span class="nav-ico">📡</span>Inn-Monitor
-          <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
-          </svg>
-          <span id="coachDotInnMonitor" class="coachmark-dot hidden"></span>
-        </summary>
-
-        <div class="tenant-list nav-submenu">
-          <a class="tenant-option nav-subitem {% if app_name == 'site24x7' and url_name == 'monitor_status' %}is-active{% endif %}"
-            href="{% url 'site24x7:monitor_status' %}">Monitores</a>
-
-          <a class="tenant-option nav-subitem {% if app_name == 'site24x7' and url_name == 'anomaly_status' %}is-active{% endif %}"
-            href="{% url 'site24x7:anomaly_status' %}">Anomalías</a>
-
-          <a class="tenant-option nav-subitem {% if app_name == 'site24x7' and url_name == 'dashboard' %}is-active{% endif %}"
-            href="{% url 'site24x7:dashboard' %}">Dashboard</a>
-        </div>
-      </details>
-      {% endwith %}
-      {% endwith %}
-      {% endif %}
-      {% endwith %}
-      {% endwith %}
       {% endif %}
 
-      {# ===== Configuración ===== #}
+      <!-- Configuración -->
       <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.url_name == 'cambiar_contrasena' %}open{% endif %}>
         <summary id="settingsSummary"
           class="nav-item {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}">
@@ -178,7 +160,6 @@
           <a class="tenant-option nav-subitem" href="#" onclick="toggleCountryModal(true)">🌎 Filtro países whitelist</a>
         </div>
       </details>
-
     </nav>
   </aside>
 
@@ -187,7 +168,7 @@
     <header class="topbar">
       <div class="top-left">
         <h1 class="top-title">
-          Tenant:
+          Cliente:
           {% if request.user.tenant.name|lower == "inntesec" %}
           <details class="tenant-dropdown">
             <summary class="tenant-summary">
@@ -214,32 +195,21 @@
       <div class="top-right">
         <button class="btn ghost" title="Actualizar" id="btn-refresh" data-loading="instant">⟳</button>
 
-        <!-- ===== Menú Exportar ===== -->
         <div class="export-wrapper">
-          <button class="btn ghost" title="Exportar dashboard" id="btn-export-toggle">
-            ⬇︎
-          </button>
+          <button class="btn ghost" title="Exportar dashboard" id="btn-export-toggle">⬇︎</button>
           <div id="export-menu" class="export-menu" aria-label="Exportar dashboard SOAR">
             <button type="button" data-export-format="pdf">📄 Exportar PDF</button>
             <button type="button" data-export-format="csv">📊 Exportar CSV</button>
           </div>
         </div>
 
-        <!-- Guía rápida -->
         <button id="showCoachBtn" class="btn ghost" title="Mostrar guía rápida" onclick="window.startInntesecCoach()">
           💡 Guía rápida
         </button>
 
-        <!-- Inntesec Agent: texto + botones -->
         <a>Inntesec Agent:</a>
-
-        <button class="btn ghost" type="button" onclick="window.openRetellCallWindow()">
-          📞 Llamar
-        </button>
-
-        <button class="btn ghost" type="button" onclick="openChatPopup()">
-          💬 Chat
-        </button>
+        <button class="btn ghost" type="button" onclick="window.openRetellCallWindow()">📞 Llamar</button>
+        <button class="btn ghost" type="button" onclick="openChatPopup()">💬 Chat</button>
 
         <div class="user-menu" id="userMenu">
           <button type="button" id="userButton" class="user-button">
@@ -263,7 +233,6 @@
     <section class="toolbar">
       <form id="date-filter" method="get" class="toolbar-row">
         <div class="group">
-          <!-- ✅ CAMBIO: chip -> soar-chip (mantengo chip-btn para date_filters.js) -->
           <button type="button" class="soar-chip chip-btn" data-range="7d">Últimos 7 días</button>
           <button type="button" class="soar-chip chip-btn" data-range="30d">Últimos 30 días</button>
           <button type="button" class="soar-chip chip-btn" data-range="month">Este mes</button>
@@ -283,111 +252,118 @@
     {% endif %}
 
     {% if events|length > 0 %}
-      <!-- ÁREA COMPLETA A EXPORTAR (KPIs + gráficos) -->
-      <section id="dashboard-export-area" data-page-slug="soar_dashboard">
-        <!-- KPIs -->
-        <section class="grid grid-kpis">
-          <div class="card kpi"><div class="kpi-label">Total eventos</div><div class="kpi-value" id="kpi-total">—</div></div>
-          <div class="card kpi"><div class="kpi-label">Top dispositivo</div><div class="kpi-value" id="kpi-top-device">—</div></div>
-          <div class="card kpi"><div class="kpi-label">Severidad dominante</div><div class="kpi-value" id="kpi-dom-sev">—</div></div>
-          <div class="card kpi"><div class="kpi-label">País Top Incidentes</div><div class="kpi-value" id="kpi-top-country">—</div></div>
-        </section>
-
-        <!-- Chips de secciones (NO se exportan en PDF) -->
-        <div class="section-chips" data-export-hide="true">
-          <!-- ✅ CAMBIO: chip -> soar-chip -->
-          <button class="soar-chip active" data-sec="all">Todos</button>
-          <button class="soar-chip" data-sec="incidentes">Incidentes</button>
-          <button class="soar-chip" data-sec="origen">Origen/Destino</button>
-          <button class="soar-chip" data-sec="politicas">Políticas/Acciones</button>
-          <button class="soar-chip" data-sec="operativa">Operativa</button>
+    <section id="dashboard-export-area" data-page-slug="soar_dashboard">
+      <section class="grid grid-kpis">
+        <div class="card kpi">
+          <div class="kpi-label">Total eventos</div>
+          <div class="kpi-value" id="kpi-total">—</div>
         </div>
+        <div class="card kpi">
+          <div class="kpi-label">Top dispositivo</div>
+          <div class="kpi-value" id="kpi-top-device">—</div>
+        </div>
+        <div class="card kpi">
+          <div class="kpi-label">Severidad dominante</div>
+          <div class="kpi-value" id="kpi-dom-sev">—</div>
+        </div>
+        <div class="card kpi">
+          <div class="kpi-label">País Top Incidentes</div>
+          <div class="kpi-value" id="kpi-top-country">—</div>
+        </div>
+      </section>
 
-        <section class="sec visible">
-          <div class="grid grid-main">
-            <div class="card chart" data-groups="all,origen">
-              <div class="card-head"><h3>Top países origen</h3></div>
-              <div class="card-body"><canvas id="chartCountries"></canvas></div>
-            </div>
+      <div class="section-chips" data-export-hide="true">
+        <button class="soar-chip active" data-sec="all">Todos</button>
+        <button class="soar-chip" data-sec="incidentes">Incidentes</button>
+        <button class="soar-chip" data-sec="origen">Origen/Destino</button>
+        <button class="soar-chip" data-sec="politicas">Políticas/Acciones</button>
+        <button class="soar-chip" data-sec="operativa">Operativa</button>
+      </div>
 
-            <div class="card chart" data-groups="all,incidentes">
-              <div class="card-head"><h3>Severidad</h3></div>
-              <div class="card-body"><canvas id="chartSeverity"></canvas></div>
-            </div>
-
-            <div class="card chart" data-groups="all,politicas">
-              <div class="card-head"><h3>Acción de seguridad</h3></div>
-              <div class="card-body"><canvas id="chartSecAction"></canvas></div>
-            </div>
-
-            <div class="card chart" data-groups="all,incidentes">
-              <div class="card-head"><h3>Tendencia diaria</h3></div>
-              <div class="card-body"><canvas id="chartTrendDaily"></canvas></div>
-            </div>
-
-            <div class="card chart" data-groups="all,incidentes">
-              <div class="card-head"><h3>Tendencia por hora</h3></div>
-              <div class="card-body"><canvas id="chartTrendHourly"></canvas></div>
-            </div>
-
-            <div class="card table card--table" data-groups="all,operativa">
-              <div class="card-head between"><h3>Top dispositivos</h3></div>
-              <div class="table-wrap">
-                <table class="datatable" id="device-table">
-                  <thead>
-                    <tr>
-                      <th data-sort="text">Dispositivo</th>
-                      <th data-sort="number" class="is-right">Cantidad</th>
-                    </tr>
-                  </thead>
-                  <tbody id="device-table-body"></tbody>
-                </table>
-              </div>
-              <div class="table-footnote">* Clic en una fila para filtrar</div>
-            </div>
-
-            <div class="card chart" data-groups="all,operativa">
-              <div class="card-head"><h3>Top servicios</h3></div>
-              <div class="card-body"><canvas id="chartServices"></canvas></div>
-            </div>
-
-            <div class="card chart" data-groups="all,operativa">
-              <div class="card-head"><h3>Top aplicaciones</h3></div>
-              <div class="card-body"><canvas id="chartApplications"></canvas></div>
-            </div>
-
-            <div class="card chart" data-groups="all,origen">
-              <div class="card-head"><h3>Top IP Origen</h3></div>
-              <div class="card-body"><canvas id="chartTopSrcIP"></canvas></div>
-            </div>
-
-            <div class="card chart" data-groups="all,origen">
-              <div class="card-head"><h3>Top IP Destino</h3></div>
-              <div class="card-body"><canvas id="chartTopDstIP"></canvas></div>
-            </div>
+      <section class="sec visible">
+        <div class="grid grid-main">
+          <!-- ... tus cards/charts tal cual ... -->
+          <div class="card chart" data-groups="all,origen">
+            <div class="card-head"><h3>Top países origen</h3></div>
+            <div class="card-body"><canvas id="chartCountries"></canvas></div>
           </div>
-        </section>
-      </section>
 
-      <footer class="footnote">SOAR · última actualización: hace 1 min</footer>
-    {% else %}
-      <section class="empty-state">
-        <div class="empty-card">
-          <h2>Servicio no disponible</h2>
-          <p>La empresa <strong>{{ tenant.name|default:"—" }}</strong> no tiene el servicio de alarmas contratado.</p>
-          <p>Por favor, contacte con un administrador.</p>
+          <div class="card chart" data-groups="all,incidentes">
+            <div class="card-head"><h3>Severidad</h3></div>
+            <div class="card-body"><canvas id="chartSeverity"></canvas></div>
+          </div>
+
+          <div class="card chart" data-groups="all,politicas">
+            <div class="card-head"><h3>Acción de seguridad</h3></div>
+            <div class="card-body"><canvas id="chartSecAction"></canvas></div>
+          </div>
+
+          <div class="card chart" data-groups="all,incidentes">
+            <div class="card-head"><h3>Tendencia diaria</h3></div>
+            <div class="card-body"><canvas id="chartTrendDaily"></canvas></div>
+          </div>
+
+          <div class="card chart" data-groups="all,incidentes">
+            <div class="card-head"><h3>Tendencia por hora</h3></div>
+            <div class="card-body"><canvas id="chartTrendHourly"></canvas></div>
+          </div>
+
+          <div class="card table card--table" data-groups="all,operativa">
+            <div class="card-head between"><h3>Top dispositivos</h3></div>
+            <div class="table-wrap">
+              <table class="datatable" id="device-table">
+                <thead>
+                  <tr>
+                    <th data-sort="text">Dispositivo</th>
+                    <th data-sort="number" class="is-right">Cantidad</th>
+                  </tr>
+                </thead>
+                <tbody id="device-table-body"></tbody>
+              </table>
+            </div>
+            <div class="table-footnote">* Clic en una fila para filtrar</div>
+          </div>
+
+          <div class="card chart" data-groups="all,operativa">
+            <div class="card-head"><h3>Top servicios</h3></div>
+            <div class="card-body"><canvas id="chartServices"></canvas></div>
+          </div>
+
+          <div class="card chart" data-groups="all,operativa">
+            <div class="card-head"><h3>Top aplicaciones</h3></div>
+            <div class="card-body"><canvas id="chartApplications"></canvas></div>
+          </div>
+
+          <div class="card chart" data-groups="all,origen">
+            <div class="card-head"><h3>Top IP Origen</h3></div>
+            <div class="card-body"><canvas id="chartTopSrcIP"></canvas></div>
+          </div>
+
+          <div class="card chart" data-groups="all,origen">
+            <div class="card-head"><h3>Top IP Destino</h3></div>
+            <div class="card-body"><canvas id="chartTopDstIP"></canvas></div>
+          </div>
         </div>
       </section>
+    </section>
+
+    <footer class="footnote">SOAR · última actualización: hace 1 min</footer>
+    {% else %}
+    <section class="empty-state">
+      <div class="empty-card">
+        <h2>Servicio no disponible</h2>
+        <p>La empresa <strong>{{ tenant.name|default:"—" }}</strong> no tiene el servicio de alarmas contratado.</p>
+        <p>Por favor, contacte con un administrador.</p>
+      </div>
+    </section>
     {% endif %}
   </div>
-
+  
   {{ events|json_script:"soar-events" }}
 
   <!-- ===== MODAL LISTA (Incidentes relacionados) ===== -->
-  <div id="soarIncidentsModal"
-       class="modal hidden"
-       aria-hidden="true"
-       data-api-url="{% url 'soar_incidents:api_by_alarm_ids' %}">
+  <div id="soarIncidentsModal" class="modal hidden" aria-hidden="true"
+    data-api-url="{% url 'soar_incidents:api_by_alarm_ids' %}">
     <div class="modal-backdrop" data-close></div>
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="si-title">
       <div class="modal-header">
@@ -398,10 +374,11 @@
         <div class="block">
           <h4>Incidentes</h4>
           <div class="table-wrap">
-            <table class="tbl" id="si-table">
+            <table class="tbl" id="tbl-incidentes">
               <thead>
                 <tr>
-                  <th>ID Alarma</th>
+                  <th class="nowrap">ID Alarma</th>
+                  <th class="nowrap" data-assigned-th>Asignado</th>
                   <th>Dispositivo</th>
                   <th>Tipo de amenaza</th>
                   <th>Nivel de severidad</th>
@@ -416,7 +393,7 @@
             Sin incidentes para este filtro.
           </div>
           <div class="muted" style="padding-top:.35rem">
-            * Clic en una fila para ver el detalle.
+            * Clic en una fila para ver el detalle. / Click derecho para asignar ticket.
           </div>
         </div>
       </div>
@@ -428,14 +405,37 @@
     <div class="modal-backdrop" data-close></div>
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="inc-title">
       <div class="modal-header">
-        <h3 id="inc-title" class="alert-title">Detalle de Alerta</h3>
+
+        <!-- Header como foto 2: severidad + dispositivo + ticket inline -->
+        <h3 id="inc-title" class="alert-title">
+          <span class="inc-title-main">
+            <span aria-hidden="true">🚨</span>
+            <strong id="inc-sev">—</strong>
+            <span class="muted">—</span>
+            <span class="muted" id="inc-dev">—</span>
+          </span>
+
+          <span class="inc-title-ticket" id="inc-ticket-inline">
+            <span id="inc-ticket-status">—</span>
+
+            <span class="inc-title-assignee hidden" id="inc-ticket-assignee-wrap">
+              <span class="assignee-ico" aria-hidden="true">👤</span>
+              <span id="inc-ticket-user">—</span>
+            </span>
+          </span>
+        </h3>
+
         <button class="modal-close" data-close>&times;</button>
       </div>
+
       <div class="modal-body">
         <div id="inc-header" class="block">
           <h4>Encabezado</h4>
           <ul class="stacked" id="inc-meta-list"></ul>
         </div>
+
+        <!-- ELIMINADO: bloque "Ticket" del body (ya va arriba en el header) -->
+
         <div class="block">
           <h4>Riesgo Detectado</h4>
           <p id="inc-riesgo">—</p>
@@ -456,6 +456,115 @@
     </div>
   </div>
 
+  <!-- Menú contextual -->
+  <div id="soarCtxMenu" class="ctx-menu hidden" role="menu" aria-hidden="true">
+    <button type="button" id="ctxAssignTicketBtn" role="menuitem">🎫 Asignar Ticket</button>
+  </div>
+
+  <!-- Modal Asignación Ticket -->
+  <div id="assignTicketModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-assign-backdrop></div>
+
+    <div class="modal-card modal-card-assign" role="dialog" aria-modal="true" aria-labelledby="assign-title">
+      <!-- ... tu modal asignación igual ... -->
+      <div class="assign-head">
+        <div class="assign-head-row">
+          <div class="assign-head-title">
+            <span class="head-ico is-ok" aria-hidden="true"></span>
+            <span id="assign-title">Asignar Evento a Usuario</span>
+          </div>
+          <button class="modal-close" data-assign-close type="button" aria-label="Cerrar">&times;</button>
+        </div>
+
+        <div class="assign-head-card">
+          <div class="assign-head-main">
+            <span class="meta-ico is-alert" aria-hidden="true"></span>
+            <span id="assign-event-title" class="assign-head-text">—</span>
+          </div>
+
+          <div class="assign-head-sub mono">
+            <span class="meta-ico is-id" aria-hidden="true"></span>
+            <span>ID:</span>
+            <span id="assign-event-id">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-body">
+        <div class="assign-grid">
+          <div class="block">
+            <h4 class="h-ico">
+              <span class="meta-ico is-tenant"></span>
+              Tenant
+            </h4>
+            <div class="assign-static" id="assign-tenant-static" data-tenant-id="{{ tenant.id }}">
+              {{ tenant.name }}
+            </div>
+          </div>
+
+          <div class="block">
+            <h4 class="h-ico">
+              <span class="meta-ico is-user"></span>
+              Asignar a usuario
+            </h4>
+            <select id="assign-user" class="assign-select" disabled>
+              <option value="">Cargando usuarios…</option>
+            </select>
+            <div class="assign-hint muted" id="assign-user-hint">
+              Selecciona un usuario para asignar el ticket.
+            </div>
+          </div>
+
+          <div class="block">
+            <h4 class="h-ico">
+              <span class="meta-ico is-duration"></span>
+              Duración de la tarea
+            </h4>
+            <select id="assign-duration" class="assign-select">
+              <option value="7">7 días</option>
+              <option value="14">14 días</option>
+              <option value="30">30 días</option>
+              <option value="custom">Personalizada…</option>
+            </select>
+
+            <div id="assign-custom-date-wrap" class="assign-custom-date hidden">
+              <label class="date-range" style="margin-top:10px;">
+                <span>Vence</span>
+                <input id="assign-custom-date" type="date" value="">
+              </label>
+            </div>
+
+            <div class="assign-due muted" id="assign-due-text">Fecha de vencimiento: —</div>
+          </div>
+        </div>
+
+        <div class="block">
+          <h4 class="h-ico">
+            <span class="meta-ico is-note"></span>
+            Comentario inicial
+          </h4>
+
+          <textarea id="assign-initial-notes" class="assign-textarea" rows="4"
+            placeholder="Escribe observaciones iniciales para el usuario asignado… (ej: contención, prioridad, contexto, pasos sugeridos)"></textarea>
+
+          <div class="assign-hint muted">
+            Este comentario quedará guardado en el ticket.
+          </div>
+        </div>
+
+        <div class="block assign-warning">
+          Esta alarma será asignada como un ticket al usuario seleccionado.
+        </div>
+
+        <div class="assign-actions">
+          <button type="button" class="btn ghost" id="assign-cancel">Cancelar</button>
+          <button type="button" class="btn primary" id="assign-submit">Asignar Ticket</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
   <!-- ===== JS ===== -->
   <script defer src="{% static 'js/alarms_one/date_filters.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/soar/sections.js' %}?v={% now 'U' %}"></script>
@@ -463,17 +572,16 @@
   <script defer src="{% static 'js/coach_allinone.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/menus_dropdowns.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/sidebar_animation.js' %}?v={% now 'U' %}"></script>
+  {{ ticket_map|json_script:"soarTicketMap" }}
+  <script defer src="{% static 'js/soar/soar_ticket_map_hydrate.js' %}?v={% now 'U' %}"></script>
 
-  <!-- Modales (exponen window.SOAR_Incidents) -->
+
+
   <script defer src="{% static 'js/soar/incidents_modal.js' %}?v={% now 'U' %}"></script>
 
-  <!-- Librerías para exportar PDF/imagen -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
-          crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
-          crossorigin="anonymous"></script>
-
-  <!-- JS DE EXPORT -->
+  <!-- Librerías export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
   <script defer src="{% static 'js/alarms_one/dashboard_export.js' %}?v={% now 'U' %}"></script>
 
   <!-- App principal SOAR -->
@@ -483,6 +591,9 @@
   <script defer src="{% static 'js/home_portal.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/country_filter_modal.js' %}?v={% now 'U' %}"></script>
 
+  <!-- asignación tickets -->
+  <script defer src="{% static 'js/soar_assign_ticket.js' %}?v={% now 'U' %}"></script>
+
   {% include 'partials/config_notificaciones_modal.html' %}
   {% include 'partials/_country_filter_modal.html' %}
   {% include 'partials/cred_modal.html' %}
@@ -490,7 +601,6 @@
   <script>
     window.__RETELL_POPUP_URL = "{% url 'retell_call_window' %}";
   </script>
-
   <script defer src="{% static 'js/retell_open_popup.js' %}?v={% now 'U' %}"></script>
 </body>
 </html>

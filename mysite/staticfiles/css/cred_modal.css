@@ -1,81 +1,238 @@
-/* Overlay */
-.cred-overlay {
-  position: fixed; inset: 0;
-  background: rgba(15, 23, 42, .6);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 1000;
-}
-.cred-overlay.hidden { display: none; }
+/* ==========================================================
+   cred_modal.css — Modal Credenciales (overlay + card + campos)
+   FIX: la modal ahora SI tapa la topbar
+   - z-index del overlay elevado
+   - opcional: baja topbar y bloquea clicks mientras modal esté abierta (via :has)
+   ========================================================== */
 
-/* Card */
+/* =========================
+   1) Overlay
+   ========================= */
+.cred-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, .6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* ✅ FIX principal: ganar a topbar/sidebar/menus */
+  z-index: 99999 !important;
+}
+
+.cred-overlay.hidden {
+  display: none;
+}
+
+/* (Opcional) Si tienes topbar con z-index raro o stacking contexts,
+   esto asegura que quede debajo y sin interacción mientras la modal está abierta.
+   Ajusta selectores si tu topbar usa otra clase/id. */
+body:has(.cred-overlay:not(.hidden)) .topbar,
+body:has(.cred-overlay:not(.hidden)) .top-bar,
+body:has(.cred-overlay:not(.hidden)) header {
+  z-index: 1 !important;
+  pointer-events: none;
+}
+
+/* (Opcional) Evita scroll del body cuando la modal está abierta.
+   Si ya lo manejas por JS/clase, puedes eliminarlo. */
+body:has(.cred-overlay:not(.hidden)) {
+  overflow: hidden;
+}
+
+/* =========================
+   2) Card
+   ========================= */
 .cred-card {
-  width: 96%; max-width: 560px;
-  background: #0f172a; color: #e5e7eb;
+  width: 96%;
+  max-width: 560px;
+  background: #0f172a;
+  color: #e5e7eb;
   border: 1px solid #1e293b;
   border-radius: 16px;
-  box-shadow: 0 20px 50px rgba(2,6,23,.45);
+  box-shadow: 0 20px 50px rgba(2, 6, 23, .45);
+  overflow: hidden;
+  /* bordes limpios */
 }
-.cred-head, .cred-foot { padding: 16px 18px; border-bottom: 1px solid #1e293b; }
-.cred-foot { border-bottom: 0; border-top: 1px solid #1e293b; }
-.cred-head { display: flex; align-items: center; justify-content: space-between; }
-.cred-head h3 { margin: 0; font-size: 1.05rem; font-weight: 700; }
-.cred-close { background: transparent; color: #94a3b8; border: 0; font-size: 20px; cursor: pointer; }
 
-.cred-body { padding: 14px 18px; }
-.cred-tenant-line { display: flex; gap: 8px; align-items: baseline; margin-bottom: 10px; }
-.muted { color: #94a3b8; font-size: .9rem; }
+/* =========================
+   3) Head / Foot
+   ========================= */
+.cred-head,
+.cred-foot {
+  padding: 16px 18px;
+  border-bottom: 1px solid #1e293b;
+}
 
-/* === BLOQUES EN GRID (label arriba; input + acciones a la misma altura) === */
-.cred-block{
-  margin:14px 0;
-  display:grid;
-  grid-template-columns: 1fr auto;   /* input | botones */
-  grid-template-rows: auto auto;     /* label | fila de campo */
+.cred-foot {
+  border-bottom: 0;
+  border-top: 1px solid #1e293b;
+}
+
+.cred-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cred-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.cred-close {
+  background: transparent;
+  color: #94a3b8;
+  border: 0;
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: 10px;
+}
+
+.cred-close:hover {
+  background: rgba(255, 255, 255, .04);
+  color: #e5e7eb;
+}
+
+/* =========================
+   4) Body / textos
+   ========================= */
+.cred-body {
+  padding: 14px 18px;
+}
+
+.cred-tenant-line {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+
+.muted {
+  color: #94a3b8;
+  font-size: .9rem;
+}
+
+/* =========================
+   5) Bloques en grid
+   label arriba; input + acciones a la misma altura
+   ========================= */
+.cred-block {
+  margin: 14px 0;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  /* input | botones */
+  grid-template-rows: auto auto;
+  /* label | fila de campo */
   grid-template-areas:
     "label  label"
     "input  actions";
   column-gap: 8px;
   row-gap: 6px;
-  align-items:center;
-  width:100%;
+  align-items: center;
+  width: 100%;
 }
-.cred-label{
+
+.cred-label {
   grid-area: label;
-  font-size:.82rem; color:#94a3b8; line-height:1.2; margin:0;
+  font-size: .82rem;
+  color: #94a3b8;
+  line-height: 1.2;
+  margin: 0;
 }
-.cred-input{
+
+.cred-input {
   grid-area: input;
-  width:100%;
-  background:#0f1d35; color:#e5e7eb;
-  border:1px solid #1e293b; border-radius:10px;
-  padding:10px 12px;                  /* sin padding-right extra */
+  width: 100%;
+  background: #0f1d35;
+  color: #e5e7eb;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  padding: 10px 12px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  outline: none;
 }
-.cred-actions{
+
+.cred-input:focus {
+  border-color: rgba(96, 165, 250, .55);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, .18);
+}
+
+.cred-actions {
   grid-area: actions;
-  display:inline-flex;
-  gap:8px;
-  align-items:center;
-  margin:0;                           /* a ras del input */
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  margin: 0;
 }
 
-/* Botones */
-.cred-copy, .cred-toggle, .btn {
-  appearance:none; border:1px solid #1e293b; background:#132449; color:#e5e7eb;
-  padding:8px 12px; border-radius:10px; cursor:pointer; line-height:1;
+/* =========================
+   6) Botones
+   ========================= */
+.cred-copy,
+.cred-toggle,
+.btn {
+  appearance: none;
+  border: 1px solid #1e293b;
+  background: #132449;
+  color: #e5e7eb;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  line-height: 1;
+  font-weight: 700;
 }
-.cred-copy:hover, .cred-toggle:hover, .btn:hover { background:#19305f; }
 
-.cred-hint { color:#94a3b8; font-size:.85rem; margin:8px 2px 0; }
+.cred-copy:hover,
+.cred-toggle:hover,
+.btn:hover {
+  background: #19305f;
+}
+
+.cred-copy:active,
+.cred-toggle:active,
+.btn:active {
+  transform: translateY(1px);
+}
+
+/* =========================
+   7) Hint / empty
+   ========================= */
+.cred-hint {
+  color: #94a3b8;
+  font-size: .85rem;
+  margin: 8px 2px 0;
+}
 
 .cred-empty {
-  padding:12px; background:#0d1a36; border:1px dashed #1e293b;
-  border-radius:10px; color:#94a3b8;
+  padding: 12px;
+  background: #0d1a36;
+  border: 1px dashed #1e293b;
+  border-radius: 10px;
+  color: #94a3b8;
 }
 
-/* Dropdown usuario visible al toggle */
+/* =========================
+   8) Dropdown usuario (si aplica en este modal)
+   ========================= */
 .user-menu .dropdown-menu {
-  display:none; position:absolute; right:0; top:100%;
-  background:#0f172a; border:1px solid #1e293b; border-radius:10px; padding:8px;
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  padding: 8px;
+  z-index: 100;
+  /* dentro del overlay/card no requiere más */
 }
-.user-menu .dropdown-menu.is-open { display:block; }
+
+.user-menu .dropdown-menu.is-open {
+  display: block;
+}

@@ -113,7 +113,7 @@ class TenantDashboardEmbed(models.Model):
         help_text="URL pública del dashboard a embeber en un iframe"
     )
 
-    # ✅ NUEVAS COLUMNAS (urls adicionales por módulo)
+    # NUEVAS COLUMNAS (urls adicionales por módulo)
     threat_analytics = models.TextField(blank=True, null=True)
     microsoft365 = models.TextField(blank=True, null=True)
     

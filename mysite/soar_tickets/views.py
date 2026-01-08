@@ -14,6 +14,7 @@ from tenants.models import Tenant
 from django.db import IntegrityError, transaction
 import logging
 from utils.ms_email import enviar_correo_ticket_asignado, enviar_correo_ticket_cerrado
+from django.db.models import Case, When, Value, BooleanField
 
 
 logger = logging.getLogger(__name__)
@@ -223,7 +224,7 @@ def tickets_list(request):
     user_tenant = getattr(request.user, "tenant", None)
     is_inntesec = bool(user_tenant and (user_tenant.name or "").lower() == "inntesec")
 
-    # ✅ Inntesec: por defecto "all" si no viene scope (para que switch tenant muestre tickets del tenant)
+    # ✅ Inntesec: por defecto "all" si no viene scope
     if is_inntesec and "scope" not in request.GET:
         scope = "all"
 
@@ -240,11 +241,24 @@ def tickets_list(request):
     if scope == "mine":
         base_qs = base_qs.filter(assigned_to=request.user)
 
-    # counts siempre por scope actual (no por status)
     open_count = base_qs.filter(status=SoarTicket.STATUS_OPEN).count()
     closed_count = base_qs.filter(status=SoarTicket.STATUS_CLOSED).count()
 
-    # ✅ tickets según status
+    # ✅ vencido: OPEN + due_date < hoy
+    today = timezone.localdate()
+    base_qs = base_qs.annotate(
+        is_overdue=Case(
+            When(
+                status=SoarTicket.STATUS_OPEN,
+                due_date__isnull=False,
+                due_date__lt=today,
+                then=Value(True),
+            ),
+            default=Value(False),
+            output_field=BooleanField(),
+        )
+    )
+
     if status == "ALL":
         tickets = base_qs.filter(status__in=[SoarTicket.STATUS_OPEN, SoarTicket.STATUS_CLOSED]).order_by("-opened_at")
     else:
@@ -261,7 +275,6 @@ def tickets_list(request):
         "open_count": open_count,
         "closed_count": closed_count,
     })
-
 
 @require_POST
 @login_required

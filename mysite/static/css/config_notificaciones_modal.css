@@ -2,9 +2,28 @@
    Modal flotante de Configuración de Notificaciones (Inntesec)
    FIX ZOOM + footer siempre visible (scope: #configModal)
    + MODAL MÁS ANCHA (secciones en una línea)
+   + FIX: overlay por encima de topbar
+   + Mejoras UI: bloque teléfono "bonito"
    ========================================================== */
 
-/* Overlay */
+/* ==========================================================
+   0) FIX: asegurar que la topbar quede debajo cuando el modal está abierto
+   ========================================================== */
+body:has(#configModal.modal-overlay:not(.hidden)) .topbar,
+body:has(#configModal.modal-overlay:not(.hidden)) .top-bar,
+body:has(#configModal.modal-overlay:not(.hidden)) header {
+  z-index: 1 !important;
+  pointer-events: none;
+}
+
+/* (Opcional) evitar scroll del body mientras el modal está abierto */
+body:has(#configModal.modal-overlay:not(.hidden)) {
+  overflow: hidden;
+}
+
+/* ==========================================================
+   1) Overlay
+   ========================================================== */
 #configModal.modal-overlay {
   position: fixed;
   inset: 0;
@@ -14,14 +33,13 @@
   display: flex;
   justify-content: center;
 
-  /* clave para zoom: NO centrar vertical, anclar arriba + padding */
   align-items: flex-start;
   padding: clamp(12px, 3vh, 28px);
 
-  /* clave: si el viewport queda chico, el overlay puede scrollear */
   overflow: auto;
 
-  z-index: 2000;
+  z-index: 99999 !important;
+
   transition: opacity 0.25s ease;
 }
 
@@ -30,15 +48,17 @@
   pointer-events: none;
 }
 
-/* Tarjeta del modal */
+/* ==========================================================
+   2) Tarjeta del modal
+   ========================================================== */
 #configModal .modal-card {
-  position: relative; /* para el toast */
+  position: relative;
+
   background: var(--card, #0f1d35);
   border: 1px solid var(--border, #1e293b);
   border-radius: 1rem;
   box-shadow: 0 10px 40px rgba(2, 6, 23, 0.6);
 
-  /* MÁS ANCHA (antes 480px) */
   width: min(96vw, 680px);
 
   padding: 1.5rem 1.75rem;
@@ -47,24 +67,30 @@
   transform: translateY(-10px);
   animation: floatIn 0.3s ease forwards;
 
-  /* clave: limitar alto según viewport */
   max-height: calc(100dvh - 2 * clamp(12px, 3vh, 28px));
-  max-height: calc(100vh - 2 * clamp(12px, 3vh, 28px)); /* fallback */
+  max-height: calc(100vh - 2 * clamp(12px, 3vh, 28px));
 
-  /* clave: layout vertical */
   display: flex;
   flex-direction: column;
 
-  /* importante para que el scroll quede dentro del body */
   overflow: hidden;
 }
 
 @keyframes floatIn {
-  from { transform: translateY(30px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
-/* Cabecera */
+/* ==========================================================
+   3) Cabecera
+   ========================================================== */
 #configModal .modal-head {
   display: flex;
   justify-content: space-between;
@@ -94,20 +120,18 @@
 }
 
 /* ==========================================================
-   CLAVE: el form debe ser flex-column y ocupar el alto disponible
+   4) CLAVE: el form debe ser flex-column y ocupar el alto disponible
    ========================================================== */
 #configModal #configForm {
   display: flex;
   flex-direction: column;
-
-  /* ocupa el espacio restante bajo el header */
   flex: 1 1 auto;
-
-  /* CLAVE para que overflow funcione dentro de flex */
   min-height: 0;
 }
 
-/* Cuerpo (scrolleable) */
+/* ==========================================================
+   5) Cuerpo (scrolleable)
+   ========================================================== */
 #configModal .modal-body {
   display: flex;
   flex-direction: column;
@@ -116,14 +140,13 @@
   flex: 1 1 auto;
   overflow: auto;
 
-  /* CLAVE para que no empuje el footer fuera */
   min-height: 0;
-
-  /* pequeño ajuste visual para scrollbar */
   padding-right: 2px;
 }
 
-/* Pie de botones (siempre visible) */
+/* ==========================================================
+   6) Pie de botones (siempre visible)
+   ========================================================== */
 #configModal .modal-foot {
   display: flex;
   justify-content: flex-end;
@@ -131,7 +154,6 @@
 
   flex: 0 0 auto;
 
-  /* sticky dentro del form */
   position: sticky;
   bottom: 0;
 
@@ -172,7 +194,9 @@
   background: rgba(255, 255, 255, 0.06);
 }
 
-/* Opciones */
+/* ==========================================================
+   7) Opciones (base)
+   ========================================================== */
 #configModal .config-option {
   display: flex;
   justify-content: space-between;
@@ -184,7 +208,6 @@
   transition: all 0.2s ease;
   font-weight: 600;
 
-  /* ayuda a que “calce” todo en una línea */
   gap: 14px;
   flex-wrap: nowrap;
 }
@@ -203,7 +226,128 @@
 }
 
 /* ==========================================================
-   Toast flotante dentro del modal
+   7.1) Bloque Teléfono: ayuda debajo del input (se ve completo)
+   - Mantiene 2 columnas: label | (input + ayuda)
+   - En mobile queda 1 columna automáticamente
+   ========================================================== */
+
+#configModal #telNumberWrap{
+  /* sobreescribe el flex de .config-option */
+  display: grid;
+  grid-template-columns: 260px minmax(220px, 1fr);
+  align-items: start;
+  gap: 14px;
+
+  padding: 12px 14px;
+  border-radius: 16px;
+
+  background: rgba(2, 6, 23, 0.22);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+/* Columna izquierda */
+#configModal #telNumberWrap > span{
+  font-weight: 800;
+  color: var(--text, #e5e7eb);
+  line-height: 1.2;
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 2px;
+}
+
+/* Columna derecha: input arriba + ayuda abajo */
+#configModal #telNumberWrap .franja-input{
+  width: 100%;
+  height: 44px;
+  padding: 10px 12px;
+  border-radius: 14px;
+
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  color: var(--text, #e5e7eb);
+
+  outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+
+#configModal #telNumberWrap .franja-input.input-error{
+  border-color: #f87171;
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.18);
+}
+
+#configModal #telNumberWrap .franja-input::placeholder{
+  color: rgba(148,163,184,.75);
+}
+
+#configModal #telNumberWrap .franja-input:focus{
+  border-color: rgba(59,130,246,.65);
+  box-shadow: 0 0 0 4px rgba(59,130,246,.18);
+  background: rgba(15, 23, 42, 0.55);
+}
+
+/* La ayuda queda explícitamente DEBAJO del input, ocupando la 2da columna */
+#configModal #telNumberWrap .phone-help{
+  grid-column: 2;              /* fuerza a la columna del input */
+  margin: 8px 0 0 0;
+  display: block;
+
+  font-size: .85rem;
+  line-height: 1.35;
+  color: rgba(148,163,184,.92);
+
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px dashed rgba(148,163,184,.22);
+  background: rgba(15,23,42,.30);
+
+  /* clave para que se vea TODO */
+  white-space: normal;
+  overflow: visible;
+}
+
+/* Chips de ejemplo */
+#configModal #telNumberWrap .phone-help code{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: .82rem;
+
+  padding: 2px 8px;
+  border-radius: 999px;
+
+  border: 1px solid rgba(148,163,184,.18);
+  background: rgba(2,6,23,.35);
+  color: rgba(226,232,240,.95);
+
+  white-space: nowrap;
+}
+
+#configModal .form-error{
+  grid-column: 2;
+  margin-top: 6px;
+  display: block;
+  color: #fca5a5;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+/* Responsivo */
+@media (max-width: 920px){
+  #configModal #telNumberWrap{
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  #configModal #telNumberWrap .phone-help{
+    grid-column: auto; /* ya no hay columna 2 */
+  }
+
+  #configModal .form-error{
+    grid-column: auto;
+  }
+}
+
+/* ==========================================================
+   8) Toast flotante dentro del modal
    ========================================================== */
 #configModal .save-toast {
   position: absolute;
@@ -232,7 +376,7 @@
 }
 
 /* ==========================================================
-   QR Telegram
+   9) QR Telegram
    ========================================================== */
 #configModal .qr-container {
   display: flex;
@@ -241,7 +385,7 @@
   justify-content: center;
   margin-top: 14px;
   padding-top: 10px;
-  border-top: 1px dashed var(--color-border, rgba(255,255,255,0.18));
+  border-top: 1px dashed var(--color-border, rgba(255, 255, 255, 0.18));
   text-align: center;
 }
 
@@ -268,16 +412,16 @@
   display: none !important;
 }
 
-/* ===== Override final anti-pisadas (Config Modal) ===== */
-
-#configModal.modal-overlay{
+/* ==========================================================
+   10) Override final anti-pisadas (Config Modal)
+   ========================================================== */
+#configModal.modal-overlay {
   align-items: flex-start !important;
   padding: clamp(12px, 3vh, 28px) !important;
   overflow: auto !important;
 }
 
-#configModal.modal-overlay > .modal-card{
-  /* MÁS ANCHA (antes 480px) */
+#configModal.modal-overlay > .modal-card {
   width: min(96vw, 680px) !important;
 
   max-height: calc(100dvh - 2 * clamp(12px, 3vh, 28px)) !important;
@@ -289,23 +433,20 @@
   overflow: hidden !important;
 }
 
-/* CLAVE: el form debe “encajar” dentro del alto del modal */
-#configModal.modal-overlay > .modal-card > #configForm{
+#configModal.modal-overlay > .modal-card > #configForm {
   display: flex !important;
   flex-direction: column !important;
   flex: 1 1 auto !important;
   min-height: 0 !important;
 }
 
-/* Área scrolleable */
-#configModal.modal-overlay > .modal-card > #configForm > .modal-body{
+#configModal.modal-overlay > .modal-card > #configForm > .modal-body {
   flex: 1 1 auto !important;
   overflow: auto !important;
   min-height: 0 !important;
 }
 
-/* Botones siempre visibles */
-#configModal.modal-overlay > .modal-card > #configForm > .modal-foot{
+#configModal.modal-overlay > .modal-card > #configForm > .modal-foot {
   flex: 0 0 auto !important;
 
   position: sticky !important;
@@ -321,17 +462,14 @@
 }
 
 /* ==========================================================
-   FIX inputs hora (texto invisible) — scope: #configModal
+   11) FIX inputs hora (texto invisible) — scope: #configModal
    ========================================================== */
-
-/* Ayuda a que los controles nativos (time) adopten tema oscuro */
-#configModal{
+#configModal {
   color-scheme: dark;
 }
 
-/* Inputs/select dentro del modal */
 #configModal input,
-#configModal select{
+#configModal select {
   color: var(--text, #e5e7eb) !important;
   background: rgba(15, 23, 42, 0.55) !important;
   border: 1px solid var(--border, #1e293b) !important;
@@ -340,21 +478,18 @@
   outline: none;
 }
 
-/* Específico para type="time" (Chrome/WebKit) */
-#configModal input[type="time"]{
+#configModal input[type="time"] {
   color: var(--text, #e5e7eb) !important;
 }
 
-/* Los dígitos/segmentos del time */
 #configModal input[type="time"]::-webkit-datetime-edit,
 #configModal input[type="time"]::-webkit-datetime-edit-text,
 #configModal input[type="time"]::-webkit-datetime-edit-hour-field,
-#configModal input[type="time"]::-webkit-datetime-edit-minute-field{
+#configModal input[type="time"]::-webkit-datetime-edit-minute-field {
   color: var(--text, #e5e7eb) !important;
 }
 
-/* Icono del picker (si se ve muy oscuro en fondo oscuro) */
-#configModal input[type="time"]::-webkit-calendar-picker-indicator{
+#configModal input[type="time"]::-webkit-calendar-picker-indicator {
   filter: invert(1);
   opacity: 0.85;
   cursor: pointer;

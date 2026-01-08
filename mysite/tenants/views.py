@@ -2,6 +2,7 @@
 import logging
 import re
 import json  # para armar input_data
+import os  # lo usas en SOPORTE_AUTHTOKEN
 
 import requests
 from django.conf import settings
@@ -15,7 +16,7 @@ from django.views.decorators.cache import never_cache
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
 from django.http import HttpResponseRedirect, JsonResponse
-from tenants.models import Tenant, Client, NotificationChannelPreference  # añadimos Client
+from tenants.models import Tenant, Client, NotificationChannelPreference
 from tenants.context import current_tenant, current_tenant_source
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.messages import get_messages
@@ -23,6 +24,40 @@ from utils.ms_email import enviar_correo_cambio_contrasena
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
+
+
+# ==========================
+# Helpers: Teléfono (E.164)
+# ==========================
+
+def normalize_e164_phone(raw: str):
+    """
+    Normaliza y valida teléfono E.164 básico:
+    - Permite espacios/guiones/paréntesis, pero exige que empiece con '+'
+    - Retorna '+<digits>' (sin separadores)
+    - Retorna '' si viene vacío (permitimos vaciar)
+    - Retorna None si inválido
+
+    Reglas mínimas E.164:
+      - Debe iniciar con '+'
+      - Largo total de dígitos (sin '+'): 7..15
+    """
+    s = (raw or "").strip()
+    if not s:
+        return ""
+
+    if not s.startswith("+"):
+        return None
+
+    digits = re.sub(r"\D+", "", s)  # quita todo menos dígitos
+    if not digits:
+        return None
+
+    if len(digits) < 7 or len(digits) > 15:
+        return None
+
+    return f"+{digits}"
+
 
 # ========================== API SOPORTE INNTESEC (USERS) ==========================
 
@@ -35,8 +70,7 @@ def fetch_soporte_users(start_index: int = 1, row_count: int = 100) -> dict:
     Llama a la API de soporte (https://soporte.inntesec.com/api/v3/users)
     para obtener usuarios usando input_data en QUERYSTRING.
 
-    Requiere SOPORTE_AUTHTOKEN en settings.py:
-
+    Requiere SOPORTE_AUTHTOKEN en settings.py (o env var):
         SOPORTE_AUTHTOKEN = "tu_token_zoho_aqui"
     """
     authtoken = os.getenv("SOPORTE_AUTHTOKEN")
@@ -44,11 +78,8 @@ def fetch_soporte_users(start_index: int = 1, row_count: int = 100) -> dict:
         logger.error("[SoporteUsers] Falta settings.SOPORTE_AUTHTOKEN")
         raise RuntimeError("Falta SOPORTE_AUTHTOKEN en settings")
 
-    headers = {
-        "authtoken": authtoken,
-    }
+    headers = {"authtoken": authtoken}
 
-    # La API espera input_data como JSON en querystring
     payload = {
         "list_info": {
             "sort_field": "name",
@@ -57,9 +88,7 @@ def fetch_soporte_users(start_index: int = 1, row_count: int = 100) -> dict:
             "row_count": row_count,
         }
     }
-    params = {
-        "input_data": json.dumps(payload)
-    }
+    params = {"input_data": json.dumps(payload)}
 
     try:
         resp = requests.get(
@@ -82,11 +111,7 @@ def fetch_soporte_users(start_index: int = 1, row_count: int = 100) -> dict:
         )
         return data
     except requests.RequestException as e:
-        logger.exception(
-            "[SoporteUsers] Error llamando a %s: %s",
-            SUPORTE_USERS_ENDPOINT,
-            e,
-        )
+        logger.exception("[SoporteUsers] Error llamando a %s: %s", SUPORTE_USERS_ENDPOINT, e)
         raise
 
 
@@ -95,7 +120,7 @@ def sync_soporte_clients() -> dict:
     Recorre todas las páginas de la API de soporte y sincroniza
     los usuarios con empresa (account != None) en la tabla Client.
 
-    - Hace update_or_create por id (que viene como string en la API).
+    - Hace update_or_create por id (string en la API).
     - Asocia el Client al Tenant cuya name coincide con account['name'].
     """
     start_index = 1
@@ -110,9 +135,9 @@ def sync_soporte_clients() -> dict:
     skipped_no_email = 0
     skipped_bad_id = 0
 
-    seen_ids = set()  # evitar duplicados por id
+    seen_ids = set()
 
-    for loop in range(max_loops):
+    for _ in range(max_loops):
         logger.info("[SoporteSync] Pidiendo página start_index=%s", start_index)
         data = fetch_soporte_users(start_index=start_index, row_count=row_count_request)
 
@@ -129,7 +154,6 @@ def sync_soporte_clients() -> dict:
             if not uid:
                 continue
 
-            # evitar procesar el mismo id otra vez si la API repite
             if uid in seen_ids:
                 continue
             seen_ids.add(uid)
@@ -144,7 +168,6 @@ def sync_soporte_clients() -> dict:
                 skipped_no_tenant += 1
                 continue
 
-            # Buscar Tenant por nombre de empresa
             tenant = Tenant.objects.filter(name__iexact=account_name).first()
             if not tenant:
                 logger.warning(
@@ -163,17 +186,14 @@ def sync_soporte_clients() -> dict:
             name = u.get("name") or ""
             phone = u.get("mobile") or u.get("phone")
 
-            # id del Client es entero
             try:
                 client_id = int(uid)
             except (TypeError, ValueError):
-                logger.warning(
-                    "[SoporteSync] id de usuario no numérico, se omite: %r", uid
-                )
+                logger.warning("[SoporteSync] id de usuario no numérico, se omite: %r", uid)
                 skipped_bad_id += 1
                 continue
 
-            obj, created_flag = Client.objects.update_or_create(
+            _, created_flag = Client.objects.update_or_create(
                 id=client_id,
                 defaults={
                     "tenant": tenant,
@@ -207,7 +227,6 @@ def sync_soporte_clients() -> dict:
             logger.warning("[SoporteSync] resp_count <= 0, se detiene para evitar bucle.")
             break
 
-        # avanzar al siguiente bloque
         start_index = resp_start + resp_count
 
     summary = {
@@ -228,9 +247,7 @@ def sync_soporte_clients() -> dict:
 def soporte_usuarios_view(request):
     """
     Devuelve una página concreta de usuarios de soporte Inntesec (API v3) como JSON.
-
-    Endpoint de ejemplo:
-        /tenants/soporte/usuarios/?start_index=1&row_count=100
+    Ejemplo: /tenants/soporte/usuarios/?start_index=1&row_count=100
     """
     try:
         start_index = int(request.GET.get("start_index", 1))
@@ -256,11 +273,8 @@ def soporte_usuarios_view(request):
 @login_required
 def soporte_sync_clients_view(request):
     """
-    Endpoint para lanzar la sincronización de usuarios con empresa
-    hacia la tabla Client.
-
-    Ejemplo:
-        /tenants/soporte/sync_clients/
+    Endpoint para lanzar la sincronización hacia Client.
+    Ejemplo: /tenants/soporte/sync_clients/
     """
     try:
         summary = sync_soporte_clients()
@@ -281,8 +295,6 @@ def tenant_login_view(request):
     Login con identifier (email o username) + password.
     Opcional: POST['tenant'] para scope explícito.
     """
-
-    # Limpia mensajes antiguos (de sesiones previas)
     storage = get_messages(request)
     for _ in storage:
         pass
@@ -296,13 +308,11 @@ def tenant_login_view(request):
             messages.error(request, "Debes ingresar tu correo o usuario y contraseña.")
             return render(request, "auth/login.html", {"now": timezone.now()})
 
-        # Si el usuario ya está autenticado, cerrar sesión antes
         if request.user.is_authenticated:
             logout(request)
 
         user = None
 
-        # --- Si se especifica el tenant en el formulario ---
         if form_tenant_name:
             tenant = Tenant.objects.filter(name__iexact=form_tenant_name).first()
             if not tenant:
@@ -327,8 +337,6 @@ def tenant_login_view(request):
                 password=password,
                 tenant_name=tenant.name,
             )
-
-        # --- Si no se especifica el tenant (autodetectar) ---
         else:
             user = (
                 User.objects.filter(
@@ -351,36 +359,25 @@ def tenant_login_view(request):
             if user_auth is None:
                 user_auth = authenticate(request, username=user.username, password=password)
 
-        # --- Login exitoso ---
         if user_auth is not None:
-            login(request, user_auth)  # 🔹 Aquí Django rota el CSRF token
+            login(request, user_auth)  # Django rota CSRF token
 
             tenant = getattr(user_auth, "tenant", None)
             if tenant:
                 request.session["tenant_id"] = tenant.id
                 request.session["tenant_name"] = tenant.name
-                logger.info(
-                    "[Login] Ok user=%s tenant=%s (guardado en sesión).",
-                    user_auth.username,
-                    tenant.name,
-                )
+                logger.info("[Login] Ok user=%s tenant=%s (guardado en sesión).", user_auth.username, tenant.name)
             else:
                 request.session["tenant_id"] = None
                 request.session["tenant_name"] = None
-                logger.warning(
-                    "[Login] Usuario autenticado sin tenant asociado: %s",
-                    user_auth.username,
-                )
+                logger.warning("[Login] Usuario autenticado sin tenant asociado: %s", user_auth.username)
                 messages.warning(request, "Inicio de sesión sin tenant asociado.")
 
-            # Redirigir inmediatamente para evitar reenvíos o tokens antiguos
             return redirect("/home/")
 
-        # --- Credenciales inválidas ---
         messages.error(request, "Credenciales inválidas.")
         return render(request, "auth/login.html", {"now": timezone.now()})
 
-    # --- GET (mostrar formulario) ---
     ctx = {
         "now": timezone.now(),
         "tenant_debug": {
@@ -398,9 +395,7 @@ def tenant_login_view(request):
 
 @never_cache
 def logout_view(request):
-    """
-    Cierra sesión y limpia tenant_id/tenant_name.
-    """
+    """Cierra sesión y limpia tenant_id/tenant_name."""
     logout(request)
     request.session.flush()
 
@@ -418,7 +413,6 @@ def switch_tenant(request, tenant_id):
     """
     Cambia el tenant activo en la sesión.
     Si el usuario pertenece a Inntesec, puede cambiar entre tenants.
-    Redirige al dashboard correcto según la página origen.
     """
     user_tenant = getattr(request.user, "tenant", None)
     if not user_tenant or user_tenant.name.lower() != "inntesec":
@@ -430,19 +424,14 @@ def switch_tenant(request, tenant_id):
         messages.error(request, "El tenant seleccionado no existe.")
         return redirect("dashboard:dashboard_realtime")
 
-    # Guardar en sesión
     request.session["tenant_id"] = tenant.id
     request.session["tenant_name"] = tenant.name
     logger.info("[SwitchTenant] %s cambió a tenant %s", request.user.username, tenant.name)
 
-    # Determinar destino según Referer
     referer = request.META.get("HTTP_REFERER", "")
     if "realtime" in referer.lower():
-        logger.debug("[SwitchTenant] Redirigiendo a dashboard_realtime tras cambio de tenant.")
         return redirect("dashboard:dashboard_realtime")
-    else:
-        logger.debug("[SwitchTenant] Redirigiendo a dashboard histórico tras cambio de tenant.")
-        return redirect("dashboard:dashboard")
+    return redirect("dashboard:dashboard")
 
 
 @login_required
@@ -452,7 +441,6 @@ def cambiar_contraseña(request):
         nueva = request.POST.get("nueva")
         confirmar = request.POST.get("confirmar")
 
-        # 🔸 Validaciones de seguridad
         if not request.user.check_password(actual):
             messages.error(request, "La contraseña actual no es correcta.")
         elif nueva != confirmar:
@@ -467,14 +455,12 @@ def cambiar_contraseña(request):
                 "La nueva contraseña debe incluir al menos un carácter especial (como @, #, $, %, etc.)."
             )
         else:
-            # Cambia la contraseña y mantiene la sesión activa
             request.user.set_password(nueva)
             request.user.save()
             update_session_auth_hash(request, request.user)
 
             success_msg = "✅ Contraseña cambiada correctamente."
 
-            # Envío del correo de confirmación (diseño corporativo Inntesec)
             try:
                 enviar_correo_cambio_contrasena(
                     email_destino=request.user.email,
@@ -482,7 +468,6 @@ def cambiar_contraseña(request):
                 )
                 success_msg += " Se ha enviado un correo de confirmación a tu dirección registrada."
             except Exception as e:
-                # ⚠️ Si falla el envío, mostrar advertencia pero mantener éxito
                 messages.warning(
                     request,
                     f"Contraseña cambiada, pero ocurrió un error al enviar el correo: {e}"
@@ -491,7 +476,6 @@ def cambiar_contraseña(request):
             messages.success(request, success_msg)
             return redirect("cambiar_contrasena")
 
-    # Limpieza de mensajes antiguos (por accesibilidad)
     storage = get_messages(request)
     for _ in storage:
         pass
@@ -500,10 +484,7 @@ def cambiar_contraseña(request):
 
 
 def csrf_failure_view(request, reason=""):
-    """
-    Vista personalizada para manejar fallos de verificación CSRF.
-    Redirige al login con un mensaje claro para el usuario.
-    """
+    """Vista personalizada para manejar fallos CSRF."""
     messages.error(
         request,
         "Tu sesión expiró o el formulario no es válido. Por favor, inicia sesión nuevamente."
@@ -516,10 +497,8 @@ def oauth2_callback(request):
     if not code:
         return JsonResponse({"error": "Missing authorization code"}, status=400)
 
-    # URL del token de Microsoft
     token_url = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
 
-    # Datos requeridos para el intercambio
     data = {
         "client_id": settings.MS_CLIENT_ID,
         "client_secret": settings.MS_CLIENT_SECRET,
@@ -528,31 +507,50 @@ def oauth2_callback(request):
         "redirect_uri": "https://ia.inntesec.com/rest/oauth2-credential/callback",
     }
 
-    # Solicita el token a Microsoft
     response = requests.post(token_url, data=data)
     token_data = response.json()
-
-    # Guarda o devuelve el token (según tu necesidad)
     return JsonResponse(token_data)
 
+
+# ========================== CONFIG NOTIFICACIONES ==========================
 
 @login_required
 def config_notificaciones_view(request):
     """Página o modal de configuración de notificaciones del usuario"""
     user = request.user
 
-    # Crear/obtener el registro de preferencias de canal para este usuario
     prefs, _ = NotificationChannelPreference.objects.get_or_create(user=user)
 
     if request.method == "POST":
         # ==============================
-        # Canales (como ya los tenías)
+        # Canales
         # ==============================
         user.Alarma_Telefono = "Alarma_Telefono" in request.POST
         user.Alarma_Correo = "Alarma_Correo" in request.POST
         user.Alarma_Telegram = "Alarma_Telegram" in request.POST
 
-        # 🔹 Franja horaria
+        # ==============================
+        # Teléfono (E.164) -> tenants_tenantuser.phone
+        # Acepta name="phone" o name="telefono"
+        # ==============================
+        if ("phone" in request.POST) or ("telefono" in request.POST):
+            raw_phone = (request.POST.get("phone") or request.POST.get("telefono") or "").strip()
+
+            if raw_phone == "":
+                user.phone = None
+            else:
+                normalized = normalize_e164_phone(raw_phone)
+                if normalized is None:
+                    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+                    msg = "Número inválido. Debe estar en formato internacional E.164, por ejemplo: +56912345678 o +14155552671."
+                    if is_ajax:
+                        return JsonResponse({"ok": False, "error": msg}, status=400)
+                    messages.error(request, msg)
+                    return redirect(request.META.get("HTTP_REFERER", "dashboard:dashboard_alarmsone"))
+
+                user.phone = normalized
+
+        # Franja horaria
         hora_inicio = request.POST.get("hora_inicio") or None
         hora_fin = request.POST.get("hora_fin") or None
 
@@ -563,13 +561,25 @@ def config_notificaciones_view(request):
             user.hora_inicio = None
             user.hora_fin = None
 
-        user.save()
+        # Guardar en una sola operación (reduce riesgo de sobrescrituras)
+        # Nota: si alguno de estos campos no existe en tu modelo, quítalo del listado.
+        update_fields = [
+            "Alarma_Telefono",
+            "Alarma_Correo",
+            "Alarma_Telegram",
+            "hora_inicio",
+            "hora_fin",
+            "phone",
+        ]
+        try:
+            user.save(update_fields=update_fields)
+        except Exception:
+            # fallback si update_fields falla por fields inexistentes
+            user.save()
 
         # ==============================
         # Severidades por canal
         # ==============================
-
-        # Teléfono
         prefs.telefono = {
             "baja": "sev_tel_baja" in request.POST,
             "media": "sev_tel_media" in request.POST,
@@ -577,7 +587,6 @@ def config_notificaciones_view(request):
             "critica": "sev_tel_critica" in request.POST,
         }
 
-        # Correo
         prefs.correo = {
             "baja": "sev_mail_baja" in request.POST,
             "media": "sev_mail_media" in request.POST,
@@ -585,7 +594,6 @@ def config_notificaciones_view(request):
             "critica": "sev_mail_critica" in request.POST,
         }
 
-        # Telegram
         prefs.telegram = {
             "baja": "sev_tg_baja" in request.POST,
             "media": "sev_tg_media" in request.POST,
@@ -595,7 +603,6 @@ def config_notificaciones_view(request):
 
         prefs.save()
 
-        # Soporta tanto submit normal como AJAX (fetch)
         is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
         if is_ajax:
             return JsonResponse({"ok": True})
@@ -603,7 +610,7 @@ def config_notificaciones_view(request):
         return redirect(request.META.get("HTTP_REFERER", "dashboard:dashboard_alarmsone"))
 
     # ==============================
-    # GET: preparar datos para el template
+    # GET
     # ==============================
     tel = prefs.telefono or {}
     mail = prefs.correo or {}
@@ -612,19 +619,16 @@ def config_notificaciones_view(request):
     ctx = {
         "user": user,
 
-        # Teléfono
         "tel_baja": tel.get("baja", True),
         "tel_media": tel.get("media", True),
         "tel_alta": tel.get("alta", True),
         "tel_critica": tel.get("critica", True),
 
-        # Correo
         "mail_baja": mail.get("baja", True),
         "mail_media": mail.get("media", True),
         "mail_alta": mail.get("alta", True),
         "mail_critica": mail.get("critica", True),
 
-        # Telegram
         "tg_baja": tg.get("baja", True),
         "tg_media": tg.get("media", True),
         "tg_alta": tg.get("alta", True),

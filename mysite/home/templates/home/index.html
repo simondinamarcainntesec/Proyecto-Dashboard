@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{% static 'css/base.css' %}?v={% now 'U' %}" />
   <link rel="stylesheet" href="{% static 'css/home.css' %}?v={% now 'U' %}" />
-  <link rel="stylesheet" href="{% static 'css/coachmark.css' %}?v={% now 'U' %}"/>
+  <link rel="stylesheet" href="{% static 'css/coachmark.css' %}?v={% now 'U' %}" />
   <link rel="stylesheet" href="{% static 'css/config_notificaciones_modal.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/cred_modal.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="{% static 'css/country_filter_modal.css' %}?v={% now 'U' %}">
@@ -33,13 +33,13 @@
       <div class="brand">
         <img src="{% static 'img/inntesec CSS negro 1.avif' %}" alt="Logo Inntesec" />
       </div>
-    
+
       <nav class="nav">
 
-      {# ===== AlarmasOne gate (oculta Home/Alarmas/SOAR si alarms_one_id es 0 o nulo) ===== #}
-      {% with raw_aid=tenant.alarms_one_id|default_if_none:"" %}
-      {% with aid=raw_aid|stringformat:"s" %}
-      {% if tenant and aid and aid != "0" and aid != "null" and aid != "NULL" and aid != "None" %}
+        {# ===== AlarmasOne gate (oculta Home/Alarmas/SOAR si alarms_one_id es 0 o nulo) ===== #}
+        {% with raw_aid=tenant.alarms_one_id|default_if_none:"" %}
+        {% with aid=raw_aid|stringformat:"s" %}
+        {% if tenant and aid and aid != "0" and aid != "null" and aid != "NULL" and aid != "None" %}
 
         <a id="homeNav" class="nav-item {% if request.resolver_match.app_name == 'home' %}is-active{% endif %}"
           href="{% url 'home:index' %}">
@@ -91,10 +91,10 @@
         </details>
         {% endwith %}
 
-      {% endif %}
-      {% endwith %}
-      {% endwith %}
-    
+        {% endif %}
+        {% endwith %}
+        {% endwith %}
+
         {# ===== SIEM (dropdown con Alertas + dashboards) ===== #}
         {% with raw_siem_id=tenant.logs360siem_id|default_if_none:"" %}
         {% with siem_id=raw_siem_id|stringformat:"s" %}
@@ -112,13 +112,13 @@
           <div class="tenant-list nav-submenu">
             <a class="tenant-option nav-subitem {% if app_name == 'siem' and url_name == 'alerts_logs360' %}is-active{% endif %}"
               href="{% url 'siem:alerts_logs360' %}">Alertas</a>
-    
+
             <a class="tenant-option nav-subitem {% if app_name == 'siem' and url_name == 'microsoft365' %}is-active{% endif %}"
               href="{% url 'siem:microsoft365' %}">Microsoft 365</a>
-    
+
             <a class="tenant-option nav-subitem {% if app_name == 'siem' and url_name == 'networks' %}is-active{% endif %}"
               href="{% url 'siem:networks' %}">Networks</a>
-    
+
             <a class="tenant-option nav-subitem {% if app_name == 'siem' and url_name == 'eventos_diarios' %}is-active{% endif %}"
               href="{% url 'siem:eventos_diarios' %}">Eventos diarios</a>
 
@@ -131,7 +131,7 @@
         {% endif %}
         {% endwith %}
         {% endwith %}
-    
+
         {# ===== Site24x7 ===== #}
         {% if tenant %}
         {% with raw_site_id=tenant.site24x7_id|default_if_none:"" %}
@@ -147,14 +147,14 @@
             </svg>
             <span id="coachDotInnMonitor" class="coachmark-dot hidden"></span>
           </summary>
-    
+
           <div class="tenant-list nav-submenu">
             <a class="tenant-option nav-subitem {% if app_name == 'site24x7' and url_name == 'monitor_status' %}is-active{% endif %}"
               href="{% url 'site24x7:monitor_status' %}">Monitores</a>
-    
+
             <a class="tenant-option nav-subitem {% if app_name == 'site24x7' and url_name == 'anomaly_status' %}is-active{% endif %}"
               href="{% url 'site24x7:anomaly_status' %}">Anomalías</a>
-    
+
             <a class="tenant-option nav-subitem {% if app_name == 'site24x7' and url_name == 'dashboard' %}is-active{% endif %}"
               href="{% url 'site24x7:dashboard' %}">Dashboard</a>
           </div>
@@ -165,7 +165,7 @@
         {% endwith %}
         {% endwith %}
         {% endif %}
-    
+
         {# ===== Configuración ===== #}
         <details class="tenant-dropdown nav-dropdown" {% if request.resolver_match.url_name == 'cambiar_contrasena' %}open{% endif %}>
           <summary id="settingsSummary"
@@ -176,16 +176,17 @@
             </svg>
             <span id="coachDotConfig" class="coachmark-dot hidden"></span>
           </summary>
-    
+
           <div class="tenant-list nav-submenu">
             <a class="tenant-option nav-subitem {% if request.resolver_match.url_name == 'cambiar_contrasena' %}is-active{% endif %}"
               href="{% url 'cambiar_contrasena' %}">🔒 Cambiar contraseña</a>
             <a class="tenant-option nav-subitem" href="#" onclick="toggleCredModal(true)">🔑 Credenciales</a>
             <a class="tenant-option nav-subitem" href="#" onclick="toggleConfigModal(true)">🔔 Notificaciones</a>
-            <a class="tenant-option nav-subitem" href="#" onclick="toggleCountryModal(true)">🌎 Filtro países whitelist</a>
+            <a class="tenant-option nav-subitem" href="#" onclick="toggleCountryModal(true)">🌎 Filtro países
+              whitelist</a>
           </div>
         </details>
-    
+
       </nav>
     </aside>
 
@@ -196,7 +197,7 @@
       <header class="topbar">
         <div class="top-left">
           <h1 class="top-title">
-            Tenant:
+            Cliente:
             {% if request.user.tenant.name|lower == "inntesec" %}
             <details class="tenant-dropdown" id="tenantDropdown">
               <summary class="tenant-summary">
@@ -331,8 +332,8 @@
             <div class="card-body severity-body">
               <ul class="severity-list">
                 {% for sev in severity_summary %}
-                <li class="severity-item" data-key="{{ sev.key }}" data-label="{{ sev.label }}" data-count="{{ sev.count }}"
-                  data-percent="{{ sev.percent }}">
+                <li class="severity-item" data-key="{{ sev.key }}" data-label="{{ sev.label }}"
+                  data-count="{{ sev.count }}" data-percent="{{ sev.percent }}">
                   <div class="severity-main">
                     <span class="severity-ico sev-ico-{{ sev.key }}">
                       {% if sev.key == "critical" %}⛔{% elif sev.key == "high" %}⚠️{% elif sev.key == "medium" %}🔶{% else %}❔{% endif %}
@@ -400,8 +401,7 @@
       </section>
 
       <!-- IP Search Modal (FIX) -->
-      <div id="ipSearchModal"
-        class="modal-overlay {% if blacklist_q or whitelist_q %}{% else %}hidden{% endif %}"
+      <div id="ipSearchModal" class="modal-overlay {% if blacklist_q or whitelist_q %}{% else %}hidden{% endif %}"
         aria-hidden="{% if blacklist_q or whitelist_q %}false{% else %}true{% endif %}">
         <div class="modal-card">
           <div class="modal-head">
@@ -447,7 +447,8 @@
                       <h4>FECHAS</h4>
                       <ul class="stacked">
                         <li><strong>Fecha creación:</strong> {{ ip.fecha_creacion|date:"Y-m-d H:i:s"|default:"-" }}</li>
-                        <li><strong>Fecha actualización:</strong> {{ ip.fecha_actualizacion|date:"Y-m-d H:i:s"|default:"-" }}</li>
+                        <li><strong>Fecha actualización:</strong> {{ ip.fecha_actualizacion|date:"Y-m-d
+                          H:i:s"|default:"-" }}</li>
                       </ul>
                     </div>
                   </div>
@@ -483,7 +484,8 @@
                       <h4>FECHAS</h4>
                       <ul class="stacked">
                         <li><strong>Fecha creación:</strong> {{ ip.fecha_creacion|date:"Y-m-d H:i:s"|default:"-" }}</li>
-                        <li><strong>Última actualización:</strong> {{ ip.fecha_actualizacion|date:"Y-m-d H:i:s"|default:"-" }}</li>
+                        <li><strong>Última actualización:</strong> {{ ip.fecha_actualizacion|date:"Y-m-d
+                          H:i:s"|default:"-" }}</li>
                       </ul>
                     </div>
                   </div>
@@ -518,7 +520,8 @@
               {% csrf_token %}
               <input type="hidden" name="ip" value="{{ blacklist_results.0.ip }}">
               {% if blacklist_q %}<input type="hidden" name="blacklist_q_original" value="{{ blacklist_q }}">{% endif %}
-              {% if blacklist_removed %}<input type="hidden" name="blacklist_removed_original" value="{{ blacklist_removed }}">{% endif %}
+              {% if blacklist_removed %}<input type="hidden" name="blacklist_removed_original"
+                value="{{ blacklist_removed }}">{% endif %}
               <button type="submit" class="btn btn-danger">🗑 Solicitar eliminación de blacklist</button>
             </form>
             {% endif %}
@@ -528,7 +531,8 @@
               {% csrf_token %}
               <input type="hidden" name="ip" value="{{ whitelist_not_found_terms.0 }}">
               <input type="hidden" name="whitelist_q_original" value="{{ whitelist_q }}">
-              {% if whitelist_removed %}<input type="hidden" name="whitelist_removed_original" value="{{ whitelist_removed }}">{% endif %}
+              {% if whitelist_removed %}<input type="hidden" name="whitelist_removed_original"
+                value="{{ whitelist_removed }}">{% endif %}
               <button type="submit" class="btn btn-primary">➕ Añadir a whitelist</button>
             </form>
             {% endif %}
@@ -661,7 +665,7 @@
   {% include "partials/_country_filter_modal.html" %}
 
   <script>
-  window.__RETELL_POPUP_URL = "{% url 'retell_call_window' %}";
+    window.__RETELL_POPUP_URL = "{% url 'retell_call_window' %}";
   </script>
 
   <script defer src="{% static 'js/retell_open_popup.js' %}?v={% now 'U' %}"></script>

@@ -1,113 +1,151 @@
 /* =========================================================
    base.css — Tema + Layout + Componentes compartidos
-   + ✅ Empty-state unificado (misma posición, sidebar visible)
+   + Empty-state unificado (misma posición, sidebar visible)
    ========================================================= */
 
 /* =========================
    1) Variables (Tema)
    ========================= */
-:root{
-  --bg:#0b1220;
-  --bg-soft:#0e172a;
+:root {
+  --bg: #0b1220;
+  --bg-soft: #0e172a;
 
-  --panel:#0f1b31;
-  --surface:#0f172a;
-  --card:#0f1d35;
+  --panel: #0f1b31;
+  --surface: #0f172a;
+  --card: #0f1d35;
 
-  --border:#1e293b;
+  --border: #1e293b;
 
-  --text:#e5e7eb;
-  --muted:#94a3b8;
-  --muted-2:#64748b;
+  --text: #e5e7eb;
+  --muted: #94a3b8;
+  --muted-2: #64748b;
 
-  --brand:#3b82f6;
-  --brand-2:#60a5fa;
+  --brand: #3b82f6;
+  --brand-2: #60a5fa;
 
-  --ok:#22c55e;
-  --warn:#f59e0b;
-  --danger:#ef4444;
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
 
-  --radius:16px;
-  --radius-sm:12px;
+  --radius: 16px;
+  --radius-sm: 12px;
 
-  --shadow:0 10px 28px rgba(2,6,23,.25);
-  --shadow-2:0 16px 44px rgba(2,6,23,.45);
+  --shadow: 0 10px 28px rgba(2, 6, 23, .25);
+  --shadow-2: 0 16px 44px rgba(2, 6, 23, .45);
 
-  --dropdown-bg:linear-gradient(180deg, rgba(15,23,42,.92) 0%, rgba(11,18,32,.92) 100%);
-  --dropdown-border:rgba(148,163,184,.16);
-  --dropdown-item-hover:rgba(59,130,246,.12);
-  --dropdown-item-active:rgba(59,130,246,.20);
+  --dropdown-bg: linear-gradient(180deg, rgba(15, 23, 42, .92) 0%, rgba(11, 18, 32, .92) 100%);
+  --dropdown-border: rgba(148, 163, 184, .16);
+  --dropdown-item-hover: rgba(59, 130, 246, .12);
+  --dropdown-item-active: rgba(59, 130, 246, .20);
 
-  --scroll-track:rgba(148,163,184,.10);
-  --scroll-thumb:rgba(148,163,184,.26);
-  --scroll-thumb-hover:rgba(148,163,184,.40);
+  --scroll-track: rgba(148, 163, 184, .10);
+  --scroll-thumb: rgba(148, 163, 184, .26);
+  --scroll-thumb-hover: rgba(148, 163, 184, .40);
 
-  --sidebar-w:240px;
-  --topbar-h:64px;
-  --gutter:18px;
+  --sidebar-w: 240px;
+  --topbar-h: 64px;
+  --gutter: 18px;
 
-  --nav-item-h:44px;
-  --nav-gap:6px;
+  --nav-item-h: 44px;
+  --nav-gap: 6px;
 }
 
 /* =========================
    2) Reset / Base
    ========================= */
-*{ box-sizing:border-box }
-html,body{ height:100% }
-
-body{
-  margin:0;
-  font-family:'Inter',system-ui,Segoe UI,Roboto,Arial,sans-serif;
-  background:var(--bg);
-  color:var(--text);
-  -webkit-font-smoothing:antialiased;
-  -moz-osx-font-smoothing:grayscale;
+* {
+  box-sizing: border-box
 }
 
-img{ max-width:100%; height:auto; display:block }
-a{ color:inherit; text-decoration:none }
-button,input,select,textarea{ font:inherit; color:inherit }
-button{ cursor:pointer }
-.hidden{ display:none !important }
+html,
+body {
+  height: 100%
+}
 
-:focus-visible{
-  outline:2px solid rgba(96,165,250,.85);
-  outline-offset:2px;
-  border-radius:10px;
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, Segoe UI, Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block
+}
+
+a {
+  color: inherit;
+  text-decoration: none
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit
+}
+
+button {
+  cursor: pointer
+}
+
+.hidden {
+  display: none !important
+}
+
+:focus-visible {
+  outline: 2px solid rgba(96, 165, 250, .85);
+  outline-offset: 2px;
+  border-radius: 10px;
 }
 
 /* =========================
    3) Scrollbars (global suaves)
    ========================= */
-*{
-  scrollbar-width:thin;
+* {
+  scrollbar-width: thin;
   scrollbar-color: var(--scroll-thumb) transparent;
 }
-*::-webkit-scrollbar{ width:10px; height:10px }
-*::-webkit-scrollbar-track{ background:transparent }
-*::-webkit-scrollbar-thumb{
-  background:var(--scroll-thumb);
-  border-radius:999px;
-  border:2px solid transparent;
-  background-clip:padding-box;
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px
 }
-*::-webkit-scrollbar-thumb:hover{ background:var(--scroll-thumb-hover) }
+
+*::-webkit-scrollbar-track {
+  background: transparent
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scroll-thumb-hover)
+}
 
 /* =========================
    4) Layout global
    ========================= */
-.layout{
-  min-height:100vh;
-  display:grid;
+.layout {
+  min-height: 100vh;
+  display: grid;
   grid-template-columns: var(--sidebar-w) 1fr;
-  gap:0;
+  gap: 0;
 }
 
 /* =========================
    5) Sidebar
    ========================= */
-.sidebar{
+.sidebar {
   background: linear-gradient(180deg, #0e1930 0%, #0a1224 100%);
   border-right: 1px solid var(--border);
   padding: 16px 12px;
@@ -122,158 +160,190 @@ button{ cursor:pointer }
 }
 
 /* Brand */
-.brand{ display:flex; gap:10px; align-items:center; padding: 8px 6px 18px 6px }
-.brand-sub{ font-size:.75rem; color:#9aa7bd }
-.brand-name{ font-weight:800 }
+.brand {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 6px 18px 6px
+}
+
+.brand-sub {
+  font-size: .75rem;
+  color: #9aa7bd
+}
+
+.brand-name {
+  font-weight: 800
+}
 
 /* Nav con scroll interno */
-.sidebar .nav{
-  flex:1 1 auto;
-  min-height:0;
-  padding:14px 4px 10px 4px;
-  overflow:auto;
-  overflow-x:hidden;
+.sidebar .nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 14px 4px 10px 4px;
+  overflow: auto;
+  overflow-x: hidden;
 }
 
 /* Items sidebar */
-.sidebar .nav-item{
-  height:var(--nav-item-h);
-  display:flex;
-  align-items:center;
-  gap:10px;
+.sidebar .nav-item {
+  height: var(--nav-item-h);
+  display: flex;
+  align-items: center;
+  gap: 10px;
 
-  padding:0 14px;
-  border-radius:14px;
+  padding: 0 14px;
+  border-radius: 14px;
 
-  border:1px solid transparent;
-  background:transparent;
+  border: 1px solid transparent;
+  background: transparent;
 
-  color:rgba(229,231,235,.92);
-  font-weight:900;
-  font-size:15px;
-  letter-spacing:.2px;
+  color: rgba(229, 231, 235, .92);
+  font-weight: 900;
+  font-size: 15px;
+  letter-spacing: .2px;
 
   transition: background .12s ease, border-color .12s ease, transform .12s ease;
-  user-select:none;
-}
-.sidebar .nav-item:hover{
-  background:rgba(59,130,246,.10);
-  border-color:rgba(59,130,246,.18);
-}
-.sidebar .nav-item:active{ transform: translateY(1px) }
-
-.sidebar .nav-item.is-active{
-  background:rgba(59,130,246,.18);
-  border-color:rgba(96,165,250,.55);
-  box-shadow: inset 0 0 0 1px rgba(96,165,250,.22);
+  user-select: none;
 }
 
-.sidebar .nav-ico{
-  width:20px;
-  height:20px;
-  display:grid;
-  place-items:center;
-  color:rgba(148,163,184,.92);
-  flex:0 0 auto;
+.sidebar .nav-item:hover {
+  background: rgba(59, 130, 246, .10);
+  border-color: rgba(59, 130, 246, .18);
+}
+
+.sidebar .nav-item:active {
+  transform: translateY(1px)
+}
+
+.sidebar .nav-item.is-active {
+  background: rgba(59, 130, 246, .18);
+  border-color: rgba(96, 165, 250, .55);
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, .22);
+}
+
+.sidebar .nav-ico {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  color: rgba(148, 163, 184, .92);
+  flex: 0 0 auto;
 }
 
 /* Details (sidebar) */
-.sidebar details.tenant-dropdown{ display:block; }
-.sidebar details.tenant-dropdown > summary{
-  list-style:none;
-  cursor:pointer;
+.sidebar details.tenant-dropdown {
+  display: block;
 }
-.sidebar details.tenant-dropdown > summary::-webkit-details-marker{ display:none }
-.sidebar details.tenant-dropdown > summary::marker{ content:"" }
+
+.sidebar details.tenant-dropdown>summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.sidebar details.tenant-dropdown>summary::-webkit-details-marker {
+  display: none
+}
+
+.sidebar details.tenant-dropdown>summary::marker {
+  content: ""
+}
 
 /* Chevron sidebar */
-.sidebar .chevron{
-  margin-left:auto;
-  opacity:.9;
+.sidebar .chevron {
+  margin-left: auto;
+  opacity: .9;
   transition: transform .14s ease;
 }
-.sidebar details.tenant-dropdown[open] .chevron{ transform: rotate(180deg) }
+
+.sidebar details.tenant-dropdown[open] .chevron {
+  transform: rotate(180deg)
+}
 
 /* Submenú acordeón en flujo (sidebar) */
-.sidebar details.nav-dropdown .tenant-list.nav-submenu{
-  position:static;
-  margin:8px 0 10px 0;
+.sidebar details.nav-dropdown .tenant-list.nav-submenu {
+  position: static;
+  margin: 8px 0 10px 0;
 
-  padding:0;
-  padding-right:10px;
-  box-sizing:border-box;
+  padding: 0;
+  padding-right: 10px;
+  box-sizing: border-box;
 
-  border:0;
-  background:transparent;
-  box-shadow:none;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 
-  max-width:100%;
-  overflow:hidden;
+  max-width: 100%;
+  overflow: hidden;
 
-  display:flex;
-  flex-direction:column;
-  align-items:flex-start;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 /* Subitems (pills) */
-.sidebar .nav-subitem{
-  height:38px;
-  display:inline-flex;
-  width:fit-content;
+.sidebar .nav-subitem {
+  height: 38px;
+  display: inline-flex;
+  width: fit-content;
 
   max-width: calc(100% - 28px);
 
-  align-items:center;
+  align-items: center;
 
-  padding:0 3px;
-  margin-left:18px;
-  margin-right:10px;
+  padding: 0 3px;
+  margin-left: 18px;
+  margin-right: 10px;
 
-  border-radius:12px;
+  border-radius: 12px;
 
-  border:1px solid rgba(148,163,184,.10);
-  background: rgba(2,6,23,.12);
+  border: 1px solid rgba(148, 163, 184, .10);
+  background: rgba(2, 6, 23, .12);
 
-  color:rgba(229,231,235,.90);
-  font-weight:400;
+  color: rgba(229, 231, 235, .90);
+  font-weight: 400;
 
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 
   transition: background .12s ease, border-color .12s ease;
 }
-.sidebar .nav-subitem + .nav-subitem{ margin-top:6px; }
 
-.sidebar .nav-subitem:hover{
-  background:rgba(59,130,246,.10);
-  border-color:rgba(59,130,246,.18);
+.sidebar .nav-subitem+.nav-subitem {
+  margin-top: 6px;
 }
-.sidebar .nav-subitem.is-active{
-  background:rgba(59,130,246,.18);
-  border-color:rgba(96,165,250,.55);
-  box-shadow: inset 0 0 0 1px rgba(96,165,250,.22);
+
+.sidebar .nav-subitem:hover {
+  background: rgba(59, 130, 246, .10);
+  border-color: rgba(59, 130, 246, .18);
+}
+
+.sidebar .nav-subitem.is-active {
+  background: rgba(59, 130, 246, .18);
+  border-color: rgba(96, 165, 250, .55);
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, .22);
 }
 
 /* =========================
    6) Content + Topbar
    ========================= */
-.content{
-  display:flex;
-  flex-direction:column;
-  gap:16px;
-  padding:16px;
-  min-width:0;
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  min-width: 0;
 
   /* importante: permite centrar empty-state bajo la topbar */
   min-height: 100vh;
 }
 
 /* Topbar */
-.topbar{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 
   background: linear-gradient(180deg, #0e1a33 0%, #0e172a 100%);
   border: 1px solid var(--border);
@@ -287,42 +357,51 @@ button{ cursor:pointer }
 }
 
 /* Lados */
-.top-left{ display:flex; align-items:center; min-width:0; }
-.top-right{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  min-width:0;
+.top-left {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.top-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
   flex-wrap: nowrap;
 }
 
 /* Título */
-.top-title{
-  margin:0;
+.top-title {
+  margin: 0;
   font-size: 1rem;
   font-weight: 800;
   color: var(--text);
-  display:flex;
-  align-items:center;
-  gap:10px;
-  min-width:0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 
 /* Tenant destacado */
-.top-tenant{
+.top-tenant {
   color: #bfdbfe;
   font-weight: 800;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* =========================
    TOPBAR — pills
    ========================= */
-.topbar{ padding: 10px 12px; border-radius: 16px; min-height: 52px; }
+.topbar {
+  padding: 10px 12px;
+  border-radius: 16px;
+  min-height: 52px;
+}
 
-.topbar .btn{
+.topbar .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -332,8 +411,8 @@ button{ cursor:pointer }
   padding: 0 12px;
   border-radius: 12px;
 
-  border: 1px solid rgba(30,41,59,.85);
-  background: rgba(11,20,40,.85);
+  border: 1px solid rgba(30, 41, 59, .85);
+  background: rgba(11, 20, 40, .85);
   color: #e5e7eb;
 
   font-size: 13px;
@@ -344,16 +423,24 @@ button{ cursor:pointer }
   box-shadow: none;
   transition: transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
 }
-.topbar .btn:hover{
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(2,6,23,.35);
-  background: rgba(14,26,51,.95);
-  border-color: rgba(59,130,246,.22);
-}
-.topbar .btn:active{ transform: translateY(0); box-shadow:none; }
 
-.topbar .btn.ghost{ background: transparent; }
-.topbar .btn.primary{
+.topbar .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(2, 6, 23, .35);
+  background: rgba(14, 26, 51, .95);
+  border-color: rgba(59, 130, 246, .22);
+}
+
+.topbar .btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.topbar .btn.ghost {
+  background: transparent;
+}
+
+.topbar .btn.primary {
   background: var(--brand);
   border-color: var(--brand);
   color: #fff;
@@ -361,32 +448,32 @@ button{ cursor:pointer }
 
 .topbar .btn svg,
 .topbar .btn img,
-.topbar .btn .nav-ico{
+.topbar .btn .nav-ico {
   width: 16px;
   height: 16px;
 }
 
 .topbar .btn.icon-only,
 .topbar .btn.icon-btn,
-.topbar .btn.square{
+.topbar .btn.square {
   width: 34px;
   padding: 0;
   border-radius: 12px;
 }
 
 /* Tenant summary y user button como pills */
-.topbar .tenant-dropdown > summary,
-.topbar .user-button{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
+.topbar .tenant-dropdown>summary,
+.topbar .user-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 
   height: 34px;
   padding: 0 12px;
   border-radius: 12px;
 
-  border: 1px solid rgba(30,41,59,.85);
-  background: rgba(11,20,40,.85);
+  border: 1px solid rgba(30, 41, 59, .85);
+  background: rgba(11, 20, 40, .85);
   color: #e5e7eb;
 
   font-size: 13px;
@@ -394,209 +481,207 @@ button{ cursor:pointer }
   line-height: 1;
   white-space: nowrap;
 }
-.topbar .tenant-dropdown > summary:hover,
-.topbar .user-button:hover{
-  background: rgba(14,26,51,.95);
-  border-color: rgba(59,130,246,.22);
+
+.topbar .tenant-dropdown>summary:hover,
+.topbar .user-button:hover {
+  background: rgba(14, 26, 51, .95);
+  border-color: rgba(59, 130, 246, .22);
 }
 
 /* =========================
    7) Cards / Panel base
    ========================= */
-.card{
-  background:linear-gradient(180deg, rgba(15,29,53,.75) 0%, rgba(15,23,42,.62) 100%);
-  border:1px solid rgba(30,41,59,.7);
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
+.card {
+  background: linear-gradient(180deg, rgba(15, 29, 53, .75) 0%, rgba(15, 23, 42, .62) 100%);
+  border: 1px solid rgba(30, 41, 59, .7);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
-.card-pad{ padding:16px }
-.muted{ color:var(--muted) }
+
+.card-pad {
+  padding: 16px
+}
+
+.muted {
+  color: var(--muted)
+}
 
 /* =========================
    8) Botones / Inputs base
    ========================= */
-.btn{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:10px;
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 
-  padding:10px 14px;
-  border-radius:12px;
+  padding: 10px 14px;
+  border-radius: 12px;
 
-  border:1px solid rgba(30,41,59,.8);
-  background:rgba(15,23,42,.65);
-  color:var(--text);
-  font-weight:400;
+  border: 1px solid rgba(30, 41, 59, .8);
+  background: rgba(15, 23, 42, .65);
+  color: var(--text);
+  font-weight: 400;
 
-  transition:transform .12s ease, background .12s ease, border-color .12s ease;
-  user-select:none;
+  transition: transform .12s ease, background .12s ease, border-color .12s ease;
+  user-select: none;
 }
-.btn:hover{
-  background:rgba(15,23,42,.85);
-  border-color:rgba(96,165,250,.35);
-}
-.btn:active{ transform: translateY(1px) }
 
-.btn.ghost{
-  background:transparent;
-  border-color:rgba(30,41,59,.55);
+.btn:hover {
+  background: rgba(15, 23, 42, .85);
+  border-color: rgba(96, 165, 250, .35);
 }
-.btn.ghost:hover{ background:rgba(148,163,184,.08) }
 
-.btn.small{
-  padding:8px 10px;
-  border-radius:10px;
-  gap:8px;
+.btn:active {
+  transform: translateY(1px)
+}
+
+.btn.ghost {
+  background: transparent;
+  border-color: rgba(30, 41, 59, .55);
+}
+
+.btn.ghost:hover {
+  background: rgba(148, 163, 184, .08)
+}
+
+.btn.small {
+  padding: 8px 10px;
+  border-radius: 10px;
+  gap: 8px;
 }
 
 /* Inputs */
-.input, .select, .textarea{
-  width:100%;
-  padding:10px 12px;
-  border-radius:12px;
-  border:1px solid rgba(30,41,59,.85);
-  background:rgba(15,23,42,.55);
-  color:var(--text);
-  outline:none;
+.input,
+.select,
+.textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(30, 41, 59, .85);
+  background: rgba(15, 23, 42, .55);
+  color: var(--text);
+  outline: none;
 }
-.input::placeholder, .textarea::placeholder{ color:rgba(148,163,184,.70) }
-.input:focus, .select:focus, .textarea:focus{
-  border-color:rgba(96,165,250,.55);
-  box-shadow:0 0 0 3px rgba(59,130,246,.18);
+
+.input::placeholder,
+.textarea::placeholder {
+  color: rgba(148, 163, 184, .70)
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  border-color: rgba(96, 165, 250, .55);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, .18);
 }
 
 /* =========================
    9) Dropdown Tenant (TOPBAR)
    ========================= */
-.tenant-dropdown{
-  position:relative;
-  display:inline-block;
+.tenant-dropdown {
+  position: relative;
+  display: inline-block;
 }
 
-.tenant-dropdown > summary{
-  list-style:none;
-  display:inline-flex;
-  align-items:center;
-  gap:10px;
+.tenant-dropdown>summary {
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 
-  padding:10px 12px;
-  border-radius:12px;
-  border:1px solid rgba(30,41,59,.85);
-  background:rgba(15,23,42,.55);
-  color:var(--text);
-  font-weight:500;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(30, 41, 59, .85);
+  background: rgba(15, 23, 42, .55);
+  color: var(--text);
+  font-weight: 500;
 
-  cursor:pointer;
-  user-select:none;
+  cursor: pointer;
+  user-select: none;
 
   max-width: 320px;
 }
-.tenant-dropdown > summary::-webkit-details-marker{ display:none }
-.tenant-dropdown > summary::marker{ content:"" }
 
-.tenant-dropdown .caret{
-  font-size:12px;
-  color:var(--muted);
+.tenant-dropdown>summary::-webkit-details-marker {
+  display: none
+}
+
+.tenant-dropdown>summary::marker {
+  content: ""
+}
+
+.tenant-dropdown .caret {
+  font-size: 12px;
+  color: var(--muted);
   transition: transform .14s ease;
 }
-.tenant-dropdown[open] .caret{ transform: rotate(180deg) }
 
-.tenant-dropdown .tenant-list{
-  position:absolute;
+.tenant-dropdown[open] .caret {
+  transform: rotate(180deg)
+}
+
+.tenant-dropdown .tenant-list {
+  position: absolute;
   top: calc(100% + 10px);
   left: 0;
 
   min-width: 320px;
   max-width: 520px;
   max-height: min(72vh, 560px);
-  overflow:auto;
+  overflow: auto;
 
   background: var(--dropdown-bg);
-  border:1px solid var(--dropdown-border);
+  border: 1px solid var(--dropdown-border);
   border-radius: 16px;
   box-shadow: var(--shadow-2);
-  padding:10px;
+  padding: 10px;
 
-  z-index:200;
+  z-index: 200;
 }
 
-.tenant-dropdown:not(.nav-dropdown) .tenant-option{
-  width:100%;
-  display:block;
-  text-align:left;
+.tenant-dropdown:not(.nav-dropdown) .tenant-option {
+  width: 100%;
+  display: block;
+  text-align: left;
 
-  padding:10px 12px;
-  border-radius:12px;
-  border:1px solid transparent;
-  background:transparent;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: transparent;
 
-  color:var(--text);
-  font-weight:400;
+  color: var(--text);
+  font-weight: 400;
 
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 
   transition: background .12s ease, border-color .12s ease;
 }
-.tenant-dropdown:not(.nav-dropdown) .tenant-option:hover{
-  background:var(--dropdown-item-hover);
-  border-color:rgba(59,130,246,.26);
+
+.tenant-dropdown:not(.nav-dropdown) .tenant-option:hover {
+  background: var(--dropdown-item-hover);
+  border-color: rgba(59, 130, 246, .26);
 }
-.tenant-dropdown:not(.nav-dropdown) .tenant-option.is-active{
-  background:var(--dropdown-item-active);
-  border-color:rgba(96,165,250,.55);
-  box-shadow: inset 0 0 0 1px rgba(96,165,250,.25);
+
+.tenant-dropdown:not(.nav-dropdown) .tenant-option.is-active {
+  background: var(--dropdown-item-active);
+  border-color: rgba(96, 165, 250, .55);
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, .25);
 }
 
 /* =========================
    10) Export + Perfil (header)
    ========================= */
-.export-wrapper{
-  position:relative;
-  display:inline-flex;
-  align-items:center;
+.export-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
   z-index: 6000 !important;
 }
 
-.export-menu{
-  position:absolute;
-  top: calc(100% + 10px);
-  right: 0;
-
-  min-width: 220px;
-  padding:10px;
-
-  border-radius: 14px;
-  border:1px solid var(--dropdown-border);
-  background: var(--dropdown-bg);
-  box-shadow: var(--shadow-2);
-
-  z-index:6500;
-  display:none;
-}
-#homeExportToggleBtn[aria-expanded="true"] + #homeExportMenu{ display:block; }
-
-.export-menu button{
-  width:100%;
-  text-align:left;
-  padding:10px 12px;
-  border-radius:12px;
-
-  border:1px solid transparent;
-  background:transparent;
-
-  color:var(--text);
-  font-weight:400;
-}
-.export-menu button:hover{
-  background:var(--dropdown-item-hover);
-  border-color:rgba(59,130,246,.26);
-}
-
-/* Alias export-dropdown (wrapper is-open) */
-.export-wrapper .export-dropdown{
+.export-menu {
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
@@ -612,9 +697,12 @@ button{ cursor:pointer }
   z-index: 6500;
   display: none;
 }
-.export-wrapper.is-open .export-dropdown{ display:block; }
 
-.export-wrapper .export-dropdown button{
+#homeExportToggleBtn[aria-expanded="true"]+#homeExportMenu {
+  display: block;
+}
+
+.export-menu button {
   width: 100%;
   text-align: left;
   padding: 10px 12px;
@@ -626,54 +714,102 @@ button{ cursor:pointer }
   color: var(--text);
   font-weight: 400;
 }
-.export-wrapper .export-dropdown button:hover{
+
+.export-menu button:hover {
   background: var(--dropdown-item-hover);
-  border-color: rgba(59,130,246,.26);
+  border-color: rgba(59, 130, 246, .26);
 }
 
-.user-menu{
-  position:relative !important;
-  display:inline-flex;
-  align-items:center;
+/* Alias export-dropdown (wrapper is-open) */
+.export-wrapper .export-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+
+  min-width: 220px;
+  padding: 10px;
+
+  border-radius: 14px;
+  border: 1px solid var(--dropdown-border);
+  background: var(--dropdown-bg);
+  box-shadow: var(--shadow-2);
+
+  z-index: 6500;
+  display: none;
+}
+
+.export-wrapper.is-open .export-dropdown {
+  display: block;
+}
+
+.export-wrapper .export-dropdown button {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 12px;
+
+  border: 1px solid transparent;
+  background: transparent;
+
+  color: var(--text);
+  font-weight: 400;
+}
+
+.export-wrapper .export-dropdown button:hover {
+  background: var(--dropdown-item-hover);
+  border-color: rgba(59, 130, 246, .26);
+}
+
+.user-menu {
+  position: relative !important;
+  display: inline-flex;
+  align-items: center;
   z-index: 6000 !important;
 }
 
-.user-menu .dropdown-menu{
+.user-menu .dropdown-menu {
   z-index: 6500 !important;
 }
-.user-menu.dropdown-open .dropdown-menu{
-  display:block !important;
+
+.user-menu.dropdown-open .dropdown-menu {
+  display: block !important;
 }
 
 /* =========================
    11) Responsive
    ========================= */
-@media (max-width: 1100px){
-  :root{ --sidebar-w: 250px; }
+@media (max-width: 1100px) {
+  :root {
+    --sidebar-w: 250px;
+  }
 }
 
-@media (max-width: 980px){
-  .layout{ grid-template-columns: 1fr; }
-
-  .sidebar{
-    position:relative;
-    height:auto;
-    border-right:none;
-    border-bottom:1px solid rgba(30,41,59,.75);
+@media (max-width: 980px) {
+  .layout {
+    grid-template-columns: 1fr;
   }
 
-  .content{ padding: 14px; }
+  .sidebar {
+    position: relative;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid rgba(30, 41, 59, .75);
+  }
 
-  .tenant-dropdown .tenant-list{
-    left:auto;
-    right:0;
+  .content {
+    padding: 14px;
+  }
+
+  .tenant-dropdown .tenant-list {
+    left: auto;
+    right: 0;
     min-width: min(92vw, 380px);
   }
 
   .export-menu,
-  .user-menu .dropdown-menu{
-    right:0;
-    left:auto;
+  .user-menu .dropdown-menu {
+    right: 0;
+    left: auto;
     min-width: min(92vw, 320px);
   }
 }
@@ -681,7 +817,7 @@ button{ cursor:pointer }
 /* =========================
    Loader overlay (global)
    ========================= */
-#loading-overlay{
+#loading-overlay {
   position: fixed;
   inset: 0;
   z-index: 9999;
@@ -698,12 +834,14 @@ button{ cursor:pointer }
 
   transition: opacity .15s ease-out, visibility .15s ease-out;
 }
-#loading-overlay.is-active{
+
+#loading-overlay.is-active {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
 }
-#loading-overlay .loading-card{
+
+#loading-overlay .loading-card {
   display: flex;
   align-items: center;
   gap: 14px;
@@ -712,13 +850,14 @@ button{ cursor:pointer }
   border-radius: 14px;
 
   background: var(--surface, #0f172a);
-  border: 1px solid rgba(30,41,59,.70);
+  border: 1px solid rgba(30, 41, 59, .70);
   box-shadow: var(--shadow, 0 10px 28px rgba(2, 6, 23, .25));
 
   color: var(--text, #e5e7eb);
   font-weight: 600;
 }
-#loading-overlay .spinner{
+
+#loading-overlay .spinner {
   width: 22px;
   height: 22px;
   border-radius: 50%;
@@ -728,30 +867,44 @@ button{ cursor:pointer }
 
   animation: spin .8s linear infinite;
 }
-@keyframes spin{ to{ transform: rotate(360deg); } }
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 /* =========================
    FIX: Sidebar rounding hardening
    ========================= */
-.sidebar .nav-item{ border-radius:14px !important; }
-.sidebar details.nav-dropdown .tenant-list.nav-submenu{ border-radius:14px !important; }
+.sidebar .nav-item {
+  border-radius: 14px !important;
+}
+
+.sidebar details.nav-dropdown .tenant-list.nav-submenu {
+  border-radius: 14px !important;
+}
+
 .sidebar .nav-submenu .nav-subitem,
-.sidebar a.tenant-option.nav-subitem{
-  border-radius:12px !important;
-  overflow:hidden;
+.sidebar a.tenant-option.nav-subitem {
+  border-radius: 12px !important;
+  overflow: hidden;
 }
 
 /* Sidebar submenu: optimización para animación por JS */
-.sidebar details.nav-dropdown .tenant-list.nav-submenu{
+.sidebar details.nav-dropdown .tenant-list.nav-submenu {
   will-change: height, opacity, transform;
   contain: layout paint;
 }
-@media (prefers-reduced-motion: reduce){
-  .sidebar details.nav-dropdown .tenant-list.nav-submenu{ will-change:auto; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar details.nav-dropdown .tenant-list.nav-submenu {
+    will-change: auto;
+  }
 }
 
 /* =========================================================
-   ✅ EMPTY STATE (GLOBAL UNIFICADO, SIDEBAR VISIBLE)
+   EMPTY STATE (GLOBAL UNIFICADO, SIDEBAR VISIBLE)
    Objetivo:
    - Siempre centrado en el área de contenido (columna derecha)
    - Debajo de la topbar si existe
@@ -762,14 +915,14 @@ button{ cursor:pointer }
    ========================================================= */
 
 /* Wrapper base */
-.empty-state{
+.empty-state {
   display: grid;
   place-items: center;
   padding: 28px;
 }
 
 /* Tarjeta base */
-.empty-state .empty-card{
+.empty-state .empty-card {
   width: min(680px, 100%);
   padding: 28px 32px;
   text-align: center;
@@ -784,12 +937,21 @@ button{ cursor:pointer }
 }
 
 /* Tipografías */
-.empty-state .empty-card h2{ margin: 0 0 10px; }
-.empty-state .empty-card p{ margin: 0 0 10px; color: rgba(229,231,235,.90); }
-.empty-state .empty-card p:last-child{ margin-bottom: 0; }
+.empty-state .empty-card h2 {
+  margin: 0 0 10px;
+}
+
+.empty-state .empty-card p {
+  margin: 0 0 10px;
+  color: rgba(229, 231, 235, .90);
+}
+
+.empty-state .empty-card p:last-child {
+  margin-bottom: 0;
+}
 
 /* Caso A: empty-state como contenido principal (debajo topbar) */
-.content > .empty-state{
+.content>.empty-state {
   /* ocupa el “resto” del alto del content para centrar bajo topbar */
   flex: 1 1 auto;
   display: grid;
@@ -798,32 +960,32 @@ button{ cursor:pointer }
 }
 
 /* Evita offsets por márgenes antiguos */
-.content > .empty-state .empty-card{
+.content>.empty-state .empty-card {
   margin: 0 auto !important;
 }
 
 /* Caso B: dentro de card-body, único hijo */
-.card .card-body > .empty-state:only-child{
+.card .card-body>.empty-state:only-child {
   min-height: clamp(280px, 55vh, 720px);
   padding: 28px;
 }
 
 /* =========================================================
-   ✅ EMPTY STATE (GLOBAL UNIFICADO, SIDEBAR VISIBLE)
+   EMPTY STATE (GLOBAL UNIFICADO, SIDEBAR VISIBLE)
    - Funciona aunque .empty-state venga anidado (ej: embed_wrap)
    - Centrado en el área de contenido (columna derecha)
    - Bajo topbar, sin esconder sidebar
    ========================================================= */
 
 /* Wrapper base */
-.empty-state{
+.empty-state {
   display: grid;
   place-items: center;
   padding: 28px;
 }
 
 /* Tarjeta base */
-.empty-state .empty-card{
+.empty-state .empty-card {
   width: min(680px, 100%);
   padding: 28px 32px;
   text-align: center;
@@ -838,9 +1000,18 @@ button{ cursor:pointer }
 }
 
 /* Tipografías */
-.empty-state .empty-card h2{ margin: 0 0 10px; }
-.empty-state .empty-card p{ margin: 0 0 10px; color: rgba(229,231,235,.90); }
-.empty-state .empty-card p:last-child{ margin-bottom: 0; }
+.empty-state .empty-card h2 {
+  margin: 0 0 10px;
+}
+
+.empty-state .empty-card p {
+  margin: 0 0 10px;
+  color: rgba(229, 231, 235, .90);
+}
+
+.empty-state .empty-card p:last-child {
+  margin-bottom: 0;
+}
 
 /* =========================================================
    FIX CLAVE: empty-state anidado (embed_wrap, wrappers, cards)
@@ -849,7 +1020,7 @@ button{ cursor:pointer }
    ========================================================= */
 
 /* Asegura que .content pueda “alojar” centrado vertical consistente */
-.content{
+.content {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -857,17 +1028,15 @@ button{ cursor:pointer }
 
 /* Cualquier empty-state dentro del área de contenido:
    centra respecto al viewport descontando topbar + paddings típicos */
-.content .empty-state{
-  min-height: clamp(
-    280px,
-    calc(100vh - var(--topbar-h, 64px) - 48px),
-    100vh
-  );
+.content .empty-state {
+  min-height: clamp(280px,
+      calc(100vh - var(--topbar-h, 64px) - 48px),
+      100vh);
 }
 
 /* Si el empty-state está dentro de una card-body y es el único hijo,
    le damos una altura más “card-friendly” (sin forzar 100vh) */
-.card .card-body > .empty-state:only-child{
+.card .card-body>.empty-state:only-child {
   min-height: clamp(280px, 55vh, 720px);
 }
 
@@ -876,16 +1045,16 @@ button{ cursor:pointer }
    ========================= */
 
 /* Contenedor del dropdown (perfil) */
-.user-menu{
-  position:relative !important;
-  display:inline-flex;
-  align-items:center;
+.user-menu {
+  position: relative !important;
+  display: inline-flex;
+  align-items: center;
   z-index: 6000 !important;
 }
 
 /* Menú desplegable (misma estética que export-menu) */
-.user-menu .dropdown-menu{
-  position:absolute;
+.user-menu .dropdown-menu {
+  position: absolute;
   top: calc(100% + 10px);
   right: 0;
 
@@ -904,22 +1073,22 @@ button{ cursor:pointer }
 }
 
 /* Estado abierto (lo usas desde JS) */
-.user-menu.dropdown-open .dropdown-menu{
+.user-menu.dropdown-open .dropdown-menu {
   display: block !important;
 }
 
 /* Reset básico del form para que no meta márgenes */
-.user-menu .dropdown-menu form{
+.user-menu .dropdown-menu form {
   margin: 0;
 }
 
 /* Botones/items del dropdown */
-.user-menu .dropdown-menu button{
-  width:100%;
-  text-align:left;
+.user-menu .dropdown-menu button {
+  width: 100%;
+  text-align: left;
 
-  padding:10px 12px;
-  border-radius:12px;
+  padding: 10px 12px;
+  border-radius: 12px;
 
   border: 1px solid transparent;
   background: transparent;
@@ -931,21 +1100,22 @@ button{ cursor:pointer }
   transition: background .12s ease, border-color .12s ease, transform .08s ease;
 }
 
-.user-menu .dropdown-menu button:hover{
+.user-menu .dropdown-menu button:hover {
   background: var(--dropdown-item-hover);
-  border-color: rgba(59,130,246,.26);
+  border-color: rgba(59, 130, 246, .26);
 }
 
-.user-menu .dropdown-menu button:active{
+.user-menu .dropdown-menu button:active {
   transform: translateY(1px);
 }
 
 /* Opcional: estilo “peligro” SOLO para cerrar sesión */
-.user-menu .dropdown-menu button[type="submit"]{
+.user-menu .dropdown-menu button[type="submit"] {
   color: #fecaca;
 }
-.user-menu .dropdown-menu button[type="submit"]:hover{
-  background: rgba(239,68,68,.12);
-  border-color: rgba(239,68,68,.28);
+
+.user-menu .dropdown-menu button[type="submit"]:hover {
+  background: rgba(239, 68, 68, .12);
+  border-color: rgba(239, 68, 68, .28);
   color: #fff;
 }

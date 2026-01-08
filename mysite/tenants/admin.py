@@ -190,8 +190,36 @@ class TenantDashboardEmbedAdmin(admin.ModelAdmin):
     )
 
 
+class TenantCredentialsAdminForm(forms.ModelForm):
+    class Meta:
+        model = TenantCredentials
+        fields = (
+            "tenant_id",
+            "tenant_name",
+            "alarms_one_id",
+            "logs360siem_id",
+            "site24x7_id",
+            "username",
+            "password",
+            "is_active",
+        )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        inst = getattr(self, "instance", None)
+        if inst and getattr(inst, "pk", None):
+            self.initial["username"] = inst.username_plain
+            self.initial["password"] = inst.password_plain
+
+        # Mostrar contraseña en claro solo cuando el admin pulsa "ver"
+        pwd_field = self.fields.get("password")
+        if pwd_field:
+            pwd_field.widget = forms.PasswordInput(render_value=True)
+
+
 @admin.register(TenantCredentials)
 class TenantCredentialsAdmin(admin.ModelAdmin):
+    form = TenantCredentialsAdminForm
     list_display = (
         "tenant_id",
         "tenant_name",

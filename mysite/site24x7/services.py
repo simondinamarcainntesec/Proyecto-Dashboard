@@ -188,7 +188,7 @@ def fetch_anomaly_summary(
     if monitor_type:
         params["monitor_type"] = monitor_type
 
-    # ✅ Solo para periodo personalizado
+    # Solo para periodo personalizado
     if int(period) == 50 and start_ms and end_ms:
         params["start_time"] = int(start_ms)
         params["end_time"] = int(end_ms)

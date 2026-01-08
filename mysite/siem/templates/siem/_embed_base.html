@@ -1,6 +1,7 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -28,7 +29,7 @@
 
       <div class="top-left">
         <h1 class="top-title">
-          Tenant:
+          Cliente:
           {% if request.user.tenant.name|lower == "inntesec" %}
           <details class="tenant-dropdown">
             <summary class="tenant-summary">
@@ -88,16 +89,16 @@
 
     <section class="wrap">
       {% block embed_wrap %}
-        <div class="card">
-          <div class="card-head siem-card-head">
-            <h3>{{ page_title|default:"SIEM" }}</h3>
-            <button id="theme-switcher" type="button" aria-label="Cambiar tema"></button>
-          </div>
-
-          <div class="card-body">
-            {% block embed_body %}{% endblock %}
-          </div>
+      <div class="card">
+        <div class="card-head siem-card-head">
+          <h3>{{ page_title|default:"SIEM" }}</h3>
+          <button id="theme-switcher" type="button" aria-label="Cambiar tema"></button>
         </div>
+
+        <div class="card-body">
+          {% block embed_body %}{% endblock %}
+        </div>
+      </div>
       {% endblock %}
     </section>
   </div>
@@ -110,7 +111,8 @@
   <script defer src="{% static 'js/cred_modal.js' %}?v={% now 'U' %}"></script>
   <script src="{% static 'js/chat_popup_launcher.js' %}?v={% now 'U' %}"></script>
   <script defer src="{% static 'js/sidebar_animation.js' %}?v={% now 'U' %}"></script>
-  <script defer src="{% static 'js/coach_allinone.js' %}?v={% now 'U' %}"></script>  <script defer src="{% static 'js/iframe-loader.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/coach_allinone.js' %}?v={% now 'U' %}"></script>
+  <script defer src="{% static 'js/iframe-loader.js' %}?v={% now 'U' %}"></script>
   {% include 'partials/config_notificaciones_modal.html' %}
   {% include 'partials/_country_filter_modal.html' %}
   {% include 'partials/cred_modal.html' %}
@@ -120,4 +122,5 @@
   </script>
   <script defer src="{% static 'js/retell_open_popup.js' %}?v={% now 'U' %}"></script>
 </body>
+
 </html>

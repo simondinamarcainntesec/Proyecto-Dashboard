@@ -44,7 +44,7 @@
   const elClosedBy = Q('#tkt-closed-by');
   const elClosedAt = Q('#tkt-closed-at');
 
-  // ✅ initial notes (comentario inicial)
+  // initial notes (comentario inicial)
   const wrapInitialNotes = Q('#tkt-initial-notes-wrap');
   const elInitialNotes = Q('#tkt-initial-notes');
 
@@ -99,15 +99,25 @@
     }
   }
 
+  // OPEN / CLOSED / OVERDUE
   function setStatusBadge(status) {
     const st = (status || 'OPEN').toUpperCase();
-    if (st === 'OPEN') {
-      elStatusBadge.innerHTML = `<span class="state-badge is-open">Abierto</span>`;
-      if (btnOpenClose) btnOpenClose.style.display = '';
-    } else {
+
+    if (st === 'CLOSED') {
       elStatusBadge.innerHTML = `<span class="state-badge is-closed">Cerrado</span>`;
       if (btnOpenClose) btnOpenClose.style.display = 'none';
+      return;
     }
+
+    if (st === 'OVERDUE') {
+      elStatusBadge.innerHTML = `<span class="state-badge is-overdue">Vencido</span>`;
+      if (btnOpenClose) btnOpenClose.style.display = ''; // sigue cerrable
+      return;
+    }
+
+    // OPEN (default)
+    elStatusBadge.innerHTML = `<span class="state-badge is-open">Abierto</span>`;
+    if (btnOpenClose) btnOpenClose.style.display = '';
   }
 
   function getCookie(name) {
@@ -218,7 +228,7 @@
     const closedBy = (tr.dataset.closedBy || '').trim();
     const closedAt = (tr.dataset.closedAt || '').trim();
 
-    // ✅ comentario inicial (data-initial-notes => dataset.initialNotes)
+    // comentario inicial (data-initial-notes => dataset.initialNotes)
     const initialNotes = (tr.dataset.initialNotes || '').trim();
 
     // observaciones/cierre
@@ -236,7 +246,13 @@
     elOpened.textContent = opened;
     elUpdated.textContent = updated;
     elTenant.textContent = tenant;
+
     elDue.textContent = due ? formatLongCL(due) : '—';
+
+    // poner due en rojo si está OVERDUE
+    const stUp = (status || 'OPEN').toUpperCase();
+    if (elDue) elDue.classList.toggle('is-overdue', stUp === 'OVERDUE');
+
     setStatusBadge(status);
 
     elAlarmId.textContent = alarmId;
@@ -278,7 +294,7 @@
       }
     }
 
-    // ✅ Comentario inicial dentro del mismo grid (mostrar SIEMPRE si viene)
+    // Comentario inicial dentro del mismo grid (mostrar SIEMPRE si viene)
     if (wrapInitialNotes && elInitialNotes) {
       if (initialNotes) {
         wrapInitialNotes.style.display = '';
@@ -328,7 +344,7 @@
   closeX?.addEventListener('click', closeCloseNotesModal);
   closeCancel?.addEventListener('click', (ev) => { stopAll(ev); closeCloseNotesModal(); });
 
-  // ✅ éxito estilo "Exportación": NO cerrar al click en backdrop, solo OK
+  // éxito estilo "Exportación": NO cerrar al click en backdrop, solo OK
   // successBackdrop?.addEventListener('click', closeSuccessModalAndReload); // intencionalmente OFF
   successOk?.addEventListener('click', (ev) => { stopAll(ev); closeSuccessModalAndReload(); });
 
@@ -347,7 +363,7 @@
     closeModalDetailFully();
   });
 
-  // ✅ Submit por AJAX: cierra 2 modales y abre éxito
+  // Submit por AJAX: cierra 2 modales y abre éxito
   closeForm?.addEventListener('submit', async (ev) => {
     stopAll(ev);
     if (!selectedRow || !closeForm.action) return;
@@ -379,7 +395,7 @@
         return;
       }
 
-      // ✅ actualizar dataset local (por si vuelve a abrir sin reload)
+      // actualizar dataset local (por si vuelve a abrir sin reload)
       selectedRow.dataset.status = 'CLOSED';
       selectedRow.dataset.notes = (fd.get('notes') || '').toString();
 

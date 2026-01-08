@@ -2,8 +2,8 @@
 
 /* Ajustes globales */
 :root{
-  --tf-field-width: 360px; /* ⬅️ tamaño inputs */
-  --tf-box-width: 480px;   /* ⬅️ tamaño del cuadro */
+  --tf-field-width: 360px; /* ⬅ tamaño inputs */
+  --tf-box-width: 480px;   /* ⬅ tamaño del cuadro */
 }
 
 /* que la caja crezca según contenido */

@@ -1,23 +1,26 @@
 /* ============================================================
    Altura total del documento
 ============================================================ */
-html, body { height: 100%; }
+html,
+body {
+  height: 100%;
+}
 
 /* Un poco de aire al final del contenido */
-.content .wrap{
+.content .wrap {
   padding-bottom: 28px;
 }
 
 /* ============================================================
    Cabecera de la card
 ============================================================ */
-.site24x7-card-head{
-  display:flex;
-  align-items:center;
+.site24x7-card-head {
+  display: flex;
+  align-items: center;
   gap: 12px;
 }
 
-#theme-switcher{
+#theme-switcher {
   padding: 10px 14px;
   border-radius: 999px;
   cursor: pointer;
@@ -28,16 +31,18 @@ html, body { height: 100%; }
   transition: color 0.3s, border-color 0.3s, background-color 0.3s;
 }
 
-#theme-switcher:hover{
+#theme-switcher:hover {
   background-color: rgba(148, 163, 184, 0.15);
 }
 
-[data-theme="dark"] #theme-switcher{ border-color: #444; }
+[data-theme="dark"] #theme-switcher {
+  border-color: #444;
+}
 
 /* ============================================================
    Iframe container
 ============================================================ */
-.iframe-container{
+.iframe-container {
   position: relative;
   width: 100%;
   height: calc(100vh - 220px);
@@ -48,7 +53,7 @@ html, body { height: 100%; }
   padding: 0;
 }
 
-.iframe-container iframe{
+.iframe-container iframe {
   width: 100%;
   height: 100%;
   border: 0;
@@ -57,7 +62,7 @@ html, body { height: 100%; }
   transition: filter 0.25s ease;
 }
 
-[data-theme="dark"] .iframe-container iframe{
+[data-theme="dark"] .iframe-container iframe {
   filter: invert(0.9) hue-rotate(180deg) contrast(1.05);
   transform: translateZ(0);
 }
@@ -65,18 +70,27 @@ html, body { height: 100%; }
 /* ============================================================
    Topbar + User Dropdown (capas)
 ============================================================ */
-.topbar{ position: relative; z-index: 50; }
+.topbar {
+  position: relative;
+  z-index: 50;
+}
 
-.user-menu{ position: relative; z-index: 900; }
-.user-menu .dropdown-menu{ z-index: 1000 !important; }
+.user-menu {
+  position: relative;
+  z-index: 900;
+}
 
-.user-menu.is-open .dropdown-menu,
-.user-menu.open .dropdown-menu,
-.user-menu.active .dropdown-menu{
+.user-menu .dropdown-menu {
   z-index: 1000 !important;
 }
 
-.iframe-click-shield{
+.user-menu.is-open .dropdown-menu,
+.user-menu.open .dropdown-menu,
+.user-menu.active .dropdown-menu {
+  z-index: 1000 !important;
+}
+
+.iframe-click-shield {
   position: absolute;
   top: 0;
   right: 0;
@@ -87,5 +101,11 @@ html, body { height: 100%; }
   z-index: 500;
 }
 
-.brand-nowrap{ white-space: nowrap; display: inline-block; }
-.hidden{ display: none !important; }
+.brand-nowrap {
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.hidden {
+  display: none !important;
+}

@@ -37,11 +37,36 @@ document.addEventListener("DOMContentLoaded", () => {
   const toggleCorreo = document.getElementById("toggleCorreo");
   const toggleTelegram = document.getElementById("toggleTelegram");
 
+  const phoneInput = document.getElementById("phone");
+  const phoneError = document.getElementById("phoneError");
+
   const franja = document.getElementById("franjaHoraria");
   const telSeverity = document.getElementById("telSeverity");
   const mailSeverity = document.getElementById("mailSeverity");
   const tgSeverity = document.getElementById("tgSeverity");
   const qrContainer = document.getElementById("qrTelegram");
+
+  // NUEVO: contenedor del input de teléfono
+  const telNumberWrap = document.getElementById("telNumberWrap");
+
+  function clearPhoneError() {
+    if (phoneError) {
+      phoneError.textContent = "";
+      phoneError.classList.add("hidden");
+    }
+    if (phoneInput) phoneInput.classList.remove("input-error");
+  }
+
+  function showPhoneError(msg) {
+    if (phoneError) {
+      phoneError.textContent = msg;
+      phoneError.classList.remove("hidden");
+    }
+    if (phoneInput) {
+      phoneInput.classList.add("input-error");
+      phoneInput.focus();
+    }
+  }
 
   // ============================
   // Rellenar selects de horario
@@ -99,6 +124,29 @@ document.addEventListener("DOMContentLoaded", () => {
   if (form) {
     form.addEventListener("submit", async (e) => {
       e.preventDefault(); // Evita el submit normal
+      clearPhoneError();
+
+      if (toggleTelefono && toggleTelefono.checked) {
+        const raw = (phoneInput?.value || "").trim();
+        const compact = raw.replace(/[\s-]/g, "");
+
+        if (!raw) {
+          showPhoneError("Ingresa tu número con código de país, ej: +56912345678.");
+          return;
+        }
+
+        if (!compact.startsWith("+")) {
+          showPhoneError("Debe incluir el símbolo + y el código de país, ej: +56912345678.");
+          return;
+        }
+
+        if (!/^\+\d{7,15}$/.test(compact)) {
+          showPhoneError("Formato inválido: usa + y entre 7 y 15 dígitos.");
+          return;
+        }
+
+        if (phoneInput) phoneInput.value = compact;
+      }
       const loader = document.getElementById("loading-overlay");
 
       // Asegura que el loader esté oculto antes de empezar
@@ -118,6 +166,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!res.ok) {
           console.error("Error guardando preferencias", res.status);
+
+          // Opcional: si tu backend devuelve JSON con error (status 400)
+          // puedes leerlo para loguear detalle:
+          try {
+            const data = await res.json();
+            if (data && data.error) {
+              console.error("Detalle:", data.error);
+              showPhoneError(data.error || data.message);
+            } else if (data && data.message) {
+              showPhoneError(data.message);
+            }
+          } catch (_) { }
+
           return;
         }
 
@@ -142,13 +203,18 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ============================
-  // Teléfono: franja horaria + severidad
+  // Teléfono: franja horaria + severidad + número (NUEVO)
   // ============================
   if (toggleTelefono) {
     function updateTelefono() {
       const show = toggleTelefono.checked;
       if (franja) franja.classList.toggle("hidden", !show);
       if (telSeverity) telSeverity.classList.toggle("hidden", !show);
+
+      // NUEVO: mostrar/ocultar input teléfono
+      if (telNumberWrap) telNumberWrap.classList.toggle("hidden", !show);
+
+      if (!show) clearPhoneError();
     }
 
     toggleTelefono.addEventListener("change", updateTelefono);

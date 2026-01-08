@@ -1,59 +1,110 @@
 /* === Toolbar layout === */
-.toolbar { padding: 8px 0 14px; }
-.toolbar-row{
-  display:flex; align-items:center; gap:12px;
-  border:1px solid var(--border, #1e293b); border-radius:14px;
-  padding:10px; background:var(--card,#0f1d35);
+.toolbar {
+  padding: 8px 0 14px;
 }
 
-.tb-left{ display:flex; gap:8px; align-items:center; min-width:360px; }
-.tb-spacer{ flex:1 1 auto; } /* empuja fechas a la derecha */
-
-.tb-right{
-  display:flex; align-items:center; gap:10px;
-  justify-content:flex-end;
-  margin-left:auto;
-  flex-wrap:wrap;
+.toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border, #1e293b);
+  border-radius: 14px;
+  padding: 10px;
+  background: var(--card, #0f1d35);
 }
 
-.tb-left input[type="search"]{
-  width:min(520px, 42vw);
-  background:#0f1b31; color:#e5e7eb; border:1px solid #1e293b;
-  border-radius:12px; padding:10px 12px;
+.tb-left {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 360px;
 }
 
-.btn.primary{
-  background:var(--brand,#3b82f6); color:#fff; border:0;
-  padding:8px 12px; border-radius:12px; font-weight:700;
-}
-.btn.ghost{
-  background:transparent; border:1px solid var(--border,#1e293b);
-  color:var(--text,#e5e7eb); padding:8px 12px; border-radius:12px;
-}
-.btn.ghost-sm{
-  background:transparent; border:1px solid var(--border,#1e293b);
-  color:var(--text,#e5e7eb); padding:8px 10px; border-radius:12px; font-size:12px;
+.tb-spacer {
+  flex: 1 1 auto;
 }
 
-.chip-btn{
-  padding:6px 10px; border-radius:999px;
-  border:1px solid var(--border,#1e293b); background:#0f1b31; color:var(--text,#e5e7eb);
-  font-weight:600; cursor:pointer;
+/* empuja fechas a la derecha */
+
+.tb-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-left: auto;
+  flex-wrap: wrap;
 }
-.chip-btn.is-active{ background:rgba(255,255,255,.06); }
+
+.tb-left input[type="search"] {
+  width: min(520px, 42vw);
+  background: #0f1b31;
+  color: #e5e7eb;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.btn.primary {
+  background: var(--brand, #3b82f6);
+  color: #fff;
+  border: 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.btn.ghost {
+  background: transparent;
+  border: 1px solid var(--border, #1e293b);
+  color: var(--text, #e5e7eb);
+  padding: 8px 12px;
+  border-radius: 12px;
+}
+
+.btn.ghost-sm {
+  background: transparent;
+  border: 1px solid var(--border, #1e293b);
+  color: var(--text, #e5e7eb);
+  padding: 8px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.chip-btn {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border, #1e293b);
+  background: #0f1b31;
+  color: var(--text, #e5e7eb);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chip-btn.is-active {
+  background: rgba(255, 255, 255, .06);
+}
 
 /* === Date range (icono blanco sin hueco y clickeable) === */
-.date-range{
+.date-range {
   position: relative;
-  display:flex; align-items:center; gap:8px;
-  padding:6px 10px; border:1px solid var(--border,#1e293b); border-radius:12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--border, #1e293b);
+  border-radius: 12px;
 }
-.date-range input[type="date"]{
-  background:transparent; color:var(--text,#e5e7eb); border:0; outline:0;
+
+.date-range input[type="date"] {
+  background: transparent;
+  color: var(--text, #e5e7eb);
+  border: 0;
+  outline: 0;
   color-scheme: dark;
   padding-right: 30px;
 }
-.date-range input[type="date"]::-webkit-calendar-picker-indicator{
+
+.date-range input[type="date"]::-webkit-calendar-picker-indicator {
   opacity: 0;
   width: 0;
   height: 0;
@@ -61,11 +112,14 @@
   margin: 0;
   pointer-events: none;
 }
-.date-range::after{
+
+.date-range::after {
   content: "";
   position: absolute;
-  right: 10px; top: 50%;
-  width: 18px; height: 18px;
+  right: 10px;
+  top: 50%;
+  width: 18px;
+  height: 18px;
   transform: translateY(-50%);
   background: no-repeat center / contain;
   pointer-events: none;
@@ -73,87 +127,166 @@
 }
 
 /* === Tabla === */
-.table-wrap{ overflow:auto; border:1px solid var(--border,#1e293b); border-radius:12px; }
-.tbl{
-  width:100%; border-collapse:separate; border-spacing:0; font-size:13px; table-layout:auto;
+.table-wrap {
+  overflow: auto;
+  border: 1px solid var(--border, #1e293b);
+  border-radius: 12px;
 }
-.tbl thead th{
-  position:sticky; top:0; z-index:1; background:var(--panel,#0f1b31);
-  text-align:left; font-weight:700; padding:10px 12px; border-bottom:1px solid var(--border,#1e293b); white-space:nowrap;
-}
-.tbl tbody td{
-  padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.06); vertical-align:middle;
-}
-.tbl tbody tr:nth-child(odd){ background:rgba(255,255,255,0.02); }
-.tbl tbody tr:hover{ background:rgba(255,255,255,0.06); }
 
-.mono{ font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace; }
-.nowrap{ white-space:nowrap; }
-.w-240{ max-width:240px; overflow:hidden; text-overflow:ellipsis; }
-.w-320{ max-width:320px; overflow:hidden; text-overflow:ellipsis; }
+.tbl {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  table-layout: auto;
+}
+
+.tbl thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--panel, #0f1b31);
+  text-align: left;
+  font-weight: 700;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border, #1e293b);
+  white-space: nowrap;
+}
+
+.tbl tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  vertical-align: middle;
+}
+
+.tbl tbody tr:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tbl tbody tr:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.w-240 {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.w-320 {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* Severidad pills (texto SIEMPRE blanco) */
-.pill{
-  display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; font-weight:800;
-  line-height:1.6; letter-spacing:.2px; color:#fff;
+.pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.6;
+  letter-spacing: .2px;
+  color: #fff;
 }
 
 /* crítico = rojo */
-.sev-critical{
-  background:#dc262633;
-  border:1px solid #dc2626aa;
-  color:#fff;
+.sev-critical {
+  background: #dc262633;
+  border: 1px solid #dc2626aa;
+  color: #fff;
 }
 
 /* alto = naranja */
-.sev-high{
-  background:#f9731633;
-  border:1px solid #f97316aa;
-  color:#fff;
+.sev-high {
+  background: #f9731633;
+  border: 1px solid #f97316aa;
+  color: #fff;
 }
 
 /* medio = amarillo */
-.sev-medium{
-  background:#f59e0b33;
-  border:1px solid #f59e0baa;
-  color:#fff;
+.sev-medium {
+  background: #f59e0b33;
+  border: 1px solid #f59e0baa;
+  color: #fff;
 }
 
 /* bajo = celeste */
-.sev-low{
-  background:#38bdf833;
-  border:1px solid #38bdf8aa;
-  color:#fff;
+.sev-low {
+  background: #38bdf833;
+  border: 1px solid #38bdf8aa;
+  color: #fff;
 }
 
 /* opcional: info y n/a */
-.sev-info{
-  background:#60a5fa33; border:1px solid #60a5faaa; color:#fff;
+.sev-info {
+  background: #60a5fa33;
+  border: 1px solid #60a5faaa;
+  color: #fff;
 }
-.sev-na{
-  background:#6b728033; border:1px solid #6b7280aa; color:#fff;
+
+.sev-na {
+  background: #6b728033;
+  border: 1px solid #6b7280aa;
+  color: #fff;
 }
 
 /* Paginación */
-.paginate{ display:flex; gap:8px; justify-content:flex-end; margin-top:10px; }
-.paginate a,.paginate span{
-  padding:6px 10px; border:1px solid var(--border,#1e293b);
-  border-radius:10px; text-decoration:none; color:var(--text,#e5e7eb);
+.paginate {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 10px;
 }
-.paginate .current{ background:rgba(255,255,255,0.06); font-weight:700; }
+
+.paginate a,
+.paginate span {
+  padding: 6px 10px;
+  border: 1px solid var(--border, #1e293b);
+  border-radius: 10px;
+  text-decoration: none;
+  color: var(--text, #e5e7eb);
+}
+
+.paginate .current {
+  background: rgba(255, 255, 255, 0.06);
+  font-weight: 700;
+}
 
 /* Topbar tenant */
-.tenant-selector{
-  background:#0f1b31; border:1px solid #1e293b; color:#e5e7eb;
-  border-radius:10px; padding:6px 8px;
+.tenant-selector {
+  background: #0f1b31;
+  border: 1px solid #1e293b;
+  color: #e5e7eb;
+  border-radius: 10px;
+  padding: 6px 8px;
 }
 
 /* === Modal === */
-body.modal-open { overflow: hidden; }
+body.modal-open {
+  overflow: hidden;
+}
 
 /* CAMBIO: subir z-index del modal por encima de .topbar (base.css usa ~5000) */
-.modal { position: fixed; inset: 0; z-index: 7000 !important; display: none; }
-.modal:not(.hidden) { display: block; }
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 7000 !important;
+  display: none;
+}
+
+.modal:not(.hidden) {
+  display: block;
+}
 
 .modal-backdrop {
   position: absolute;
@@ -173,29 +306,80 @@ body.modal-open { overflow: hidden; }
   margin: 5vh auto;
   padding: 16px;
   color: var(--text, #e5e7eb);
-  box-shadow: 0 10px 28px rgba(2,6,23,.35);
+  box-shadow: 0 10px 28px rgba(2, 6, 23, .35);
 }
 
-.modal-header { display: flex; justify-content: space-between; align-items: center;
-  padding-bottom: 8px; border-bottom: 1px solid var(--border, #1e293b); margin-bottom: 12px; }
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border, #1e293b);
+  margin-bottom: 12px;
+}
 
-.modal-close { background: transparent; border: 1px solid var(--border, #1e293b);
-  border-radius: 8px; color: var(--text, #e5e7eb); padding: 4px 8px; cursor: pointer; }
+.modal-close {
+  background: transparent;
+  border: 1px solid var(--border, #1e293b);
+  border-radius: 8px;
+  color: var(--text, #e5e7eb);
+  padding: 4px 8px;
+  cursor: pointer;
+}
 
-.modal-close:hover { background: rgba(255, 255, 255, 0.08); }
+.modal-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
 
-.modal-body { display: flex; flex-direction: column; gap: 12px; max-height: 65vh; overflow-y: auto; }
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 65vh;
+  overflow-y: auto;
+}
 
-.block { background:#0f1b31; border:1px solid #1e293b; border-radius:12px; padding:12px 14px; }
-.block h4 { margin:.1rem 0 .6rem; font-size:14px; letter-spacing:.3px; text-transform:uppercase; color:#cbd5e1; }
-.block p { margin:.35rem 0; line-height:1.5; color:#cbd5e1; }
+.block {
+  background: #0f1b31;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
 
-.stacked { list-style:none; padding:0; margin:0; }
-.stacked li { padding:4px 0; border-bottom:1px dashed rgba(255,255,255,0.06); }
-.stacked li:last-child { border-bottom:0; }
-.muted { opacity:.92; }
+.block h4 {
+  margin: .1rem 0 .6rem;
+  font-size: 14px;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+  color: #cbd5e1;
+}
 
-#incidentModal .modal-card{
+.block p {
+  margin: .35rem 0;
+  line-height: 1.5;
+  color: #cbd5e1;
+}
+
+.stacked {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.stacked li {
+  padding: 4px 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+}
+
+.stacked li:last-child {
+  border-bottom: 0;
+}
+
+.muted {
+  opacity: .92;
+}
+
+#incidentModal .modal-card {
   max-width: min(1400px, calc(100% - 64px));
   width: 100%;
 }
@@ -248,28 +432,28 @@ body.modal-open { overflow: hidden; }
 }
 
 /* =========================
-   ✅ NUEVO: Selects de filtros (Severidad / Asignación)
+   NUEVO: Selects de filtros (Severidad / Asignación)
    - mismo look que chips/inputs
    ========================= */
 
-.sel-filter{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
+.sel-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.sel-filter > span{
-  font-size:12px;
-  opacity:.85;
-  white-space:nowrap;
-  color: var(--text,#e5e7eb);
+.sel-filter>span {
+  font-size: 12px;
+  opacity: .85;
+  white-space: nowrap;
+  color: var(--text, #e5e7eb);
 }
 
-.filter-select{
+.filter-select {
   height: 36px;
   padding: 0 36px 0 12px;
   border-radius: 12px;
-  border: 1px solid var(--border,#1e293b);
+  border: 1px solid var(--border, #1e293b);
   background: #0f1b31;
   color: #e5e7eb;
 
@@ -287,12 +471,12 @@ body.modal-open { overflow: hidden; }
   background-size: 16px 16px;
 }
 
-.filter-select:focus{
-  border-color: rgba(59,130,246,.65);
-  box-shadow: 0 0 0 3px rgba(59,130,246,.18);
+.filter-select:focus {
+  border-color: rgba(59, 130, 246, .65);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, .18);
 }
 
-.filter-select option{
+.filter-select option {
   background: #0f1b31;
   color: #e5e7eb;
 }
@@ -302,28 +486,141 @@ body.modal-open { overflow: hidden; }
    ========================================== */
 
 /* Labels de filtros (Severidad / Asignación) */
-.toolbar .sel-filter > span{
+.toolbar .sel-filter>span {
   color: #ffffff !important;
   opacity: 1 !important;
-  font-size: 12px;          /* mismo tamaño que tus labels */
+  font-size: 12px;
+  /* mismo tamaño que tus labels */
   font-weight: 600;
 }
 
 /* Botón/Link Limpiar: forzar look blanco como el resto */
-.toolbar #btn-clear{
+.toolbar #btn-clear {
   color: #ffffff !important;
   opacity: 1 !important;
 }
 
 /* Si por algún motivo Limpiar está como <a> sin clase btn, le damos el look */
-.toolbar #btn-clear:not(.btn){
+.toolbar #btn-clear:not(.btn) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 8px 12px;
   border-radius: 12px;
-  border: 1px solid var(--border,#1e293b);
+  border: 1px solid var(--border, #1e293b);
   text-decoration: none;
   background: transparent;
   font-weight: 700;
+}
+
+/* =========================================================
+   NUEVO: Pills de "Asignado" (tabla + modal)
+   - La tabla ya renderiza .assign-pill, acá dejamos el estilo
+   - El modal usa .inc-assign-pill con el mismo look (foto 1)
+   y con el icono verde de usuario estilo Tickets (foto 2)
+   ========================================================= */
+
+/* Base pill (tabla) */
+.assign-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  border: 1px solid transparent;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.assign-pill .assign-ico {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  opacity: .95;
+}
+
+.assign-pill.is-yes {
+  background: rgba(34, 197, 94, .16);
+  border-color: rgba(34, 197, 94, .55);
+  color: #fff;
+}
+
+.assign-pill.is-no {
+  background: rgba(148, 163, 184, .12);
+  border-color: rgba(148, 163, 184, .45);
+  color: #fff;
+}
+
+/* ===== Modal title: hacerlo "fila" y permitir chip al lado ===== */
+#incidentModal .alert-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Pill del modal: mismo look que tabla + nombre al lado */
+#incidentModal .inc-assign-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  border: 1px solid transparent;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+/* colores iguales a tabla */
+#incidentModal .inc-assign-pill.is-yes {
+  background: rgba(34, 197, 94, .16);
+  border-color: rgba(34, 197, 94, .55);
+  color: #fff;
+}
+
+#incidentModal .inc-assign-pill.is-no {
+  background: rgba(148, 163, 184, .12);
+  border-color: rgba(148, 163, 184, .45);
+  color: #fff;
+}
+
+/* check icon del pill en modal (usa el mismo svg que tabla) */
+#incidentModal .inc-assign-pill .assign-ico {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  opacity: .95;
+}
+
+/* separador discreto */
+#incidentModal .inc-assign-sep {
+  opacity: .75;
+  font-weight: 900;
+}
+
+/* Nombre del asignado (fuerte, como chip pro) */
+#incidentModal .inc-assign-name {
+  font-weight: 900;
+  color: #eaf1ff;
+}
+
+/* ===== Icono de usuario (igual al de tickets: meta-ico is-user) ===== */
+#incidentModal .meta-ico {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  opacity: .95;
+  flex: 0 0 auto;
+}
+
+/* mismo SVG que en soar_tickets.css (.meta-ico.is-user) */
+#incidentModal .meta-ico.is-user {
+  background: no-repeat center/contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2322c55e'%3E%3Cpath d='M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-4.42 0-8 2-8 4v2h16v-2c0-2-3.58-4-8-4z'/%3E%3C/svg%3E");
 }
