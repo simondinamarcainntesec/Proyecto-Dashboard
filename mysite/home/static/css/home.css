@@ -623,3 +623,154 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== Alerta de contrato próximo a expirar ===== */
+.topbar .top-left .contract-warning,
+.topbar .top-title .contract-warning,
+.contract-warning {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.6rem !important;
+  padding: 0.6rem 1rem !important;
+  margin: 0 2rem 0 1rem !important;
+  background: #dc3545 !important;
+  border-radius: 16px !important;
+  font-size: 0.9rem !important;
+  color: #fff !important;
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.5) !important;
+  transition: all 0.3s ease !important;
+  white-space: nowrap !important;
+  text-decoration: none !important;
+}
+
+.topbar .top-left .contract-warning:hover,
+.topbar .top-title .contract-warning:hover,
+.contract-warning:hover {
+  background: #ef4444 !important;
+  box-shadow: 0 6px 16px rgba(220, 53, 69, 0.7) !important;
+  transform: translateY(-2px) !important;
+}
+
+.topbar .top-left .contract-warning .warning-icon,
+.topbar .top-title .contract-warning .warning-icon,
+.contract-warning .warning-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  font-size: 1.2rem !important;
+  flex-shrink: 0 !important;
+  line-height: 1 !important;
+  animation: pulse 2s ease-in-out infinite !important;
+}
+
+.topbar .top-left .contract-warning .warning-text,
+.topbar .top-title .contract-warning .warning-text,
+.contract-warning .warning-text {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.4rem !important;
+  color: #fff !important;
+}
+
+.topbar .top-left .contract-warning strong,
+.topbar .top-title .contract-warning strong,
+.contract-warning strong {
+  font-weight: 800 !important;
+  color: #fff !important;
+}
+
+/* Tooltip al pasar el mouse */
+.topbar .top-left .contract-warning::after,
+.topbar .top-title .contract-warning::after,
+.contract-warning::after {
+  content: "Para renovar su licencia, contactese con su ejecutivo de ventas";
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%) scale(0.9);
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  color: #fff;
+  font-size: 0.813rem;
+  font-weight: 600;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(220, 53, 69, 0.5);
+  border: 2px solid #a71d2a;
+  z-index: 9999 !important;
+  pointer-events: auto !important;
+}
+
+/* Flecha del tooltip */
+.topbar .top-left .contract-warning::before,
+.topbar .top-title .contract-warning::before,
+.contract-warning::before {
+  content: "";
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid #dc3545;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  z-index: 9999 !important;
+  pointer-events: auto !important;
+}
+
+.topbar .top-left .contract-warning:hover::after,
+.topbar .top-title .contract-warning:hover::after,
+.contract-warning:hover::after,
+.topbar .top-left .contract-warning:hover::before,
+.topbar .top-title .contract-warning:hover::before,
+.contract-warning:hover::before {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateX(-50%) scale(1) !important;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .contract-warning {
+    font-size: 0.9rem;
+    padding: 1rem 1.25rem;
+    max-width: 100%;
+  }
+  
+  .contract-warning .warning-icon {
+    font-size: 1.5rem;
+  }
+  
+  .contract-warning::after {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    white-space: normal;
+    max-width: 250px;
+    text-align: center;
+  }
+}

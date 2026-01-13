@@ -42,24 +42,29 @@ app.conf.beat_schedule = {
         "schedule": crontab(minute="20", hour="3"),  # todos los días a las 03:20 AM
     },
 
-    # Ingesta mensual cada 5 minutos (si la quieres periódica además del arranque)
-    #"ingesta-mensual": {
-    #    "task": "integrations.tasks.ingesta_mensual_ciclica",
-    #    "schedule": crontab(minute="*/5"),  # Cada 5 minutos
-    #},
-
-    # Ingesta de alarmas cada 65 minutos (en realidad: cada hora, minuto 5)
-    "ingesta-api-cada-65-min": {
+    # Ingesta de alarmas cada hora, minuto 5
+    "ingesta-api-cada-hora-min5": {
         "task": "integrations.tasks.tarea_ingesta_api",
-        "schedule": crontab(minute="5", hour="*/1"),  # cada hora, en el minuto 5
-        # Si de verdad quieres cada 65 min, conviene usar timedelta(minutes=65)
+        "schedule": crontab(minute="5", hour="*/1"),
     },
-        # ✅ Recordatorio tickets 2 días antes del vencimiento
+
+    # Recordatorio tickets 2 días antes del vencimiento
     "soar-ticket-reminder-due-soon-diario": {
         "task": "soar_tickets.tasks.send_due_soon_reminders",
         "schedule": crontab(minute="0", hour="9"),  # todos los días 09:00 CL
     },
 
+    # ✅ Ingesta contratos (webhook) 1 vez al día
+    "sync-tenants-contracts-webhook-diario": {
+        "task": "integrations.tasks.sync_tenants_contracts_from_webhook",
+        "schedule": crontab(minute="30", hour="3"),  # todos los días 03:30 AM
+    },
+
+    # ✅ Enforce por fecha + sync tenant/users (backup)
+    "contracts-enforce-expiry-diario": {
+        "task": "integrations.tasks.contracts_enforce_expiry_and_sync_tenants",
+        "schedule": crontab(minute="35", hour="3"),  # todos los días 03:35 AM
+    },
 }
 
 # Configuración adicional
@@ -79,9 +84,9 @@ def debug_task(self):
 def at_worker_ready(sender, **kwargs):
     try:
         print("[CELERY STARTUP] Lanzando ingesta mensual y recordatorio de tickets...")
-        sender.app.send_task("integrations.tasks.ingesta_mensual_ciclica")
-        #sender.app.send_task("soar_tickets.tasks.send_due_soon_reminders")
-        #sender.app.send_task("integrations.tasks.tarea_sync_empresas")
+        # sender.app.send_task("integrations.tasks.ingesta_mensual_ciclica")
+        # sender.app.send_task("soar_tickets.tasks.send_due_soon_reminders")
+        # sender.app.send_task("integrations.tasks.tarea_sync_empresas")
+        # sender.app.send_task("integrations.tasks.sync_tenants_contracts_from_webhook")
     except Exception as exc:
         print(f"[CELERY STARTUP] Error: {exc!r}")
-

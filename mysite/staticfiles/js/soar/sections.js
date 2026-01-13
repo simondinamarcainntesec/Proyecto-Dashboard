@@ -7,7 +7,7 @@
   const cardSelector = '.grid-main .card';
   const norm = (v) => String(v || '').toLowerCase().trim();
 
-  // ✅ Chips: ahora son .soar-chip (fallback a .chip por compatibilidad)
+  // Chips: ahora son .soar-chip (fallback a .chip por compatibilidad)
   const chipSelector = '.section-chips .soar-chip, .section-chips .chip';
   const chips = $$(chipSelector);
 
@@ -66,7 +66,7 @@
 
   function getActiveSec() {
     const params = new URLSearchParams(window.location.search);
-    // ✅ Lee ?sec=... o el chip activo actual (soar-chip/chip)
+    // Lee ?sec=... o el chip activo actual (soar-chip/chip)
     const activeChip = $(`${chipSelector}.active`);
     return norm(params.get('sec') || (activeChip?.dataset.sec) || 'all');
   }

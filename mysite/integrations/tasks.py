@@ -13,11 +13,15 @@ import httpx
 from celery import shared_task
 from django.conf import settings
 from django.db import connection
-
+from django.db import transaction
+from django.db.models import Q
+from django.utils import timezone
 
 from inyeccion_api.models import Alarm
 from inyeccion_api.utils import _map_api_alarm_to_model
-from tenants.models import Tenant, Client  # añadimos Client
+
+# ✅ IMPORTS tenants (incluye contratos y usuarios)
+from tenants.models import Tenant, Client, TenantUser, Tenants_contracts
 
 TOKEN_FILE = Path(settings.BASE_DIR) / "token.txt"
 
@@ -178,7 +182,7 @@ def _build_site24x7_headers():
 
     Ideal: usar env SITE24X7_OAUTH_TOKEN
     """
-    token = "1000.a6250986ef34e1b792958f60288f9b49.d9334f2f2eee3c3814723b4f08e2f0be"
+    token = os.getenv("SITE24X7_OAUTH_TOKEN")
     if not token:
         logger.error("❌ [Site24x7] Falta SITE24X7_OAUTH_TOKEN en variables de entorno.")
         return None
@@ -295,7 +299,6 @@ def tarea_ingesta_api():
 
     except Exception as e:
         logger.exception("❌ Error inesperado durante la ingesta diaria: %s", e)
-
 
 
 @shared_task
@@ -565,7 +568,6 @@ def tarea_sync_empresas():
             return s or None
 
         def norm_name(s: str) -> str:
-            # normaliza para comparar de forma tolerante (espacios y case)
             return " ".join((s or "").strip().lower().split())
 
         OMIT_NAME = norm_name("Inntesec SpA")
@@ -576,7 +578,6 @@ def tarea_sync_empresas():
             if not name:
                 continue
 
-            # === OMITIR Inntesec SpA ===
             if norm_name(name) == OMIT_NAME:
                 omitidos += 1
                 logger.info("⏭️ Omitiendo empresa (no se guarda): %s", name)
@@ -624,6 +625,7 @@ def tarea_sync_empresas():
     except Exception as e:
         logger.exception("❌ Error en tarea_sync_empresas: %s", e)
 
+
 # === NUEVA TAREA: Sync user_groups Site24x7 → Client.site24x7_user_group (por email) ===
 @shared_task
 def tarea_sync_site24x7_user_groups():
@@ -633,12 +635,9 @@ def tarea_sync_site24x7_user_groups():
     try:
         logger.info("👤 [Site24x7] Llamando a https://www.site24x7.com/api/users ...")
 
-        token = os.getenv("SITE24X7_OAUTH_TOKEN")
-        if not token:
-            logger.error("❌ [Site24x7] Falta SITE24X7_OAUTH_TOKEN en variables de entorno.")
+        headers = _build_site24x7_headers()
+        if not headers:
             return
-
-        headers = {"Accept": "application/json; version=2.0", "Authorization": f"Zoho-oauthtoken {token}"}
 
         with httpx.Client(timeout=30) as client:
             resp = client.get("https://www.site24x7.com/api/users", headers=headers)
@@ -671,7 +670,7 @@ def tarea_sync_site24x7_user_groups():
                 )
                 continue
 
-            if client_obj.site24x7_user_group != groups_str:
+            if getattr(client_obj, "site24x7_user_group", None) != groups_str:
                 client_obj.site24x7_user_group = groups_str
                 client_obj.save(update_fields=["site24x7_user_group"])
                 actualizados += 1
@@ -686,3 +685,590 @@ def tarea_sync_site24x7_user_groups():
     except Exception as e:
         logger.exception("❌ [Site24x7] Error en tarea_sync_site24x7_user_groups: %s", e)
         return
+
+
+# =========================================================
+# NUEVA TAREA: Sincronizar contratos (MODIFICADA)
+# - Webhook devuelve "account" (nombre empresa)
+# - Se resuelve tenant_id desde public.tenants_tenant (id,name)
+#   uniendo: tenants_tenant.name == account
+# - Se guarda en agent.tenants_contracts
+# - + Regla: NO pisar contratos vigentes si contract_id ya existe
+# =========================================================
+
+def _contracts_parse_date(value):
+    """
+    Webhook trae DD-MM-YYYY (ej: 01-11-2025). Soporta variantes comunes.
+    """
+    from datetime import date as dt_date
+
+    if value in (None, ""):
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, dt_date):
+        return value
+
+    s = str(value).strip()
+    for fmt in ("%d-%m-%Y", "%Y-%m-%d", "%d/%m/%Y", "%Y/%m/%d"):
+        try:
+            return datetime.strptime(s, fmt).date()
+        except ValueError:
+            continue
+    raise ValueError(f"[Contracts] Formato de fecha no soportado: {s!r}")
+
+
+def _contracts_extract_rows(payload):
+    """
+    Normaliza JSON a lista de dicts:
+    - lista -> lista
+    - dict con lista interna -> primera lista interna de dicts
+    - dict sin listas -> [dict]
+    """
+    if isinstance(payload, list):
+        return [x for x in payload if isinstance(x, dict)]
+    if isinstance(payload, dict):
+        for v in payload.values():
+            if isinstance(v, list) and v and all(isinstance(x, dict) for x in v):
+                return v
+        return [payload]
+    return []
+
+
+def _contracts_fetch_tenant_map(account_names):
+    """
+    Mapping exacto {name: id} desde public.tenants_tenant.
+    """
+    names = [str(n).strip() for n in (account_names or []) if n and str(n).strip()]
+    if not names:
+        return {}
+
+    sql = """
+        SELECT id, name
+        FROM public.tenants_tenant
+        WHERE name = ANY(%s)
+    """
+    with connection.cursor() as cur:
+        cur.execute(sql, (names,))
+        rows = cur.fetchall()
+
+    return {str(name): int(id_) for (id_, name) in rows}
+
+
+def _contracts_detect_conflict_target():
+    """
+    Preferencia:
+      - (tenant_id, contract_id) si existe UNIQUE/PK con esas columnas
+      - fallback (contract_id)
+    """
+    sql = """
+      WITH idx_cols AS (
+        SELECT
+          array_agg(a.attname ORDER BY x.ord) AS cols
+        FROM pg_index i
+        JOIN pg_class t ON t.oid = i.indrelid
+        JOIN pg_namespace n ON n.oid = t.relnamespace
+        JOIN LATERAL unnest(i.indkey) WITH ORDINALITY AS x(attnum, ord) ON TRUE
+        JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = x.attnum
+        WHERE n.nspname = 'agent'
+          AND t.relname = 'tenants_contracts'
+          AND (i.indisprimary OR i.indisunique)
+        GROUP BY i.indexrelid
+      )
+      SELECT cols
+      FROM idx_cols;
+    """
+    with connection.cursor() as cur:
+        cur.execute(sql)
+        idx_list = [r[0] for r in cur.fetchall()]
+
+    for cols in idx_list:
+        if cols == ["tenant_id", "contract_id"]:
+            return "(tenant_id, contract_id)"
+    return "(contract_id)"
+
+
+def _contracts_bulk_execute(cur, sql_values_style, values, page_size=500):
+    """
+    Ejecuta INSERT masivo compatible con:
+    - psycopg (v3): psycopg.extras.execute_values
+    - psycopg2: psycopg2.extras.execute_values
+    - fallback: executemany
+    """
+    # 1) psycopg v3
+    try:
+        from psycopg.extras import execute_values  # type: ignore
+        execute_values(cur, sql_values_style, values, page_size=page_size)
+        return
+    except Exception:
+        pass
+
+    # 2) psycopg2
+    try:
+        from psycopg2.extras import execute_values  # type: ignore
+        execute_values(cur, sql_values_style, values, page_size=page_size)
+        return
+    except Exception:
+        pass
+
+    # 3) Fallback executemany
+    sql_one = """
+        INSERT INTO agent.tenants_contracts (
+            tenant_id,
+            contract_id,
+            contract_name,
+            support_plan,
+            support_plan_type,
+            start_date,
+            expiry_date,
+            status,
+            account,
+            serviceplan_id,
+            account_id,
+            account_ciid
+        )
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+    """
+    if "ON CONFLICT" in sql_values_style:
+        tail = sql_values_style.split("ON CONFLICT", 1)[1]
+        sql_one += "\nON CONFLICT " + tail.lstrip()
+
+    cur.executemany(sql_one, values)
+
+
+def _is_expired_by_date(expiry_date, today) -> bool:
+    return bool(expiry_date is not None and expiry_date < today)
+
+
+def _existing_contracts_map(conflict_target: str, ready_rows: list[dict], today):
+    """
+    Devuelve un mapa con contratos existentes para decisión de "skip upsert".
+    Keys:
+      - si conflict_target == (tenant_id, contract_id): (tenant_id, contract_id)
+      - si conflict_target == (contract_id): contract_id
+    Value: dict con status y expiry_date
+    """
+    if not ready_rows:
+        return {}
+
+    if conflict_target == "(tenant_id, contract_id)":
+        tenant_ids = sorted({int(x["tenant_id"]) for x in ready_rows if x.get("tenant_id") is not None})
+        contract_ids = sorted({str(x["contract_id"]) for x in ready_rows if x.get("contract_id")})
+        qs = Tenants_contracts.objects.filter(tenant_id__in=tenant_ids, contract_id__in=contract_ids)
+        out = {}
+        for r in qs.values("tenant_id", "contract_id", "status", "expiry_date"):
+            out[(int(r["tenant_id"]), str(r["contract_id"]))] = {
+                "status": (r["status"] or "").strip(),
+                "expiry_date": r["expiry_date"],
+                "expired_by_date": _is_expired_by_date(r["expiry_date"], today),
+            }
+        return out
+
+    # fallback: contract_id
+    contract_ids = sorted({str(x["contract_id"]) for x in ready_rows if x.get("contract_id")})
+    qs = Tenants_contracts.objects.filter(contract_id__in=contract_ids)
+    out = {}
+    for r in qs.values("contract_id", "status", "expiry_date"):
+        out[str(r["contract_id"])] = {
+            "status": (r["status"] or "").strip(),
+            "expiry_date": r["expiry_date"],
+            "expired_by_date": _is_expired_by_date(r["expiry_date"], today),
+        }
+    return out
+
+
+def _should_skip_upsert(conflict_target: str, existing_map: dict, row: dict, today) -> bool:
+    """
+    Regla pedida:
+    - Si el contrato ya existe (mismo id / key):
+        - Upsert SOLO si (ya expiró) [por fecha o status Expired]
+        - Si sigue vigente => IGNORAR (no pisar)
+    """
+    # Key
+    if conflict_target == "(tenant_id, contract_id)":
+        key = (int(row["tenant_id"]), str(row["contract_id"]))
+    else:
+        key = str(row["contract_id"])
+
+    existing = existing_map.get(key)
+    if not existing:
+        return False  # no existe => insertar/upsert normal
+
+    existing_status = (existing.get("status") or "").strip()
+    existing_expired = bool(existing.get("expired_by_date")) or (existing_status == "Expired")
+
+    incoming_expired = _is_expired_by_date(row.get("expiry_date"), today) or ((row.get("status") or "").strip() == "Expired")
+
+    # Si alguno indica expirado => upsert permitido
+    if existing_expired or incoming_expired:
+        return False
+
+    # Si sigue vigente => ignorar
+    # Consideramos vigente: status Active y expiry_date >= hoy o expiry_date NULL
+    if existing_status == "Active" and (existing.get("expiry_date") is None or existing.get("expiry_date") >= today):
+        return True
+
+    # fallback seguro: si no está claro, no saltar
+    return False
+
+
+@shared_task(bind=True, max_retries=5, default_retry_delay=15)
+def sync_tenants_contracts_from_webhook(self):
+    """
+    Consulta webhook Contratos y hace UPSERT en agent.tenants_contracts
+    resolviendo tenant_id por join: public.tenants_tenant.name == account.
+
+    + Regla: si contract_id ya existe y sigue vigente => NO pisar (skip).
+            si ya expiró => sí upsert.
+    """
+    try:
+        url = os.getenv("INNTESEC_WEBHOOK_URL") or getattr(settings, "INNTESEC_WEBHOOK_URL", None)
+        passkey = os.getenv("INNTESEC_WEBHOOK_PASSKEY") or getattr(settings, "INNTESEC_WEBHOOK_PASSKEY", None)
+        params = {"value": "Contratos"}
+
+        if not url or not passkey:
+            raise RuntimeError("Faltan INNTESEC_WEBHOOK_URL / INNTESEC_WEBHOOK_PASSKEY (env o settings).")
+
+        headers = {"passkey": passkey}
+
+        with httpx.Client(timeout=30) as client:
+            resp = client.get(url, headers=headers, params=params)
+            resp.raise_for_status()
+            payload = resp.json()
+
+        rows = _contracts_extract_rows(payload)
+        if not rows:
+            logger.warning("[Contracts] JSON recibido pero sin filas parseables. root=%s", type(payload).__name__)
+            return {"received": 0, "upserted": 0, "skipped_no_tenant_match": 0, "skipped_active_existing": 0}
+
+        normalized = []
+        accounts = []
+
+        for r in rows:
+            contract_id = str(r.get("contract_id", "")).strip()
+            if not contract_id:
+                continue
+
+            account = (r.get("account") or "").strip()
+
+            item = {
+                "tenant_id": None,  # se resuelve
+                "contract_id": contract_id,
+                "contract_name": (r.get("contract_name") or "").strip(),
+                "support_plan": (r.get("support_plan") or "").strip(),
+                "support_plan_type": (r.get("support_plan_type") or "").strip(),
+                "start_date": _contracts_parse_date(r.get("start_date")),
+                "expiry_date": _contracts_parse_date(r.get("expiry_date")),
+                "status": (r.get("status") or "").strip(),
+                "account": account,
+                "serviceplan_id": str(r.get("serviceplan_id", "")).strip(),
+                "account_id": str(r.get("account_id", "")).strip(),
+                "account_ciid": str(r.get("account_ciid", "")).strip(),
+            }
+            normalized.append(item)
+            if account:
+                accounts.append(account)
+
+        if not normalized:
+            return {"received": len(rows), "upserted": 0, "skipped_no_tenant_match": 0, "skipped_active_existing": 0}
+
+        # resolve tenant_id
+        tenant_map = _contracts_fetch_tenant_map(list(set(accounts)))
+        for x in normalized:
+            x["tenant_id"] = tenant_map.get(x["account"])
+
+        ready = [x for x in normalized if x["tenant_id"] is not None]
+        skipped_no_tenant = len(normalized) - len(ready)
+
+        if not ready:
+            logger.warning("[Contracts] Ningún match account->tenant. Ejemplos=%s", list(set(accounts))[:10])
+            return {"received": len(rows), "upserted": 0, "skipped_no_tenant_match": skipped_no_tenant, "skipped_active_existing": 0}
+
+        conflict_target = _contracts_detect_conflict_target()
+
+        # ✅ regla nueva: skip si existe y sigue vigente
+        today = timezone.localdate()
+        existing_map = _existing_contracts_map(conflict_target, ready, today)
+
+        to_upsert = []
+        skipped_active_existing = 0
+
+        for x in ready:
+            if _should_skip_upsert(conflict_target, existing_map, x, today):
+                skipped_active_existing += 1
+                continue
+            to_upsert.append(x)
+
+        if not to_upsert:
+            logger.info(
+                "[Contracts] Sync: todo fue skip (vigentes). received=%s matched=%s skipped_active_existing=%s skipped_no_tenant=%s",
+                len(rows),
+                len(ready),
+                skipped_active_existing,
+                skipped_no_tenant,
+            )
+
+            # Aun así enforce por si hay expiraciones por fecha ya existentes
+            affected_tenant_ids = sorted({int(x["tenant_id"]) for x in ready if x.get("tenant_id") is not None})
+            if affected_tenant_ids:
+                contracts_enforce_expiry_and_sync_tenants.delay(only_tenant_ids=affected_tenant_ids)
+
+            return {
+                "received": len(rows),
+                "upserted": 0,
+                "skipped_no_tenant_match": skipped_no_tenant,
+                "skipped_active_existing": skipped_active_existing,
+                "conflict_target": conflict_target,
+            }
+
+        sql_values_style = f"""
+            INSERT INTO agent.tenants_contracts (
+                tenant_id,
+                contract_id,
+                contract_name,
+                support_plan,
+                support_plan_type,
+                start_date,
+                expiry_date,
+                status,
+                account,
+                serviceplan_id,
+                account_id,
+                account_ciid
+            )
+            VALUES %s
+            ON CONFLICT {conflict_target} DO UPDATE SET
+                tenant_id         = EXCLUDED.tenant_id,
+                contract_name     = EXCLUDED.contract_name,
+                support_plan      = EXCLUDED.support_plan,
+                support_plan_type = EXCLUDED.support_plan_type,
+                start_date        = EXCLUDED.start_date,
+                expiry_date       = EXCLUDED.expiry_date,
+                status            = EXCLUDED.status,
+                account           = EXCLUDED.account,
+                serviceplan_id    = EXCLUDED.serviceplan_id,
+                account_id        = EXCLUDED.account_id,
+                account_ciid      = EXCLUDED.account_ciid
+        """
+
+        values = [
+            (
+                x["tenant_id"],
+                x["contract_id"],
+                x["contract_name"],
+                x["support_plan"],
+                x["support_plan_type"],
+                x["start_date"],
+                x["expiry_date"],
+                x["status"],
+                x["account"],
+                x["serviceplan_id"],
+                x["account_id"],
+                x["account_ciid"],
+            )
+            for x in to_upsert
+        ]
+
+        with transaction.atomic(), connection.cursor() as cur:
+            _contracts_bulk_execute(cur, sql_values_style, values, page_size=500)
+
+        # ✅ LOG
+        logger.info(
+            "[Contracts] Sync OK received=%s matched=%s upserted=%s skipped_active_existing=%s skipped_no_tenant_match=%s conflict=%s",
+            len(rows),
+            len(ready),
+            len(values),
+            skipped_active_existing,
+            skipped_no_tenant,
+            conflict_target,
+        )
+
+        # ✅ Enforce inmediato SOLO para tenants afectados (incluye los que se skipearon)
+        affected_tenant_ids = sorted({int(x["tenant_id"]) for x in ready if x.get("tenant_id") is not None})
+        if affected_tenant_ids:
+            contracts_enforce_expiry_and_sync_tenants.delay(only_tenant_ids=affected_tenant_ids)
+
+        return {
+            "received": len(rows),
+            "matched": len(ready),
+            "upserted": len(values),
+            "skipped_no_tenant_match": skipped_no_tenant,
+            "skipped_active_existing": skipped_active_existing,
+            "conflict_target": conflict_target,
+            "affected_tenant_ids": affected_tenant_ids,
+        }
+
+    except Exception as e:
+        logger.exception("❌ [Contracts] Error en sync_tenants_contracts_from_webhook: %s", e)
+        raise self.retry(exc=e)
+
+
+# ==============================
+# CONTRACTS -> TENANT ACTIVATION
+# ==============================
+MANDATORY_CONTRACT_NAMES = {"POC Inntesec Agent", "Inntesec Agent"}
+STATUS_ACTIVE = "Active"
+STATUS_EXPIRED = "Expired"
+
+
+def _sync_tenant_and_users(tenant: Tenant, active: bool) -> int:
+    """
+    Activa/desactiva tenant + usuarios (excepto superusers).
+    Retorna cantidad de usuarios actualizados.
+    """
+    if tenant.is_active != active:
+        tenant.is_active = active
+        tenant.save(update_fields=["is_active"])
+
+    updated = (
+        TenantUser.objects
+        .filter(tenant=tenant)
+        .exclude(is_superuser=True)
+        .update(is_active=active)
+    )
+    return int(updated or 0)
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=10)
+def contracts_enforce_expiry_and_sync_tenants(self, only_tenant_ids: list[int] | None = None):
+    """
+    ✅ REGLA FINAL (solo en Celery):
+    - Si el tenant tiene AL MENOS 1 contrato mandatorio vigente => NO TOCAR usuarios (ni tenant).
+    - Si NO tiene contratos mandatorios vigentes => desactivar tenant + desactivar usuarios activos.
+
+    Vigente = status=Active y (expiry_date >= hoy OR expiry_date IS NULL)
+
+    Además:
+    - Si expiry_date < hoy => status=Expired (solo contratos mandatorios)
+
+    ✅ LOGS: contratos expirados + tenants desactivados + usuarios desactivados + tenants omitidos por estar vigentes.
+    """
+    try:
+        today = timezone.localdate()
+
+        base_qs = Tenants_contracts.objects.filter(
+            contract_name__in=list(MANDATORY_CONTRACT_NAMES),
+        )
+        if only_tenant_ids:
+            base_qs = base_qs.filter(tenant_id__in=only_tenant_ids)
+
+        # 1) Marcar Expired por fecha (solo mandatorios)
+        expired_by_date_qs = base_qs.filter(
+            expiry_date__isnull=False,
+            expiry_date__lt=today,
+        ).exclude(status=STATUS_EXPIRED)
+
+        n_contracts_marked_expired = int(expired_by_date_qs.update(status=STATUS_EXPIRED) or 0)
+
+        # 2) Tenants a revisar
+        tenant_ids = list(base_qs.values_list("tenant_id", flat=True).distinct())
+        if not tenant_ids:
+            logger.info("[ContractsEnforce] today=%s no tenants to process.", today)
+            return {
+                "today": str(today),
+                "tenants_processed": 0,
+                "contracts_marked_expired": n_contracts_marked_expired,
+                "tenants_deactivated": 0,
+                "tenants_skipped_active": 0,
+                "users_disabled_total": 0,
+                "details": [],
+            }
+
+        details = []
+        users_disabled_total = 0
+        tenants_deactivated = 0
+        tenants_skipped_active = 0
+
+        with transaction.atomic():
+            tenants = Tenant.objects.select_for_update().filter(id__in=tenant_ids)
+            tenant_map = {t.id: t for t in tenants}
+
+            for tid in tenant_ids:
+                tenant = tenant_map.get(tid)
+                if not tenant:
+                    logger.warning("[ContractsEnforce] tenant_id=%s no existe en tenants_tenant. Se omite.", tid)
+                    continue
+
+                # ¿Tiene al menos 1 contrato vigente?
+                any_active_vigente = base_qs.filter(
+                    tenant_id=tid,
+                    status=STATUS_ACTIVE,
+                ).filter(
+                    Q(expiry_date__isnull=True) | Q(expiry_date__gte=today)
+                ).exists()
+
+                # ✅ Si está vigente -> NO TOCAR NADA
+                if any_active_vigente:
+                    tenants_skipped_active += 1
+                    details.append({
+                        "tenant_id": tid,
+                        "tenant_name": tenant.name,
+                        "has_active_contract": True,
+                        "action": "skip_no_changes",
+                        "tenant_was_active": bool(getattr(tenant, "is_active", True)),
+                        "users_disabled": 0,
+                    })
+                    continue
+
+                # ❌ Si NO hay contrato vigente -> desactivar tenant + desactivar usuarios activos
+                tenant_was_active = bool(getattr(tenant, "is_active", True))
+                if tenant_was_active:
+                    tenant.is_active = False
+                    tenant.save(update_fields=["is_active"])
+                    tenants_deactivated += 1
+
+                # Desactivar SOLO los usuarios actualmente activos (no pisa inactivos manuales)
+                qs_users = (
+                    TenantUser.objects
+                    .filter(tenant=tenant)
+                    .exclude(is_superuser=True)
+                    .filter(is_active=True)
+                )
+                u_disabled = int(qs_users.update(is_active=False) or 0)
+                users_disabled_total += u_disabled
+
+                details.append({
+                    "tenant_id": tid,
+                    "tenant_name": tenant.name,
+                    "has_active_contract": False,
+                    "action": "deactivated_tenant_and_users",
+                    "tenant_was_active": tenant_was_active,
+                    "users_disabled": u_disabled,
+                })
+
+        logger.info(
+            "[ContractsEnforce] today=%s tenants_processed=%s contracts_marked_expired=%s tenants_deactivated=%s tenants_skipped_active=%s users_disabled_total=%s",
+            today,
+            len(details),
+            n_contracts_marked_expired,
+            tenants_deactivated,
+            tenants_skipped_active,
+            users_disabled_total,
+        )
+
+        # logs por tenant (útil para debug)
+        for d in details:
+            logger.info(
+                "[ContractsEnforce][Tenant] id=%s name=%s action=%s has_active_contract=%s tenant_was_active=%s users_disabled=%s",
+                d["tenant_id"],
+                d["tenant_name"],
+                d["action"],
+                d["has_active_contract"],
+                d["tenant_was_active"],
+                d["users_disabled"],
+            )
+
+        return {
+            "today": str(today),
+            "tenants_processed": len(details),
+            "contracts_marked_expired": n_contracts_marked_expired,
+            "tenants_deactivated": tenants_deactivated,
+            "tenants_skipped_active": tenants_skipped_active,
+            "users_disabled_total": users_disabled_total,
+            "details": details,
+        }
+
+    except Exception as e:
+        logger.exception("❌ [ContractsEnforce] Error: %s", e)
+        raise self.retry(exc=e)
+

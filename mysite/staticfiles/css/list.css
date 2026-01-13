@@ -432,7 +432,7 @@ body.modal-open {
 }
 
 /* =========================
-   ✅ NUEVO: Selects de filtros (Severidad / Asignación)
+   NUEVO: Selects de filtros (Severidad / Asignación)
    - mismo look que chips/inputs
    ========================= */
 
@@ -514,7 +514,7 @@ body.modal-open {
 }
 
 /* =========================================================
-   ✅ NUEVO: Pills de "Asignado" (tabla + modal)
+   NUEVO: Pills de "Asignado" (tabla + modal)
    - La tabla ya renderiza .assign-pill, acá dejamos el estilo
    - El modal usa .inc-assign-pill con el mismo look (foto 1)
    y con el icono verde de usuario estilo Tickets (foto 2)

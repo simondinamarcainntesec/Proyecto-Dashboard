@@ -1,164 +1,69 @@
-// Añade un overlay "Cargando datos…" sobre cada .iframe-container
-// y muestra el iframe solo cuando dispare el evento 'load'.
-(function(){
-  function initIframes(){
-    // Si la página es un embed, eliminamos cualquier overlay global por seguridad
-    try{
-      if(document.body && document.body.classList && document.body.classList.contains('is-embed')){
-        var globalOv = document.getElementById('loading-overlay');
-        if(globalOv && globalOv.parentNode){
-          globalOv.parentNode.removeChild(globalOv);
-        }
-      }
-    }catch(e){ /* ignore */ }
+(function() {
+    document.addEventListener("DOMContentLoaded", function() {
 
-    document.querySelectorAll('.iframe-container').forEach(function(container){
-      var iframe = container.querySelector('iframe');
-      if(!iframe) return;
+        // 1. Limpieza preventiva de overlays globales (código original conservado)
+        try {
+            if (document.body.classList.contains('is-embed')) {
+                var globalOv = document.getElementById('loading-overlay');
+                if (globalOv && globalOv.parentNode) {
+                    globalOv.parentNode.removeChild(globalOv);
+                }
+            }
+        } catch (e) { /* ignore */ }
 
-      // Añadir overlay si no existe
-      var overlay = container.querySelector('.iframe-overlay');
-      if(!overlay){
-        overlay = document.createElement('div');
-        overlay.className = 'iframe-overlay';
-        overlay.setAttribute('role','status');
-        overlay.setAttribute('aria-live','polite');
-        overlay.innerHTML = '<div class="overlay-card"><div class="spinner" aria-hidden="true"></div><div class="overlay-text">Cargando datos…</div></div>';
-        container.appendChild(overlay);
-      }
+        // 2. Inicializar todos los contenedores de iframe encontrados
+        const containers = document.querySelectorAll('.iframe-container');
 
-      var MIN_DISPLAY_MS = 7000; // 6 segundos (estándar)
-      var startAt = Date.now();
+        containers.forEach(function(container) {
+            const iframe = container.querySelector('iframe');
+            const overlay = container.querySelector('.iframe-overlay');
 
-      function showOverlay(){
-        startAt = Date.now();
-        overlay.dataset.startAt = startAt;
-        overlay.classList.remove('hidden');
-        overlay.style.opacity = '';
-        overlay.style.visibility = '';
-        iframe.classList.add('is-loading');
-        iframe.classList.remove('is-loaded');
-        iframe.setAttribute('aria-hidden','true');
-        iframe.style.visibility = 'hidden';
-      }
-      // Estado inicial
-      showOverlay();
+            if (!iframe || !overlay) return;
 
-      // Helper para ocultar overlay respetando el tiempo mínimo
-      function hideOverlayRespectingMinAndFinalize(visibleIframe){
-        var started = parseInt(overlay.dataset.startAt || '0', 10) || startAt;
-        var elapsed = Date.now() - started;
-        var remaining = Math.max(0, MIN_DISPLAY_MS - elapsed);
-        var finalize = function(ifr){
-          overlay.classList.add('hidden');
-          if(ifr){
-            ifr.classList.remove('is-loading');
-            ifr.classList.add('is-loaded');
-            ifr.removeAttribute('aria-hidden');
-            ifr.style.visibility = 'visible';
-          }
-        };
-        if(remaining > 0){
-          setTimeout(function(){ finalize(visibleIframe); }, remaining);
-        } else {
-          finalize(visibleIframe);
-        }
-      }
+            // Función para finalizar la transición visual
+            function revealDashboard() {
+                // Prevenir ejecución múltiple
+                if (iframe.classList.contains('is-loaded')) return;
 
-      // Intentaremos pre-cargar fuera de pantalla en un iframe oculto
-      var dataSrc = iframe.dataset && iframe.dataset.src ? iframe.dataset.src : null;
-      var preloaded = false;
-      var preloader = null;
+                // Ocultar Overlay
+                overlay.classList.add('hidden');
+                overlay.setAttribute('aria-busy', 'false');
 
-      function watchIframeLoadAndFinalize(targetIframe){
-        var done = false;
-        var STABILIZATION_MS = 5000; // No extra stabilization — respetamos el tiempo mínimo (MIN_DISPLAY_MS) solamente
-        var onload = function(){
-          if(done) return; done = true;
-          // Calculamos cuánto queda del mínimo y esperamos al menos STABILIZATION_MS
-          var started = parseInt(overlay.dataset.startAt || '0', 10) || startAt;
-          var elapsed = Date.now() - started;
-          var remainingMin = Math.max(0, MIN_DISPLAY_MS - elapsed);
-          var wait = Math.max(remainingMin, STABILIZATION_MS);
-          setTimeout(function(){ hideOverlayRespectingMinAndFinalize(targetIframe); }, wait);
-        };
-        try{
-          targetIframe.addEventListener('load', onload, {once:true});
-        }catch(e){ /* ignore */ }
-        // try to detect readyState for same-origin quickly and trigger the same stabilized hide
-        setTimeout(function(){
-          if(done) return;
-          try{
-            var rd = targetIframe.contentWindow && targetIframe.contentWindow.document && targetIframe.contentWindow.document.readyState;
-            if(rd === 'complete' || rd === 'interactive') onload();
-          }catch(e){ /* cross-origin: no accesible */ }
-        }, 500);
-        return function(){ done = true; };
-      }
+                // Mostrar Iframe
+                iframe.classList.remove('is-loading');
+                iframe.classList.add('is-loaded');
+                iframe.removeAttribute('aria-hidden');
+            }
 
-      var LOAD_TIMEOUT_MS = 15000;
-      function startLoad(){
-        if(!dataSrc) return;
-        showOverlay();
-        // show spinner
-        var sp = container.querySelector('.spinner');
-        if(sp) sp.style.display = '';
+            // A. INICIO: Mover data-src a src para comenzar la carga real
+            if (iframe.dataset.src) {
+                iframe.src = iframe.dataset.src;
+            }
 
-        // set src immediately so the iframe starts loading while the overlay is visible
-        try{
-          if(!iframe.getAttribute('src') || iframe.getAttribute('src') === 'about:blank'){
-            iframe.src = dataSrc;
-          }
-        }catch(e){ /* ignore */ }
+            // B. EVENTO LOAD: El navegador confirma que el iframe descargó el contenido
+            iframe.addEventListener('load', function() {
+                // Pequeño retardo (500ms) para permitir que el renderizado interno se estabilice
+                // y evitar flashes blancos
+                setTimeout(revealDashboard, 2500);
+            });
 
-        var cancelWatcher = watchIframeLoadAndFinalize(iframe);
-        var timedOut = false;
-        var to = setTimeout(function(){
-          if(timedOut) return;
-          timedOut = true;
-          // No se cargó en tiempo, mostramos mensaje (sin botones)
-          overlay.classList.add('error');
-          var txt = overlay.querySelector('.overlay-text');
-          if(txt) txt.textContent = 'No se pudo cargar el dashboard. Comprueba la conexión e inténtalo más tarde.';
-          var sp = overlay.querySelector('.spinner');
-          if(sp) sp.style.display = 'none';
-
-        }, LOAD_TIMEOUT_MS);
-
-        // If the iframe loads successfully, clear the timeout
-        iframe.addEventListener('load', function(){
-          clearTimeout(to);
-        }, {once:true});
-      }
-
-      // auto start load
-      startLoad();
-
-      // For older iframes without data-src, keep the previous fallback
-      if(!dataSrc){
-        iframe.addEventListener('load', function(){ hideOverlayRespectingMinAndFinalize(iframe); }, {once:true});
-
-        setTimeout(function(){
-          var done = false;
-          try{
-            var rd = iframe.contentWindow && iframe.contentWindow.document && iframe.contentWindow.document.readyState;
-            if(rd === 'complete' || rd === 'interactive') done = true;
-          }catch(e){ /* cross-origin: no accesible */ }
-          if(done){
-            hideOverlayRespectingMinAndFinalize(iframe);
-          }
-        }, 500);
-
-        setTimeout(function(){ hideOverlayRespectingMinAndFinalize(iframe); }, 15000);
-      }
-
-      // Opcional: si el iframe no carga por timeout, el overlay puede permanecer; podrías añadir un timeout para ocultarlo y mostrar mensaje de error.
+            // C. FALLBACK: Timeout de seguridad (15 segundos)
+            // Si el servidor del dashboard no responde, mostramos error o forzamos mostrar lo que haya
+            setTimeout(function() {
+                if (!overlay.classList.contains('hidden')) {
+                    // Opción: Mostrar mensaje de error en el overlay sin quitarlo
+                    overlay.classList.add('error');
+                    
+                    const txt = overlay.querySelector('.overlay-text');
+                    if (txt) txt.textContent = "El servidor tarda en responder...";
+                    
+                    const errMsg = overlay.querySelector('.overlay-error-msg');
+                    if (errMsg) errMsg.textContent = "Es posible que deba recargar la página.";
+                    
+                    // Si prefieres que se muestre el iframe de todas formas tras 15s, descomenta esto:
+                    // revealDashboard();
+                }
+            }, 15000);
+        });
     });
-  }
-
-  if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', initIframes);
-  } else {
-    initIframes();
-  }
 })();

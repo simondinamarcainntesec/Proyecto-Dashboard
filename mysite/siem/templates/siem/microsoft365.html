@@ -1,4 +1,5 @@
 {% extends "siem/_embed_base.html" %}
+{% load static %}
 
 {% block embed_wrap %}
   {% if not iframe_url %}
@@ -15,11 +16,14 @@
 {% endblock %}
 
 {% block embed_body %}
+  <link rel="stylesheet" href="{% static 'css/siem_embeds.css' %}">
+
   <div class="iframe-container">
     <div class="iframe-overlay" role="status" aria-live="polite">
       <div class="overlay-card">
         <div class="spinner" aria-hidden="true"></div>
         <div class="overlay-text">Cargando datos…</div>
+        <div class="overlay-error-msg">Tiempo de espera agotado.</div>
       </div>
     </div>
 
@@ -30,4 +34,6 @@
       aria-hidden="true">
     </iframe>
   </div>
+
+  <script src="{% static 'js/iframe-loader.js' %}"></script>
 {% endblock %}

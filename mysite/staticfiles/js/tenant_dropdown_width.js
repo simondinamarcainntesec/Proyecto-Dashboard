@@ -143,7 +143,7 @@
   }
 
   function boot() {
-    // ✅ SOLO topbar: no tocar acordeones del sidebar
+    // SOLO topbar: no tocar acordeones del sidebar
     document.querySelectorAll("details.tenant-dropdown").forEach((detailsEl) => {
       if (detailsEl.closest(".sidebar")) return; // ignora sidebar
       wire(detailsEl);

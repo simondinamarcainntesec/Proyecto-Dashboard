@@ -33,7 +33,7 @@
     return v === '1' || v === 'true' || v === 'yes';
   }
 
-  // ✅ soporte a múltiples nombres de data-*
+  // soporte a múltiples nombres de data-*
   function assignedName(tr) {
     const raw =
       tr?.dataset?.assignedName ||
@@ -46,7 +46,7 @@
     return String(raw || '').trim();
   }
 
-  // ✅ si el dataset viene vacío, buscar por ID en ticket_map (server-side)
+  // si el dataset viene vacío, buscar por ID en ticket_map (server-side)
   function assignedNameFromMap(tr) {
     const id = String(tr?.dataset?.id || '').trim();
     if (!id) return '';

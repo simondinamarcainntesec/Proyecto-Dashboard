@@ -361,6 +361,7 @@ button {
   display: flex;
   align-items: center;
   min-width: 0;
+  overflow: visible !important;
 }
 
 .top-right {
@@ -381,6 +382,7 @@ button {
   align-items: center;
   gap: 10px;
   min-width: 0;
+  overflow: visible !important;
 }
 
 /* Tenant destacado */
@@ -390,6 +392,49 @@ button {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Excepción para alerta de contrato (sobrescribe herencia de .top-title) */
+.top-title .contract-warning {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.6rem !important;
+  padding: 0.6rem 1rem !important;
+  margin: 0 2rem 0 1rem !important;
+  background: #dc3545 !important;
+  border-radius: 16px !important;
+  font-size: 0.9rem !important;
+  color: #fff !important;
+  font-weight: 400 !important;
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.5) !important;
+  white-space: nowrap !important;
+  position: relative !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
+
+.top-title .contract-warning * {
+  pointer-events: none !important;
+}
+
+.top-title .contract-warning .warning-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  font-size: 1.2rem !important;
+  flex-shrink: 0 !important;
+  line-height: 1 !important;
+}
+
+.top-title .contract-warning .warning-text {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.4rem !important;
+  color: #fff !important;
+}
+
+.top-title .contract-warning strong {
+  font-weight: 800 !important;
+  color: #fff !important;
 }
 
 /* =========================

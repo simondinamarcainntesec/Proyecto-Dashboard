@@ -199,25 +199,44 @@
           <h1 class="top-title">
             Cliente:
             {% if request.user.tenant.name|lower == "inntesec" %}
-            <details class="tenant-dropdown" id="tenantDropdown">
-              <summary class="tenant-summary">
-                {{ tenant.name }}
-                <span class="caret">▼</span>
-              </summary>
-              <div class="tenant-list">
-                {% for t in all_tenants %}
-                <form method="post" action="{% url 'dashboard:switch_tenant' t.id %}">
-                  {% csrf_token %}
-                  <input type="hidden" name="next" value="{{ request.path }}">
-                  <button type="submit" class="tenant-option {% if tenant.id == t.id %}is-active{% endif %}">
-                    {{ t.name }}
-                  </button>
-                </form>
-                {% endfor %}
-              </div>
-            </details>
+            <div class="tenant-selector-wrapper">
+              <details class="tenant-dropdown" id="tenantDropdown">
+                <summary class="tenant-summary">
+                  {{ tenant.name }}
+                  <span class="caret">▼</span>
+                </summary>
+                <div class="tenant-list">
+                  {% for t in all_tenants %}
+                  <form method="post" action="{% url 'dashboard:switch_tenant' t.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <button type="submit" class="tenant-option {% if tenant.id == t.id %}is-active{% endif %}">
+                      {{ t.name }}
+                    </button>
+                  </form>
+                  {% endfor %}
+                </div>
+              </details>
+            </div>
             {% else %}
-            <span class="top-tenant">{{ tenant.name }}</span>
+            <div class="tenant-selector-wrapper">
+              <span class="top-tenant">{{ tenant.name }}</span>
+            </div>
+            {% endif %}
+            
+            {% if contract_warning %}
+            <div class="contract-warning" title="Para renovar su licencia, contactese con su ejecutivo de ventas">
+              <span class="warning-icon">⚠️</span>
+              <span class="warning-text">
+                {% if contract_warning.days_remaining == 0 %}
+                  <strong>¡Contrato expira hoy!</strong> {{ contract_warning.support_plan }}
+                {% elif contract_warning.days_remaining < 0 %}
+                  <strong>¡Contrato expirado!</strong> ({{ contract_warning.support_plan }})
+                {% else %}
+                  <strong>¡Contrato por expirar!</strong> {{ contract_warning.days_remaining }} día{{ contract_warning.days_remaining|pluralize }} restantes.
+                {% endif %}
+              </span>
+            </div>
             {% endif %}
           </h1>
         </div>

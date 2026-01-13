@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="{% static 'css/soar_tickets.css' %}?v={% now 'U' %}">
 </head>
 
-<body class="layout">
+<body class="layout soar soar-tickets-page" data-user-id="{{ request.user.id }}">
   <!-- Sidebar -->
   <aside class="sidebar">
     <div class="brand">
@@ -80,7 +80,7 @@
       </details>
       {% endwith %}
 
-      {# ===== SIEM (dropdown con Alertas + dashboards) ===== #}
+      {# ===== SIEM ===== #}
       {% with raw_siem_id=tenant.logs360siem_id|default_if_none:"" %}
       {% with siem_id=raw_siem_id|stringformat:"s" %}
       {% if siem_id and siem_id != "0" and siem_id != "null" and siem_id != "NULL" and siem_id != "None" %}
@@ -119,7 +119,6 @@
       {% endwith %}
 
       {% endif %}
-      {# --- fin bloque "tenant and tenant.alarms_one_id" --- #}
 
       {# ===== Site24x7 ===== #}
       {% if tenant %}
@@ -171,15 +170,12 @@
             href="{% url 'cambiar_contrasena' %}">🔒 Cambiar contraseña</a>
           <a class="tenant-option nav-subitem" href="#" onclick="toggleCredModal(true)">🔑 Credenciales</a>
           <a class="tenant-option nav-subitem" href="#" onclick="toggleConfigModal(true)">🔔 Notificaciones</a>
-          <a class="tenant-option nav-subitem" href="#" onclick="toggleCountryModal(true)">🌎 Filtro países
-            whitelist</a>
+          <a class="tenant-option nav-subitem" href="#" onclick="toggleCountryModal(true)">🌎 Filtro países whitelist</a>
         </div>
       </details>
 
     </nav>
   </aside>
-
-
 
   <!-- Main -->
   <div class="content">
@@ -198,7 +194,6 @@
               {% for t in all_tenants %}
               <form method="post" action="{% url 'dashboard:switch_tenant' t.id %}">
                 {% csrf_token %}
-                <!-- ✅ conserva querystring -->
                 <input type="hidden" name="next" value="{{ request.get_full_path }}">
                 <button type="submit" class="tenant-option {% if tenant.id == t.id %}is-active{% endif %}">
                   {{ t.name }}
@@ -216,12 +211,10 @@
       <div class="top-right">
         <button class="btn ghost" title="Actualizar" onclick="location.reload()" data-loading="instant">⟳</button>
 
-        <!-- Guía rápida -->
         <button id="showCoachBtn" class="btn ghost" title="Mostrar guía rápida" onclick="window.startInntesecCoach()">
           💡 Guía rápida
         </button>
 
-        <!-- Inntesec Agent: texto + botones -->
         <a>Inntesec Agent:</a>
 
         <button class="btn ghost" type="button" onclick="window.openRetellCallWindow()">
@@ -255,7 +248,6 @@
       </div>
     </header>
 
-
     <section class="wrap">
       <div class="card">
         <div class="card-body">
@@ -288,8 +280,49 @@
             </div>
           </div>
 
+          <!-- ✅ KPIs (4) -->
+          <div class="tickets-kpis-wrap">
+            <div class="tickets-kpis">
+              <!-- Vencidos -->
+              <div class="kpi">
+                <div class="kpi-header">
+                  <div class="kpi-icon kpi-icon--overdue" aria-hidden="true">⏰</div>
+                  <div class="kpi-label">Tickets vencidos</div>
+                </div>
+                <div class="kpi-value">{{ kpi_overdue_count|default:0 }}</div>
+              </div>
+
+              <!-- Críticos -->
+              <div class="kpi">
+                <div class="kpi-header">
+                  <div class="kpi-icon kpi-icon--critical" aria-hidden="true">⛔</div>
+                  <div class="kpi-label">Severidad crítica</div>
+                </div>
+                <div class="kpi-value">{{ kpi_critical_count|default:0 }}</div>
+              </div>
+
+              <!-- Promedio cierre -->
+              <div class="kpi">
+                <div class="kpi-header">
+                  <div class="kpi-icon kpi-icon--avg" aria-hidden="true">✅</div>
+                  <div class="kpi-label">Promedio cierre</div>
+                </div>
+                <div class="kpi-value">{{ kpi_avg_close_human|default:"—" }}</div>
+              </div>
+
+              <!-- Total tickets -->
+              <div class="kpi">
+                <div class="kpi-header">
+                  <div class="kpi-icon kpi-icon--total" aria-hidden="true">📦</div>
+                  <div class="kpi-label">Total tickets</div>
+                </div>
+                <div class="kpi-value">{{ kpi_total_tickets|default:0 }}</div>
+              </div>
+            </div>
+          </div>
+
           <div class="table-wrap">
-            <table class="tbl" id="tbl-tickets">
+            <table class="tbl" id="tbl-tickets" data-due-url-template="{% url 'soar_tickets:due' 999999 %}">
               <thead>
                 <tr>
                   <th class="nowrap">Ticket ID</th>
@@ -328,6 +361,7 @@
                   data-due="{% if t.due_date %}{{ t.due_date|date:'Y-m-d' }}{% endif %}"
                   data-assigned="{{ t.assigned_to.get_full_name|default:t.assigned_to.username|escape }}"
                   data-created="{% if t.created_by %}{{ t.created_by.get_full_name|default:t.created_by.username|escape }}{% else %}—{% endif %}"
+                  data-created-id="{{ t.created_by_id|default_if_none:'' }}"
                   data-closed-by="{% if t.closed_by %}{{ t.closed_by.get_full_name|default:t.closed_by.username|escape }}{% else %}{% endif %}"
                   data-closed-at="{% if t.closed_at %}{{ t.closed_at|date:'d/m/Y, H:i' }}{% else %}{% endif %}"
                   data-event-date="{% if t.event_date %}{{ t.event_date|date:'Y-m-d' }}{% endif %}"
@@ -477,11 +511,30 @@
               <div class="ticket-info-v" id="tkt-tenant">—</div>
             </div>
 
+            <!-- ✅ VENCE (EDITABLE POR CREADOR, OPEN u OVERDUE) -->
             <div class="ticket-info-item">
               <div class="ticket-info-k">
                 <span class="meta-ico is-duration" aria-hidden="true"></span> Vence
               </div>
-              <div class="ticket-info-v mono" id="tkt-due">—</div>
+
+              <div class="ticket-info-v mono">
+                <span id="tkt-due">—</span>
+
+                <button type="button" class="btn ghost-sm" id="tkt-due-edit-btn" style="margin-left:8px; display:none;">
+                  ✎ Editar
+                </button>
+
+                <div id="tkt-due-edit" style="display:none; margin-top:10px;">
+                  <input type="date" id="tkt-due-input" class="tkt-date-input">
+                  <div class="ticket-actions-row" style="margin-top:10px; justify-content:flex-start;">
+                    <button type="button" class="btn primary" id="tkt-due-save">Guardar</button>
+                    <button type="button" class="btn ghost" id="tkt-due-cancel">Cancelar</button>
+                  </div>
+                  <div class="muted" id="tkt-due-help" style="margin-top:8px; display:none;">
+                    Solo el creador puede cambiar el vencimiento.
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div class="ticket-info-item">

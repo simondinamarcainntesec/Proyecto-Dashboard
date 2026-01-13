@@ -1,23 +1,30 @@
 import json
 from datetime import datetime
+import logging
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import IntegrityError, transaction
+from django.db.models import (
+    Case, When, Value, BooleanField,
+    Q, F, Avg,
+    DurationField, ExpressionWrapper,
+)
+
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+
 from tenants.decorators import tenant_required, service_required
-from tenants.models import TenantUser  
+from tenants.models import TenantUser, Tenant
+from utils.ms_email import enviar_correo_ticket_asignado, enviar_correo_ticket_cerrado
+
 from .models import SoarTicket
 from .utils import get_active_tenant
-from tenants.models import Tenant
-from django.db import IntegrityError, transaction
-import logging
-from utils.ms_email import enviar_correo_ticket_asignado, enviar_correo_ticket_cerrado
-from django.db.models import Case, When, Value, BooleanField
-
 
 logger = logging.getLogger(__name__)
+
 
 def _is_ajax(request):
     return request.headers.get("X-Requested-With") == "XMLHttpRequest"
@@ -29,15 +36,22 @@ def _json_body(request):
     except Exception:
         return {}
 
+def _is_critical_sev_q():
+    """
+    Define qué cuenta como 'crítica' en tu campo nivel_de_severidad.
+    Ajusta acá si en tu data viene distinto.
+    """
+    return (
+        Q(nivel_de_severidad__iexact="critical") |
+        Q(nivel_de_severidad__iexact="crítico") |
+        Q(nivel_de_severidad__iexact="critico")
+    )
+
 
 @login_required
 @tenant_required
 @service_required("alarms_one_id")
 def api_tenant_users(request):
-    """
-    Devuelve usuarios del tenant ACTIVO (según sesión tenant_id si es Inntesec).
-    Ignora tenant_id del front por seguridad.
-    """
     if not _is_ajax(request):
         return HttpResponseBadRequest("Bad request")
 
@@ -65,17 +79,11 @@ def api_tenant_users(request):
     return JsonResponse({"users": users})
 
 
-
 @require_POST
 @login_required
 @tenant_required
 @service_required("alarms_one_id")
 def api_ticket_create(request):
-    """
-    Crea ticket en agent.soar_ticket (estado OPEN).
-    Si ya existe ticket para ese evento (alarm_id) en el tenant activo => 409 + code ALREADY_EXISTS.
-    Además exige initial_notes y envía correo al usuario asignado.
-    """
     if not _is_ajax(request):
         return HttpResponseBadRequest("Bad request")
 
@@ -89,7 +97,6 @@ def api_ticket_create(request):
     assigned_to_id = data.get("assigned_to")
     due_date_str = (data.get("due_date") or "").strip()
 
-    # ✅ comentario inicial obligatorio (server-side)
     initial_notes = (data.get("initial_notes") or "").strip()
     if not initial_notes:
         return JsonResponse({
@@ -160,24 +167,22 @@ def api_ticket_create(request):
             created_by=request.user,
             due_date=due_date,
             status=SoarTicket.STATUS_OPEN,
-
-            # ✅ obligatorio (ya validado arriba)
             initial_notes=initial_notes,
         )
 
         assigned_email = (getattr(assigned_user, "email", "") or "").strip()
 
         def _send_mail_after_commit():
-          if not assigned_email:
-              logger.warning(
-                  "[SOAR_TICKETS] Ticket %s creado, pero usuario %s no tiene email. No se envía correo.",
-                  ticket.id, assigned_user.id
-              )
-              return
-          try:
-              enviar_correo_ticket_asignado(ticket)
-          except Exception as e:
-              logger.exception("[SOAR_TICKETS] Error enviando correo ticket=%s: %s", ticket.id, e)
+            if not assigned_email:
+                logger.warning(
+                    "[SOAR_TICKETS] Ticket %s creado, pero usuario %s no tiene email. No se envía correo.",
+                    ticket.id, assigned_user.id
+                )
+                return
+            try:
+                enviar_correo_ticket_asignado(ticket)
+            except Exception as e:
+                logger.exception("[SOAR_TICKETS] Error enviando correo ticket=%s: %s", ticket.id, e)
 
         transaction.on_commit(_send_mail_after_commit)
 
@@ -202,9 +207,6 @@ def api_ticket_create(request):
     return JsonResponse({"ok": True, "ticket_id": ticket.id, "status": ticket.status})
 
 
-
-
-
 @login_required
 @tenant_required
 @service_required("alarms_one_id")
@@ -224,27 +226,32 @@ def tickets_list(request):
     user_tenant = getattr(request.user, "tenant", None)
     is_inntesec = bool(user_tenant and (user_tenant.name or "").lower() == "inntesec")
 
-    # ✅ Inntesec: por defecto "all" si no viene scope
     if is_inntesec and "scope" not in request.GET:
         scope = "all"
 
+    # ✅ SIEMPRE filtrado por tenant activo
     base_qs = (
         SoarTicket.objects
         .select_related("assigned_to", "created_by", "closed_by")
         .filter(tenant_id=tenant.id)
     )
 
-    # Si NO es Inntesec, siempre "mine"
+    # ✅ si no es inntesec, forzamos mine
     if not is_inntesec:
         scope = "mine"
 
+    # ✅ scope
     if scope == "mine":
         base_qs = base_qs.filter(assigned_to=request.user)
 
+    # counts tabs
     open_count = base_qs.filter(status=SoarTicket.STATUS_OPEN).count()
     closed_count = base_qs.filter(status=SoarTicket.STATUS_CLOSED).count()
 
-    # ✅ vencido: OPEN + due_date < hoy
+    # ✅ KPI: total tickets (tenant + scope)
+    kpi_total_tickets = open_count + closed_count
+
+    # overdue annotate
     today = timezone.localdate()
     base_qs = base_qs.annotate(
         is_overdue=Case(
@@ -259,10 +266,53 @@ def tickets_list(request):
         )
     )
 
+    # ✅ queryset final (según status)
     if status == "ALL":
-        tickets = base_qs.filter(status__in=[SoarTicket.STATUS_OPEN, SoarTicket.STATUS_CLOSED]).order_by("-opened_at")
+        tickets_qs = base_qs.filter(status__in=[SoarTicket.STATUS_OPEN, SoarTicket.STATUS_CLOSED])
     else:
-        tickets = base_qs.filter(status=status).order_by("-opened_at")
+        tickets_qs = base_qs.filter(status=status)
+
+    tickets = tickets_qs.order_by("-opened_at")
+
+    # =========================================================
+    # KPIs
+    # =========================================================
+
+    # 1) Cantidad vencidos
+    kpi_overdue_count = base_qs.filter(
+        status=SoarTicket.STATUS_OPEN,
+        due_date__isnull=False,
+        due_date__lt=today
+    ).count()
+
+    # 2) Cantidad severidad crítica (según tickets_qs)
+    kpi_critical_count = tickets_qs.filter(
+        Q(nivel_de_severidad__iexact="critical") |
+        Q(nivel_de_severidad__iexact="crítico") |
+        Q(nivel_de_severidad__iexact="critico")
+    ).count()
+
+    # 3) Tiempo promedio de cierre (solo CLOSED)
+    closed_for_avg = base_qs.filter(
+        status=SoarTicket.STATUS_CLOSED,
+        closed_at__isnull=False,
+        opened_at__isnull=False,
+    ).annotate(
+        close_duration=ExpressionWrapper(
+            F("closed_at") - F("opened_at"),
+            output_field=DurationField()
+        )
+    )
+
+    avg_close_duration = closed_for_avg.aggregate(avg=Avg("close_duration"))["avg"]
+
+    if avg_close_duration:
+        total_seconds = int(avg_close_duration.total_seconds())
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        kpi_avg_close_human = f"{hours}h {minutes}m" if hours > 0 else f"{minutes}m"
+    else:
+        kpi_avg_close_human = "—"
 
     all_tenants = Tenant.objects.all().order_by("name") if is_inntesec else []
 
@@ -274,7 +324,14 @@ def tickets_list(request):
         "scope": scope,
         "open_count": open_count,
         "closed_count": closed_count,
+
+        "kpi_overdue_count": kpi_overdue_count,
+        "kpi_critical_count": kpi_critical_count,
+        "kpi_avg_close_human": kpi_avg_close_human,
+        "kpi_total_tickets": kpi_total_tickets,
     })
+
+
 
 @require_POST
 @login_required
@@ -333,7 +390,6 @@ def ticket_close(request, ticket_id):
                     assigned_email = (getattr(assigned_user, "email", "") or "").strip()
                     creator_email = (getattr(creator_user, "email", "") or "").strip()
 
-                    # 1) correo al asignado (saluda al asignado)
                     if assigned_email:
                         enviar_correo_ticket_cerrado(closed_t, recipient=assigned_user)
                     else:
@@ -342,7 +398,6 @@ def ticket_close(request, ticket_id):
                             closed_ticket_id
                         )
 
-                    # 2) correo al creador (saluda al creador) si es distinto email
                     if creator_email and creator_email.lower() != (assigned_email or "").lower():
                         enviar_correo_ticket_cerrado(closed_t, to_email=creator_email, recipient=creator_user)
                     elif not creator_email:
@@ -368,3 +423,66 @@ def ticket_close(request, ticket_id):
 
     messages.success(request, "Ticket cerrado ✅")
     return redirect("soar_tickets:list")
+
+@require_POST
+@login_required
+@tenant_required
+@service_required("alarms_one_id")
+def ticket_update_due_date(request, ticket_id):
+    if not _is_ajax(request):
+        return HttpResponseBadRequest("Bad request")
+
+    tenant = get_active_tenant(request)
+    if not tenant:
+        return JsonResponse({"ok": False, "error": "No hay tenant activo."}, status=400)
+
+    due_date_str = (request.POST.get("due_date") or "").strip()
+    if not due_date_str:
+        # también soporta JSON por si algún día lo usas así
+        data = _json_body(request)
+        due_date_str = (data.get("due_date") or "").strip()
+
+    if not due_date_str:
+        return JsonResponse({"ok": False, "error": "due_date requerido (YYYY-MM-DD)."}, status=400)
+
+    try:
+        new_due = datetime.strptime(due_date_str, "%Y-%m-%d").date()
+    except Exception:
+        return JsonResponse({"ok": False, "error": "due_date inválido (YYYY-MM-DD)."}, status=400)
+
+    try:
+        with transaction.atomic():
+            t = (
+                SoarTicket.objects
+                .select_for_update()
+                .filter(id=ticket_id, tenant_id=tenant.id)
+                .first()
+            )
+
+            if not t:
+                return JsonResponse({"ok": False, "error": "Ticket no encontrado."}, status=404)
+
+            # ✅ solo el creador
+            if getattr(t, "created_by_id", None) != request.user.id:
+                return JsonResponse({"ok": False, "error": "Solo el creador puede modificar el vencimiento."}, status=403)
+
+            # ✅ no permitir si está cerrado
+            if t.status != SoarTicket.STATUS_OPEN:
+                return JsonResponse({"ok": False, "error": "No puedes modificar el vencimiento de un ticket cerrado."}, status=400)
+
+            t.due_date = new_due
+            t.save(update_fields=["due_date"])  # updated_at auto_now se actualizará si tu modelo lo tiene
+
+        today = timezone.localdate()
+        computed_status = "OVERDUE" if (new_due and new_due < today) else "OPEN"
+
+        return JsonResponse({
+            "ok": True,
+            "ticket_id": t.id,
+            "due_date": new_due.strftime("%Y-%m-%d"),
+            "status": computed_status,
+        })
+
+    except Exception:
+        logger.exception("[SOAR_TICKETS] Error actualizando due_date ticket=%s", ticket_id)
+        return JsonResponse({"ok": False, "error": "No se pudo actualizar el vencimiento."}, status=400)

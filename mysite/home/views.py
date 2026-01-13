@@ -15,7 +15,7 @@ from django.db import transaction
 import json
 
 from tenants.decorators import tenant_required
-from tenants.models import Tenant, TenantUser, NotificationChannelPreference
+from tenants.models import Tenant, TenantUser, NotificationChannelPreference, Tenants_contracts
 from tenants.views import normalize_e164_phone
 
 from inyeccion_api.models import Alarm
@@ -428,6 +428,67 @@ def _first_existing_dt_field(model, candidates: list[str]) -> str | None:
     return None
 
 
+
+def _get_contract_expiry_warning(tenant) -> dict | None:
+    """
+    Verifica si el contrato del tenant está próximo a expirar.
+    
+    Retorna un dict con:
+    - 'days_remaining': días hasta la expiración
+    - 'expiry_date': fecha de expiración (string formato YYYY-MM-DD)
+    - 'support_plan': tipo de plan de soporte
+    
+    O None si no hay contrato o no está próximo a expirar.
+    
+    Lógica:
+    - Si support_plan contiene "POC": alerta con 7 días o menos
+    - Si support_plan contiene "Inntesec Agent": alerta con 30 días o menos
+    - Cualquier otro plan: alerta con 30 días o menos (por defecto)
+    """
+    if not tenant or not hasattr(tenant, 'id'):
+        return None
+    
+    try:
+        today = dj_timezone.localdate()
+        
+        # Obtener el contrato activo más reciente del tenant
+        contract = Tenants_contracts.objects.filter(
+            tenant_id=tenant.id
+        ).order_by('-expiry_date').first()
+        
+        if not contract:
+            return None
+        
+        # Calcular días restantes
+        days_remaining = (contract.expiry_date - today).days
+        
+        # Determinar el threshold según el support_plan (buscar texto contenido)
+        support_plan = (contract.support_plan or "").strip()
+        support_plan_lower = support_plan.lower()
+        threshold_days = 30  # Por defecto 30 días
+        
+        # Verificar si contiene "POC"
+        if "poc" in support_plan_lower:
+            threshold_days = 7
+        # Verificar si contiene "inntesec agent" o "agent"
+        elif "inntesec agent" in support_plan_lower or "agent" in support_plan_lower:
+            threshold_days = 30
+        
+        # Solo mostrar alerta si está dentro del threshold (incluso si ha expirado)
+        if days_remaining <= threshold_days:
+            return {
+                'days_remaining': days_remaining,
+                'expiry_date': contract.expiry_date.isoformat(),
+                'support_plan': support_plan,
+                'contract_name': contract.contract_name,
+            }
+        
+        return None
+        
+    except Exception as e:
+        logger.exception("[HOME] Error verificando contrato próximo a expirar: %s", e)
+        return None
+
 @login_required
 @tenant_required
 def home_index(request):
@@ -767,6 +828,11 @@ def home_index(request):
     except Exception as e:
         logger.exception("[HOME] Error obteniendo credenciales del tenant: %s", e)
 
+    # =======================
+    # Verificar contrato próximo a expirar
+    # =======================
+    contract_warning = _get_contract_expiry_warning(tenant)
+
     # ============================
     # Preferencias de notificación
     # ============================
@@ -851,6 +917,9 @@ def home_index(request):
         "tg_media": tg_media,
         "tg_alta": tg_alta,
         "tg_critica": tg_critica,
+        # Contrato próximo a expirar
+        "contract_warning": contract_warning,
+
     }
 
     # DBG: punto 1 (ctx sanity)

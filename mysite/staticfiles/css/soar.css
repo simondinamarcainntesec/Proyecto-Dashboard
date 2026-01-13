@@ -1010,7 +1010,7 @@ body.soar #tbl-incidentes .assign-pill{
   border: 1px solid transparent;
   line-height: 1.6;
   white-space: nowrap;
-  color: #fff; /* 🔥 que no te lo pisen */
+  color: #fff; /* que no te lo pisen */
 }
 
 body.soar #tbl-incidentes .assign-pill .assign-ico{

@@ -10,7 +10,7 @@ let chart;
 const zeros = (n) => Array.from({ length: n }, () => 0);
 const safeNum = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
-// ✅ SIN separador de miles (no puntos, no comas)
+// SIN separador de miles (no puntos, no comas)
 const NF = new Intl.NumberFormat("en-US", { useGrouping: false });
 
 // step “bonito”: 1/2/5 * 10^n (da 10, 20, 50, 100, 200, 500, 1000…)
@@ -159,7 +159,7 @@ export function renderHourly(state) {
             stepSize: stepY,
             precision: 0,
             maxTicksLimit: 9,
-            callback: (v) => NF.format(Math.round(v)), // ✅ 3500 en vez de 3.500
+            callback: (v) => NF.format(Math.round(v)), // 3500 en vez de 3.500
           },
           grid: { color: GRID },
         },

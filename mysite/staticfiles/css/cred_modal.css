@@ -16,7 +16,7 @@
   align-items: center;
   justify-content: center;
 
-  /* ✅ FIX principal: ganar a topbar/sidebar/menus */
+  /* FIX principal: ganar a topbar/sidebar/menus */
   z-index: 99999 !important;
 }
 

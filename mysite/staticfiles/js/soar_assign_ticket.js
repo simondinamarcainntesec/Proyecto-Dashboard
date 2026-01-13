@@ -213,7 +213,7 @@
     cell.innerHTML = renderAssignedCell(isRowAssigned(tr));
   }
 
-  // ✅ pinta toda la tabla al cargar (y lo dejamos disponible para refrescar luego)
+  // pinta toda la tabla al cargar (y lo dejamos disponible para refrescar luego)
   function hydrateAssignedCells() {
     try {
       table.querySelectorAll("tr.soar-row").forEach((tr) => ensureAssignedCellRendered(tr));
@@ -320,7 +320,7 @@
     updateSubmitVisualState();
   }
 
-  // ✅ NO usamos disabled (para poder mostrar mensajes al click)
+  // NO usamos disabled (para poder mostrar mensajes al click)
   function setSubmitState(enabled, busyState) {
     const btn = Q("#assign-submit", assignModal);
     if (!btn) return;
@@ -425,7 +425,7 @@
   function openAssignModalForRow(tr) {
     if (!tr) return;
 
-    // ✅ por si la tabla viene “cruda”, pintamos asignado antes de decidir
+    // por si la tabla viene “cruda”, pintamos asignado antes de decidir
     ensureAssignedCellRendered(tr);
 
     if (isRowAssigned(tr)) {
@@ -497,7 +497,7 @@
     const assignedName = getSelectedAssignedName();
     const initialNotes = (inpInitialNotes?.value || "").trim();
 
-    // ✅ Mensajes solicitados
+    // Mensajes solicitados
     if (!assignedTo) {
       openInfoModal("Usuario requerido", "Debes seleccionar un usuario para crear el ticket.");
       setTimeout(() => selUser?.focus?.(), 80);
@@ -600,7 +600,7 @@
   hideEl(ctxMenu);
   hideEl(assignModal);
 
-  // ✅ 1) Pintar “Asignado” para TODAS las filas al cargar
+  // 1) Pintar “Asignado” para TODAS las filas al cargar
   hydrateAssignedCells();
 
   // Click derecho sobre fila
@@ -627,7 +627,7 @@
   window.addEventListener("scroll", hideCtxMenu, { passive: true });
   window.addEventListener("resize", hideCtxMenu);
 
-  // ✅ Click en “Asignar Ticket” (delegado)
+  // Click en “Asignar Ticket” (delegado)
   document.addEventListener("click", (ev) => {
     const btn = ev.target.closest("#ctxAssignTicketBtn");
     if (!btn) return;
@@ -697,7 +697,7 @@
   selUser?.addEventListener("change", updateSubmitVisualState);
   inpInitialNotes?.addEventListener("input", updateSubmitVisualState);
 
-  // ✅ Click en “Crear/Asignar ticket” (delegado)
+  // Click en “Crear/Asignar ticket” (delegado)
   document.addEventListener("click", (ev) => {
     const btn = ev.target.closest("#assign-submit");
     if (!btn) return;
@@ -711,7 +711,7 @@
     }
   }, true);
 
-  // ✅ si otro script re-renderiza filas, que nos avise
+  //  si otro script re-renderiza filas, que nos avise
   window.addEventListener("soar-incidents-rendered", () => {
     hydrateAssignedCells();
   });

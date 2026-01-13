@@ -1,12 +1,15 @@
 from django import forms
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth import get_user_model
 from django.db.models.functions import Lower
 from django.utils import timezone
+from django.db import transaction
 
 from .models import Tenant, Client, TenantUser
 from .models import TenantDashboardEmbed
 from .models import NotificationChannelPreference
+from .models import Tenants_contracts  # ✅ admin contratos
 
 from home.models import TenantCredentials
 
@@ -14,15 +17,24 @@ from home.models import TenantCredentials
 TenantCredentials._meta.app_label = "tenants"
 TenantDashboardEmbed._meta.app_label = "tenants"
 
+User = get_user_model()  # TenantUser
 
+
+# =========================================================
+# TENANT
+# =========================================================
 @admin.register(Tenant)
 class TenantAdmin(admin.ModelAdmin):
-    list_display = ("name", "alarms_one_id", "logs360siem_id", "site24x7_id", "created_at")
+    list_display = ("name", "is_active", "alarms_one_id", "logs360siem_id", "site24x7_id", "created_at")
     search_fields = ("name", "alarms_one_id", "logs360siem_id", "site24x7_id")
-    list_filter = ("created_at",)
+    list_filter = ("is_active", "created_at")
     ordering = ("name",)
+    # Nota: ya no hacemos el toggle masivo acá, porque ahora "manda contratos".
 
 
+# =========================================================
+# CLIENT
+# =========================================================
 @admin.register(Client)
 class ClientAdmin(admin.ModelAdmin):
     list_display = ("name", "email", "tenant", "id", "phone", "telegram_id", "user")
@@ -35,6 +47,9 @@ class ClientAdmin(admin.ModelAdmin):
         return qs.annotate(_name_lower=Lower("name")).order_by("_name_lower")
 
 
+# =========================================================
+# TENANT USER (con blindaje)
+# =========================================================
 @admin.register(TenantUser)
 class TenantUserAdmin(UserAdmin):
     """
@@ -62,7 +77,7 @@ class TenantUserAdmin(UserAdmin):
 
     fieldsets = (
         (None, {"fields": ("username", "password")}),
-        ("Información personal", {"fields": ("first_name", "last_name", "email", "phone")}),  # phone editable
+        ("Información personal", {"fields": ("first_name", "last_name", "email", "phone")}),
         ("Tenant", {"fields": ("tenant",)}),
 
         ("Notificaciones y Alarmas", {
@@ -75,12 +90,13 @@ class TenantUserAdmin(UserAdmin):
         ("Fechas importantes", {"fields": ("last_login", "date_joined")}),
     )
 
+    # ✅ corregido (sin la línea rara)
     add_fieldsets = (
         (None, {
             "classes": ("wide",),
             "fields": (
                 "id",
-                "username", "email", "phone",  # phone al crear
+                "username", "email", "phone",
                 "password1", "password2",
                 "tenant", "is_active", "is_staff", "is_superuser",
                 "Alarma_Telegram", "Alarma_Telefono", "Alarma_Correo",
@@ -111,8 +127,22 @@ class TenantUserAdmin(UserAdmin):
     _perms_readonly.short_description = "Permisos (codenames)"
 
     def save_model(self, request, obj, form, change):
-        """Sincroniza automáticamente con Client al guardar."""
+        """
+        Blindaje:
+        - Si el tenant está desactivado, este usuario NO puede quedar activo.
+        Además, sincroniza automáticamente con Client al guardar.
+        """
+        tenant = getattr(obj, "tenant", None)
+        if tenant and getattr(tenant, "is_active", True) is False:
+            if obj.is_active:
+                messages.warning(
+                    request,
+                    f"El tenant '{tenant.name}' está desactivado: se fuerza este usuario a inactivo."
+                )
+            obj.is_active = False
+
         super().save_model(request, obj, form, change)
+
         from tenants.models import Client
         if obj.email and obj.tenant:
             client, created = Client.objects.update_or_create(
@@ -133,15 +163,14 @@ class TenantUserAdmin(UserAdmin):
                 print(f"🟡 Cliente actualizado: {client.email}")
 
     def save_related(self, request, form, formsets, change):
-        # No tocamos relaciones M2M
         pass
 
 
+# =========================================================
+# DASHBOARD EMBEDS
+# =========================================================
 @admin.register(TenantDashboardEmbed)
 class TenantDashboardEmbedAdmin(admin.ModelAdmin):
-    """
-    Admin para el modelo que guarda URLs de iframes por tenant.
-    """
     list_display = (
         "tenant",
         "tenant_name",
@@ -164,12 +193,9 @@ class TenantDashboardEmbedAdmin(admin.ModelAdmin):
         "eventos_diarios",
     )
 
-    # Recomendación: NO filtrar por campos URL/texto; solo por tenant/fechas
     list_filter = ("tenant", "created_at", "updated_at")
-
     ordering = ("tenant_name",)
     list_select_related = ("tenant",)
-
     readonly_fields = ("tenant_name", "created_at", "updated_at")
 
     fieldsets = (
@@ -190,6 +216,9 @@ class TenantDashboardEmbedAdmin(admin.ModelAdmin):
     )
 
 
+# =========================================================
+# TENANT CREDENTIALS (HOME)
+# =========================================================
 class TenantCredentialsAdminForm(forms.ModelForm):
     class Meta:
         model = TenantCredentials
@@ -211,7 +240,6 @@ class TenantCredentialsAdminForm(forms.ModelForm):
             self.initial["username"] = inst.username_plain
             self.initial["password"] = inst.password_plain
 
-        # Mostrar contraseña en claro solo cuando el admin pulsa "ver"
         pwd_field = self.fields.get("password")
         if pwd_field:
             pwd_field.widget = forms.PasswordInput(render_value=True)
@@ -245,7 +273,6 @@ class TenantCredentialsAdmin(admin.ModelAdmin):
 
     list_filter = ("is_active", "tenant_id", "created_at", "updated_at")
     ordering = ("-updated_at",)
-
     readonly_fields = ("first_login_at", "last_login_at", "created_at", "updated_at")
 
     fieldsets = (
@@ -259,10 +286,107 @@ class TenantCredentialsAdmin(admin.ModelAdmin):
     )
 
 
-# =========================
-# NotificationChannelPreference (Checkboxes + sin campos extra)
-# =========================
+# =========================================================
+# CONTRACTS ADMIN (MANDA ACTIVACIÓN) - CORREGIDO CON PRIORIDAD
+# =========================================================
+MANDATORY_CONTRACT_NAMES = {"POC Inntesec Agent", "Inntesec Agent"}
+STATUS_CHOICES = (
+    ("Active", "Active"),
+    ("Expired", "Expired"),
+)
 
+# prioridad: si existe Inntesec Agent, manda ese; si no, manda POC
+CONTRACT_PRIORITY = ["Inntesec Agent", "POC Inntesec Agent"]
+
+
+class TenantsContractsAdminForm(forms.ModelForm):
+    status = forms.ChoiceField(choices=STATUS_CHOICES, required=True, label="Status")
+
+    class Meta:
+        model = Tenants_contracts
+        fields = "__all__"
+
+
+@admin.register(Tenants_contracts)
+class TenantsContractsAdmin(admin.ModelAdmin):
+    form = TenantsContractsAdminForm
+
+    list_display = ("contract_id", "tenant_id", "contract_name", "status", "start_date", "expiry_date", "account")
+    list_filter = ("status", "contract_name", "start_date", "expiry_date")
+    search_fields = ("contract_id", "contract_name", "account", "tenant_id")
+    ordering = ("-expiry_date",)
+
+    def _normalize_status(self, s: str) -> str:
+        return (s or "").strip()
+
+    def _pick_effective_contract(self, tenant_id: int):
+        """
+        Devuelve el contrato que MANDA por prioridad:
+        - Inntesec Agent (si existe)
+        - si no, POC Inntesec Agent
+        Si hay múltiples por nombre, toma el de mayor expiry_date.
+        """
+        for name in CONTRACT_PRIORITY:
+            row = (
+                Tenants_contracts.objects
+                .filter(tenant_id=tenant_id, contract_name=name)
+                .order_by("-expiry_date")
+                .first()
+            )
+            if row:
+                return row
+        return None
+
+    @transaction.atomic
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+
+        # Solo aplicamos regla si el contrato editado es de los mandatorios
+        if (obj.contract_name or "").strip() not in MANDATORY_CONTRACT_NAMES:
+            messages.info(request, f"Contrato guardado (no mandatorio): '{obj.contract_name}'. No se aplicó activación.")
+            return
+
+        # Elegir el contrato efectivo (manda por prioridad)
+        effective = self._pick_effective_contract(obj.tenant_id)
+        if not effective:
+            messages.warning(request, f"No se encontró contrato efectivo para tenant_id={obj.tenant_id}. No se aplicó activación.")
+            return
+
+        eff_status = self._normalize_status(getattr(effective, "status", ""))
+        if eff_status not in {"Active", "Expired"}:
+            messages.info(request, f"Status '{eff_status}' guardado en contrato efectivo. (No se aplicó regla).")
+            return
+
+        tenant = Tenant.objects.select_for_update().filter(id=obj.tenant_id).first()
+        if not tenant:
+            messages.error(request, f"No existe Tenant con id={obj.tenant_id}. No se pudo sincronizar activación.")
+            return
+
+        qs_users = User.objects.filter(tenant=tenant).exclude(is_superuser=True)
+
+        desired_active = (eff_status == "Active")
+
+        # siempre dejamos consistente: tenant + TODOS sus users
+        tenant.is_active = desired_active
+        tenant.save(update_fields=["is_active"])
+
+        updated = qs_users.update(is_active=desired_active)
+
+        if desired_active:
+            messages.success(
+                request,
+                f"Contrato efectivo: '{effective.contract_name}' = Active → Tenant '{tenant.name}' activado + {updated} usuario(s) activado(s)."
+            )
+        else:
+            messages.warning(
+                request,
+                f"Contrato efectivo: '{effective.contract_name}' = Expired → Tenant '{tenant.name}' desactivado + {updated} usuario(s) desactivado(s)."
+            )
+
+
+# =========================================================
+# NotificationChannelPreference (Checkboxes + sin campos extra)
+# =========================================================
 SEVERITY_CHOICES = (
     ("baja", "Baja"),
     ("media", "Media"),
@@ -270,9 +394,7 @@ SEVERITY_CHOICES = (
     ("critica", "Crítica"),
 )
 
-
 class NotificationChannelPreferenceAdminForm(forms.ModelForm):
-    # Reemplazamos JSONField por checkboxes (lista) y lo convertimos a dict en clean_*
     telefono = forms.MultipleChoiceField(
         choices=SEVERITY_CHOICES,
         required=False,
@@ -299,7 +421,6 @@ class NotificationChannelPreferenceAdminForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Dropdown user: "Nombre (Tenant) — correo/username" (SIN ID)
         uf = self.fields.get("user")
         if uf:
             uf.queryset = TenantUser.objects.select_related("tenant").all()
@@ -308,12 +429,11 @@ class NotificationChannelPreferenceAdminForm(forms.ModelForm):
                 tenant_name = getattr(getattr(u, "tenant", None), "name", "—")
                 full = (u.get_full_name() or "").strip()
                 name = full or (getattr(u, "first_name", "") or "").strip() or getattr(u, "username", "—")
-                username = getattr(u, "username", "—")  # en tu caso suele ser correo
+                username = getattr(u, "username", "—")
                 return f"{name} ({tenant_name}) — {username}"
 
             uf.label_from_instance = _label
 
-        # Iniciales desde dict JSON -> lista checkeada
         inst = getattr(self, "instance", None)
         if inst and getattr(inst, "pk", None):
             self.initial["telefono"] = [k for k, _ in SEVERITY_CHOICES if (inst.telefono or {}).get(k) is True]
@@ -333,13 +453,11 @@ class NotificationChannelPreferenceAdminForm(forms.ModelForm):
     def clean_telegram(self):
         return self._dict_from_selected(self.cleaned_data.get("telegram"))
 
-
 @admin.register(NotificationChannelPreference)
 class NotificationChannelPreferenceAdmin(admin.ModelAdmin):
     form = NotificationChannelPreferenceAdminForm
     list_select_related = ("user", "user__tenant")
 
-    # tabla: Usuario + severidades activas por canal
     list_display = ("user_display", "telefono_levels", "correo_levels", "telegram_levels")
     list_display_links = ("user_display",)
 
@@ -352,7 +470,6 @@ class NotificationChannelPreferenceAdmin(admin.ModelAdmin):
     )
     list_filter = ("user__tenant",)
 
-    # “barras/títulos” por canal (como en tus otros módulos)
     fieldsets = (
         ("Usuario", {"fields": ("user",)}),
         ("Teléfono", {"fields": ("telefono",)}),
@@ -360,11 +477,9 @@ class NotificationChannelPreferenceAdmin(admin.ModelAdmin):
         ("Telegram", {"fields": ("telegram",)}),
     )
 
-    # al editar: user bloqueado (evita mover prefs a otro user)
     def get_readonly_fields(self, request, obj=None):
         return ("user",) if obj else ()
 
-    # --- helpers list display ---
     def user_display(self, obj):
         u = getattr(obj, "user", None)
         if not u:
@@ -375,10 +490,6 @@ class NotificationChannelPreferenceAdmin(admin.ModelAdmin):
     user_display.short_description = "Usuario"
 
     def _levels_str(self, data):
-        """
-        data: dict JSON como {"baja": True/False, "media": ..., "alta": ..., "critica": ...}
-        Devuelve: "Baja, Media" o "—"
-        """
         data = data or {}
         labels = []
         for key, label in SEVERITY_CHOICES:

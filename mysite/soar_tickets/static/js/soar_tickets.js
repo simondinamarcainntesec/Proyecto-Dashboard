@@ -44,13 +44,21 @@
   const elClosedBy = Q('#tkt-closed-by');
   const elClosedAt = Q('#tkt-closed-at');
 
-  // initial notes (comentario inicial)
+  // initial notes
   const wrapInitialNotes = Q('#tkt-initial-notes-wrap');
   const elInitialNotes = Q('#tkt-initial-notes');
 
-  // notes (detalle)
+  // notes
   const wrapNotes = Q('#tkt-notes-wrap');
   const elNotes = Q('#tkt-notes');
+
+  // ===== Editor vencimiento (IDs alineados al template) =====
+  const btnDueEdit = Q('#tkt-due-edit-btn');
+  const dueEditWrap = Q('#tkt-due-edit');
+  const dueInput = Q('#tkt-due-input');
+  const dueSaveBtn = Q('#tkt-due-save');
+  const dueCancelBtn = Q('#tkt-due-cancel');
+  const dueHint = Q('#tkt-due-help');
 
   // ===== Modal observaciones =====
   const closeBackdrop = Q('[data-close-backdrop]');
@@ -66,10 +74,17 @@
   const successOk = Q('[data-success-ok]');
   const successCard = successModal.querySelector('.modal-card');
 
+  // ✅ elementos internos para reutilizar texto
+  const successTitleEl = Q('#ticketSuccessTitle');
+  const successTextEl = successModal.querySelector('.success-info-text');
+
+  // ✅ controla si al cerrar la modal hay que recargar o no
+  let successShouldReload = true;
+
   let selectedRow = null;
 
   // helpers
-  function esc(s){ return String(s ?? ''); }
+  function esc(s) { return String(s ?? ''); }
 
   function stopAll(e) {
     if (!e) return;
@@ -111,11 +126,10 @@
 
     if (st === 'OVERDUE') {
       elStatusBadge.innerHTML = `<span class="state-badge is-overdue">Vencido</span>`;
-      if (btnOpenClose) btnOpenClose.style.display = ''; // sigue cerrable
+      if (btnOpenClose) btnOpenClose.style.display = '';
       return;
     }
 
-    // OPEN (default)
     elStatusBadge.innerHTML = `<span class="state-badge is-open">Abierto</span>`;
     if (btnOpenClose) btnOpenClose.style.display = '';
   }
@@ -130,6 +144,23 @@
     return inp ? inp.value : '';
   }
 
+  function getDueUrl(ticketId) {
+    const tpl = table.dataset.dueUrlTemplate || '';
+    if (!tpl) return `due/${ticketId}/`;
+    return tpl.replace('999999', String(ticketId));
+  }
+
+  function setRowStatusBadge(tr, status) {
+    if (!tr) return;
+    const td = tr.querySelector('td .state-badge')?.closest('td');
+    if (!td) return;
+
+    const st = (status || 'OPEN').toUpperCase();
+    if (st === 'CLOSED') td.innerHTML = `<span class="state-badge is-closed">Cerrado</span>`;
+    else if (st === 'OVERDUE') td.innerHTML = `<span class="state-badge is-overdue">Vencido</span>`;
+    else td.innerHTML = `<span class="state-badge is-open">Abierto</span>`;
+  }
+
   // ===== modal open/close =====
   function openModalDetail() {
     document.body.classList.add('modal-open');
@@ -137,7 +168,6 @@
     modal.setAttribute('aria-hidden', 'false');
   }
 
-  // NO quitar modal-open si otra modal sigue abierta
   function closeModalDetailFully() {
     modal.classList.add('hidden');
     modal.setAttribute('aria-hidden', 'true');
@@ -155,11 +185,9 @@
     closeModal.classList.remove('hidden');
     closeModal.setAttribute('aria-hidden', 'false');
 
-    // precarga notes
     const existing = (selectedRow?.dataset?.notes || '').trim();
     notesTextarea.value = existing || '';
 
-    // action del form close/<id>/
     const ticketId = selectedRow?.dataset?.ticketId;
     if (closeForm && ticketId) closeForm.action = `close/${ticketId}/`;
 
@@ -177,21 +205,36 @@
     }
   }
 
-  function openSuccessModal() {
+  // ✅ ahora acepta texto + si recarga o no
+  function openSuccessModal(opts = {}) {
+    const title = opts.title ?? 'Ticket cerrado con éxito';
+    const text = opts.text ?? 'El ticket fue actualizado y guardado correctamente.';
+    successShouldReload = (opts.reloadOnClose ?? true);
+
+    if (successTitleEl) successTitleEl.textContent = title;
+    if (successTextEl) successTextEl.textContent = text;
+
     document.body.classList.add('modal-open');
     successModal.classList.remove('hidden');
     successModal.setAttribute('aria-hidden', 'false');
   }
 
-  function closeSuccessModalAndReload() {
+  function closeSuccessModal() {
     successModal.classList.add('hidden');
     successModal.setAttribute('aria-hidden', 'true');
 
-    // removemos blur/lock
-    document.body.classList.remove('modal-open');
+    if (successShouldReload) {
+      document.body.classList.remove('modal-open');
+      location.reload();
+      return;
+    }
 
-    // refrescar para que cambie el estado/tabla
-    location.reload();
+    // ✅ si no hay otros modales abiertos, saca modal-open
+    const detailIsOpen = !modal.classList.contains('hidden');
+    const closeIsOpen = !closeModal.classList.contains('hidden');
+    if (!detailIsOpen && !closeIsOpen) {
+      document.body.classList.remove('modal-open');
+    }
   }
 
   // evitar clicks dentro de cards = "afuera"
@@ -199,9 +242,156 @@
   closeCard?.addEventListener('click', (e) => e.stopPropagation());
   successCard?.addEventListener('click', (e) => e.stopPropagation());
 
+  // ===== Editor vencimiento UI =====
+  function resetDueEditor() {
+    if (dueEditWrap) dueEditWrap.style.display = 'none';
+    if (btnDueEdit) btnDueEdit.style.display = 'none';
+    if (dueHint) dueHint.style.display = 'none';
+    if (dueInput) dueInput.value = '';
+    if (dueSaveBtn) dueSaveBtn.disabled = false;
+  }
+
+  function getCurrentUserId() {
+    const v = document.body?.dataset?.userId;
+    return v ? String(v) : '';
+  }
+
+  function computeRowStatus(tr) {
+    const isOverdue = String(tr?.dataset?.isOverdue || '0') === '1';
+    if (isOverdue) return 'OVERDUE';
+    return String(tr?.dataset?.status || 'OPEN').toUpperCase();
+  }
+
+  function canEditDueForRow(tr) {
+    const userId = getCurrentUserId();
+    const createdId = String(tr?.dataset?.createdId || '');
+    const st = computeRowStatus(tr);
+    return !!userId && !!createdId && userId === createdId && st !== 'CLOSED';
+  }
+
+  function showDueEditor(tr) {
+    if (!tr) return;
+
+    const canEdit = canEditDueForRow(tr);
+    const currentDue = (tr.dataset.due || '').trim();
+
+    if (btnDueEdit) btnDueEdit.style.display = canEdit ? '' : 'none';
+    if (dueHint) dueHint.style.display = canEdit ? 'none' : '';
+
+    if (dueEditWrap) dueEditWrap.style.display = 'none';
+    if (dueInput) dueInput.value = currentDue || '';
+    if (dueSaveBtn) dueSaveBtn.disabled = false;
+  }
+
+  async function saveDueDateForSelected() {
+    if (!selectedRow) return;
+
+    if (!canEditDueForRow(selectedRow)) {
+      alert('Solo el creador puede cambiar el vencimiento.');
+      return;
+    }
+
+    const ticketId = selectedRow.dataset.ticketId;
+    const newDue = (dueInput?.value || '').trim();
+
+    if (!ticketId || !newDue) {
+      alert('Debes seleccionar una fecha válida.');
+      return;
+    }
+
+    if (dueSaveBtn) dueSaveBtn.disabled = true;
+
+    try {
+      const url = getDueUrl(ticketId);
+
+      const fd = new FormData();
+      fd.append('due_date', newDue);
+
+      const csrfCookie = getCookie('csrftoken');
+      const csrfForm = getCsrfTokenFromForm();
+
+      const res = await fetch(url, {
+        method: 'POST',
+        body: fd,
+        credentials: 'same-origin',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          ...(csrfCookie ? { 'X-CSRFToken': csrfCookie } : (csrfForm ? { 'X-CSRFToken': csrfForm } : {})),
+        }
+      });
+
+      const ct = (res.headers.get('content-type') || '').toLowerCase();
+      const data = ct.includes('application/json') ? await res.json() : null;
+
+      if (!res.ok || (data && data.ok === false)) {
+        const msg =
+          (data && (data.error || data.message)) ? (data.error || data.message) :
+          `No se pudo actualizar el vencimiento. (${res.status})`;
+        alert(msg);
+        if (dueSaveBtn) dueSaveBtn.disabled = false;
+        return;
+      }
+
+      // ✅ actualizar local
+      const dueIso = data?.due_date || newDue;
+      const st = String((data?.status || selectedRow.dataset.status || 'OPEN')).toUpperCase();
+
+      selectedRow.dataset.due = dueIso;
+      selectedRow.dataset.status = st;
+      selectedRow.dataset.isOverdue = (st === 'OVERDUE') ? '1' : '0';
+
+      // UI: fecha + badge modal
+      elDue.textContent = dueIso ? formatLongCL(dueIso) : '—';
+      elDue.classList.toggle('is-overdue', st === 'OVERDUE');
+      setStatusBadge(st);
+
+      // UI: badge en la tabla
+      setRowStatusBadge(selectedRow, st);
+
+      // cerrar editor
+      if (dueEditWrap) dueEditWrap.style.display = 'none';
+      if (dueSaveBtn) dueSaveBtn.disabled = false;
+
+      // refrescar visibilidad del botón por si cambió el estado
+      showDueEditor(selectedRow);
+
+      // ✅ REUTILIZA la misma modal de éxito (SIN recargar)
+      openSuccessModal({
+        title: 'Vencimiento actualizado',
+        text: 'La fecha de vencimiento fue actualizada correctamente.',
+        reloadOnClose: false
+      });
+
+    } catch (err) {
+      console.error(err);
+      alert('Error de red al actualizar vencimiento.');
+      if (dueSaveBtn) dueSaveBtn.disabled = false;
+    }
+  }
+
+  btnDueEdit?.addEventListener('click', (ev) => {
+    stopAll(ev);
+    if (!selectedRow) return;
+    if (dueEditWrap) dueEditWrap.style.display = '';
+    if (dueInput) dueInput.focus();
+  });
+
+  dueCancelBtn?.addEventListener('click', (ev) => {
+    stopAll(ev);
+    if (dueEditWrap) dueEditWrap.style.display = 'none';
+    if (dueSaveBtn) dueSaveBtn.disabled = false;
+  });
+
+  dueSaveBtn?.addEventListener('click', (ev) => {
+    stopAll(ev);
+    saveDueDateForSelected();
+  });
+
   // ===== fill detail =====
   function fillFromRow(tr) {
     selectedRow = tr;
+
+    resetDueEditor();
 
     const code = tr.dataset.ticketCode || '—';
     const alarmId = tr.dataset.alarmId || '—';
@@ -209,7 +399,8 @@
     const type = tr.dataset.type || '—';
     const sev = tr.dataset.sev || 'N/A';
 
-    const status = tr.dataset.status || 'OPEN';
+    const status = computeRowStatus(tr);
+
     const tenant = tr.dataset.tenant || '—';
     const assigned = tr.dataset.assigned || '—';
     const created = tr.dataset.created || '—';
@@ -228,10 +419,7 @@
     const closedBy = (tr.dataset.closedBy || '').trim();
     const closedAt = (tr.dataset.closedAt || '').trim();
 
-    // comentario inicial (data-initial-notes => dataset.initialNotes)
     const initialNotes = (tr.dataset.initialNotes || '').trim();
-
-    // observaciones/cierre
     const notes = (tr.dataset.notes || '').trim();
 
     titleText.textContent = `${sev || 'N/A'} — ${device || '—'}`;
@@ -239,7 +427,6 @@
     elCode.textContent = code;
     elAssigned.textContent = assigned;
 
-    // OJO: tu template usa id="tkt-created-by"
     const createdEl = Q('#tkt-created-by');
     if (createdEl) createdEl.textContent = created;
 
@@ -249,11 +436,10 @@
 
     elDue.textContent = due ? formatLongCL(due) : '—';
 
-    // poner due en rojo si está OVERDUE
-    const stUp = (status || 'OPEN').toUpperCase();
-    if (elDue) elDue.classList.toggle('is-overdue', stUp === 'OVERDUE');
-
+    elDue.classList.toggle('is-overdue', status === 'OVERDUE');
     setStatusBadge(status);
+
+    showDueEditor(tr);
 
     elAlarmId.textContent = alarmId;
     elDevice.textContent = device;
@@ -278,8 +464,7 @@
       }
     }
 
-    // cerrado por / fecha cierre (solo mostrar si está cerrado y viene info)
-    const isClosed = (status || '').toUpperCase() === 'CLOSED';
+    const isClosed = status === 'CLOSED';
     if (wrapClosedBy && wrapClosedAt && elClosedBy && elClosedAt) {
       if (isClosed) {
         wrapClosedBy.style.display = '';
@@ -294,7 +479,6 @@
       }
     }
 
-    // Comentario inicial dentro del mismo grid (mostrar SIEMPRE si viene)
     if (wrapInitialNotes && elInitialNotes) {
       if (initialNotes) {
         wrapInitialNotes.style.display = '';
@@ -305,7 +489,6 @@
       }
     }
 
-    // Observaciones dentro del mismo grid
     if (wrapNotes && elNotes) {
       if (notes) {
         wrapNotes.style.display = '';
@@ -334,8 +517,6 @@
   btnOpenClose?.addEventListener('click', (ev) => {
     stopAll(ev);
     if (!selectedRow) return;
-
-    // next tick por si hay listeners globales
     setTimeout(() => openCloseNotesModal(), 0);
   });
 
@@ -344,16 +525,15 @@
   closeX?.addEventListener('click', closeCloseNotesModal);
   closeCancel?.addEventListener('click', (ev) => { stopAll(ev); closeCloseNotesModal(); });
 
-  // éxito estilo "Exportación": NO cerrar al click en backdrop, solo OK
-  // successBackdrop?.addEventListener('click', closeSuccessModalAndReload); // intencionalmente OFF
-  successOk?.addEventListener('click', (ev) => { stopAll(ev); closeSuccessModalAndReload(); });
+  // ✅ éxito (ahora respeta reloadOnClose)
+  successBackdrop?.addEventListener('click', (ev) => { stopAll(ev); closeSuccessModal(); });
+  successOk?.addEventListener('click', (ev) => { stopAll(ev); closeSuccessModal(); });
 
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
 
-    // prioridad: éxito -> observaciones -> detalle
     if (!successModal.classList.contains('hidden')) {
-      closeSuccessModalAndReload();
+      closeSuccessModal();
       return;
     }
     if (!closeModal.classList.contains('hidden')) {
@@ -363,7 +543,7 @@
     closeModalDetailFully();
   });
 
-  // Submit por AJAX: cierra 2 modales y abre éxito
+  // Submit por AJAX: cerrar ticket
   closeForm?.addEventListener('submit', async (ev) => {
     stopAll(ev);
     if (!selectedRow || !closeForm.action) return;
@@ -395,14 +575,20 @@
         return;
       }
 
-      // actualizar dataset local (por si vuelve a abrir sin reload)
       selectedRow.dataset.status = 'CLOSED';
+      selectedRow.dataset.isOverdue = '0';
       selectedRow.dataset.notes = (fd.get('notes') || '').toString();
+      setRowStatusBadge(selectedRow, 'CLOSED');
 
-      // cerrar ambas modales y abrir éxito
       closeCloseNotesModal();
       closeModalDetailFully();
-      openSuccessModal();
+
+      // ✅ misma modal, pero para cierre con recarga
+      openSuccessModal({
+        title: 'Ticket cerrado con éxito',
+        text: 'El ticket fue actualizado y guardado correctamente.',
+        reloadOnClose: true
+      });
 
     } catch (err) {
       console.error(err);

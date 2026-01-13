@@ -3,7 +3,7 @@
    FIX ZOOM + footer siempre visible (scope: #configModal)
    + MODAL MÁS ANCHA (secciones en una línea)
    + FIX: overlay por encima de topbar
-   + ✅ Mejoras UI: bloque teléfono "bonito"
+   + Mejoras UI: bloque teléfono "bonito"
    ========================================================== */
 
 /* ==========================================================
@@ -226,7 +226,7 @@ body:has(#configModal.modal-overlay:not(.hidden)) {
 }
 
 /* ==========================================================
-   7.1) ✅ Bloque Teléfono: ayuda debajo del input (se ve completo)
+   7.1) Bloque Teléfono: ayuda debajo del input (se ve completo)
    - Mantiene 2 columnas: label | (input + ayuda)
    - En mobile queda 1 columna automáticamente
    ========================================================== */

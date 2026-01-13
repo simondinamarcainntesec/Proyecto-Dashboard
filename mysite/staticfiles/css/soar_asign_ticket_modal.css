@@ -311,7 +311,7 @@
   width:110px;
 }
 
-/* ✅ mismo look de selects (por si se reutiliza en este css) */
+/* mismo look de selects (por si se reutiliza en este css) */
 .sel-filter{
   display:inline-flex;
   align-items:center;

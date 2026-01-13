@@ -13,6 +13,9 @@ class Tenant(models.Model):
     logs360siem_id = models.TextField(null=True, blank=True, help_text="ID de Logs360SIEM")
     site24x7_id = models.TextField(null=True, blank=True, help_text="ID de Site24x7")
 
+    # ✅ Nuevo
+    is_active = models.BooleanField(default=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -174,3 +177,27 @@ class NotificationChannelPreference(models.Model):
         db_table = 'agent"."tenants_notificationchannelpreference'
         # Muy importante: que Django NO toque esta tabla
         managed = False
+
+class Tenants_contracts(models.Model):
+    tenant_id = models.BigIntegerField()
+    contract_id = models.CharField(max_length=50, primary_key=True)  # ✅ PK para Admin
+
+    contract_name = models.CharField(max_length=255)
+    support_plan = models.CharField(max_length=255)
+    support_plan_type = models.CharField(max_length=100)
+    start_date = models.DateField()
+    expiry_date = models.DateField()
+    status = models.CharField(max_length=50)
+    account = models.CharField(max_length=255)
+    serviceplan_id = models.CharField(max_length=50)
+    account_id = models.CharField(max_length=50)
+    account_ciid = models.CharField(max_length=50)
+
+    class Meta:
+        managed = False
+        db_table = '"agent"."tenants_contracts"'
+        verbose_name = "Contract"
+        verbose_name_plural = "Contracts"
+
+    def __str__(self):
+        return f"{self.contract_id} - {self.contract_name} (tenant {self.tenant_id})"

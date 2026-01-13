@@ -2,9 +2,9 @@
 (function () {
   // =========================================
   // SOAR – Modal de Incidentes (listado + detalle)
-  // ✅ Integrado con asignación de tickets (soar_assign_ticket.js)
-  // ✅ Ticket inline en HEADER del detalle (como foto 2)
-  // ✅ Auto-hydrate ticket para dashboard_soar (si el objeto base no trae assigned)
+  // Integrado con asignación de tickets (soar_assign_ticket.js)
+  // Ticket inline en HEADER del detalle (como foto 2)
+  // Auto-hydrate ticket para dashboard_soar (si el objeto base no trae assigned)
   // =========================================
 
   const LIST_MODAL_ID = "soarIncidentsModal";
@@ -64,7 +64,7 @@
   const apiDetailURL =
     explicitDetailURL || apiListURL.replace(/by-?alarm-ids\/?$/i, "detail-by-alarm-id/");
 
-  // ✅ tbody del listado (tu HTML usa #si-tbody)
+  // tbody del listado (tu HTML usa #si-tbody)
   const tbody =
     $("#si-tbody", listModal) ||
     $("#inc-tbody", listModal) ||
@@ -78,7 +78,7 @@
   const dAct = $("#detail-actions", detailModal) || $("#inc-acciones", detailModal);
   const dApp = $("#detail-app", detailModal) || $("#inc-app", detailModal);
 
-  // ✅ HEADER NUEVO (como foto 2)
+  // HEADER NUEVO (como foto 2)
   const dSev = $("#inc-sev", detailModal);
   const dDev = $("#inc-dev", detailModal);
   const dTicketStatus = $("#inc-ticket-status", detailModal);
@@ -144,7 +144,7 @@
     }
     const datetime = [date, time].filter(Boolean).join(" ");
 
-    // ✅ asignación
+    // asignación
     const hasTicketRaw =
       raw.has_ticket ?? raw.hasTicket ?? raw.assigned ?? raw.ticket_exists ?? raw.ticketExists ?? 0;
 
@@ -266,7 +266,7 @@
     return { ...mapCommon(obj), ...mapDetail(obj) };
   }
 
-  // ✅ Auto-hydrate para dashboard_soar:
+  // Auto-hydrate para dashboard_soar:
   // cuando se abre el modal de detalle, si no tenemos ticketHydratedFor, buscamos el alarmId y consultamos detalle.
   async function hydrateTicketOnOpenIfNeeded() {
     if (!detailModal || detailModal.classList.contains("hidden")) return;
@@ -482,11 +482,11 @@
       detailModal.dataset.ticketHydratedFor = "";
     }
 
-    // ✅ HEADER (sin pisar innerHTML)
+    // HEADER (sin pisar innerHTML)
     TXT(dSev, val(it.severity));
     TXT(dDev, val(it.device));
 
-    // ✅ ticket inline header
+    // ticket inline header
     setTicketHeader(!!it.assigned, it.assigned_name || "");
 
     if (dMeta) {
@@ -520,7 +520,7 @@
 
     open(detailModal);
 
-    // ✅ Por si el dashboard abrió el modal con info incompleta:
+    // Por si el dashboard abrió el modal con info incompleta:
     // intenta hidratar ticket desde API cuando ya esté visible
     setTimeout(hydrateTicketOnOpenIfNeeded, 0);
   }
